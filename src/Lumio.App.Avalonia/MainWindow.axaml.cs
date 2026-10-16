@@ -566,7 +566,7 @@ public partial class MainWindow : Window
 
         if (pinDialog.IsAuthenticated)
         {
-            var dashboard = new AdminDashboardDialog(_settingsService, _storage, _printService);
+            var dashboard = new AdminDashboardDialog(_settingsService, _storage, _printService, _templateStore);
             await dashboard.ShowDialog(this);
 
             if (dashboard.ExitRequested)
@@ -577,6 +577,8 @@ public partial class MainWindow : Window
             {
                 UpdateLiveViewMirror();
                 EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
+                _activeTemplate = _templateStore.GetById(_settingsService.Current.SelectedTemplateId)
+                                  ?? BuiltInTemplates.CreateSinglePhotoPostcard();
                 await StartCameraAsync();
             }
         }

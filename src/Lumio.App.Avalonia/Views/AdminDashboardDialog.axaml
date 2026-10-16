@@ -2,8 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Lumio.App.Avalonia.Views.AdminDashboardDialog"
         Title="Lumio – Admin Dashboard"
-        Width="640"
-        Height="720"
+        Width="660"
+        Height="780"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="None"
         Background="Transparent"
@@ -67,24 +67,98 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Event Name -->
+                    <!-- Event & Storage -->
                     <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="EVENT-NAME" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <TextBox x:Name="EventNameTextBox" CornerRadius="10" FontSize="15" Padding="10,8" />
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="EVENT &amp; SPEICHERORT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Event-Name" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBox x:Name="EventNameTextBox" CornerRadius="10" FontSize="14" Padding="10,8" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Speicherordner für Fotos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBox x:Name="OutputFolderTextBox" CornerRadius="10" FontSize="14" Padding="10,8" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <!-- Camera Backend -->
+                    <!-- Camera Selection -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="KAMERA-AUSWAHL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Aktive Kamera für die Booth" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <ComboBox x:Name="CameraSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                <TextBlock x:Name="CameraDetectionStatusText" Text="Kameras werden erkannt..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,2,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="MirrorLiveViewCheckBox" Content="Live-View horizontal spiegeln (Spiegeleffekt)" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- DSLR & Camera Settings -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="DSLR-KAMERASTEUERUNG (NIKON &amp; USB)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- ISO -->
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="ISO-Empfindlichkeit" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <ComboBox x:Name="CameraIsoComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                </StackPanel>
+
+                                <!-- Shutter Speed -->
+                                <StackPanel Grid.Column="2" Spacing="4">
+                                    <TextBlock Text="Verschlusszeit" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <ComboBox x:Name="CameraShutterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Aperture -->
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="Blende (f-Zahl)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <ComboBox x:Name="CameraApertureComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                </StackPanel>
+
+                                <!-- White Balance -->
+                                <StackPanel Grid.Column="2" Spacing="4">
+                                    <TextBlock Text="Weißabgleich" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <ComboBox x:Name="CameraWhiteBalanceComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Exposure Compensation -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Belichtungskorrektur (Helligkeit)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <ComboBox x:Name="CameraExposureCompComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                            </StackPanel>
+
+                            <TextBlock Text="💡 Tipp für Blitz &amp; Partylicht: ISO 200–400, 1/125s und Blende f/5.6." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Template / Collage Selection -->
                     <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="KAMERA-AUSWAHL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <ComboBox x:Name="CameraSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10">
-                                <ComboBoxItem Content="Nikon DSLR / Z-Serie (USB / gphoto2)" Tag="Nikon" />
-                                <ComboBoxItem Content="Raspberry Pi Camera / USB-Webcam" Tag="Webcam" />
-                                <ComboBoxItem Content="Virtuelle Kamera (Testmodus)" Tag="Simulated" />
-                            </ComboBox>
-                            <CheckBox x:Name="MirrorLiveViewCheckBox" Content="Live-View horizontal spiegeln (Spiegeleffekt)" Margin="0,4,0,0" />
+                            <TextBlock Text="FOTO-LAYOUT &amp; VORLAGE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <ComboBox x:Name="TemplateSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
                         </StackPanel>
                     </Border>
 
