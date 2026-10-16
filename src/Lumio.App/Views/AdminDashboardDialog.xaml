@@ -1,4 +1,4 @@
-﻿<Window x:Class="Lumio.App.Views.AdminDashboardDialog"
+<Window x:Class="Lumio.App.Views.AdminDashboardDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Lumio – Admin Dashboard"
@@ -51,7 +51,9 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
@@ -60,17 +62,26 @@
                                         Click="OnOpenFolderClick">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📁 " FontSize="18" />
-                                        <TextBlock Text="Fotos-Ordner" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Text="Fotos-Ordner" FontSize="15" FontWeight="SemiBold" />
                                     </StackPanel>
                                 </Button>
 
                                 <Button Grid.Column="2"
                                         Style="{StaticResource TouchGlassButton}"
+                                        Click="OnAboutClick">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="ℹ️ " FontSize="18" />
+                                        <TextBlock Text="Über &amp; Lizenz" FontSize="15" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="4"
+                                        Style="{StaticResource TouchGlassButton}"
                                         BorderBrush="{StaticResource DangerBrush}"
                                         Click="OnExitAppClick">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="🚪 " FontSize="18" />
-                                        <TextBlock Text="Zum Desktop" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" />
+                                        <TextBlock Text="Zum Desktop" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" />
                                     </StackPanel>
                                 </Button>
                             </Grid>

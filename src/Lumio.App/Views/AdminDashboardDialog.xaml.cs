@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using Lumio.Camera;
@@ -306,6 +306,15 @@ public partial class AdminDashboardDialog : Window
             FileName = folder,
             UseShellExecute = true,
         });
+    }
+
+    private void OnAboutClick(object sender, RoutedEventArgs e)
+    {
+        var aboutDialog = new AboutDialog
+        {
+            Owner = this
+        };
+        aboutDialog.ShowDialog();
     }
 
     private void OnExitAppClick(object sender, RoutedEventArgs e)

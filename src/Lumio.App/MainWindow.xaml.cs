@@ -819,6 +819,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnAboutClick(object sender, RoutedEventArgs e)
+    {
+        var aboutDialog = new AboutDialog
+        {
+            Owner = this
+        };
+        aboutDialog.ShowDialog();
+    }
+
     private void OnAdminLockClick(object sender, RoutedEventArgs e)
     {
         OpenAdminMenu();

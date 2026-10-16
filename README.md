@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="200" alt="Lumio Logo" style="border-radius: 24px;" />
+</p>
+
 # Lumio 📸
 
 Eine moderne, touch-optimierte Photobooth-Software für Windows. Gebaut für Partys, Hochzeiten und Events mit Nikon DSLRs/Spiegellosen Kameras und dem Canon Selphy CP1300 Fotodrucker.
@@ -109,6 +113,16 @@ dotnet publish src/Lumio.App/Lumio.App.csproj -c Release -r win-arm64 --self-con
 - [ ] QR-Code aufs Handy zum direkten Download per lokalem Mini-Webserver
 - [ ] Greenscreen / Chroma-Keying
 - [ ] Eigener visueller Template-Designer
+
+---
+
+## Lizenz & Gewerbliche Nutzung 📜
+
+Lumio steht unter der **[Lumio Fair-Use & Event License](LICENSE.md)**:
+
+- ✅ **Gewerbliche Event-Nutzung ERLAUBT:** Du darfst die kompilierte Software völlig frei auf privaten Partys sowie gewerblichen Veranstaltungen (z. B. Fotobox-Vermietung, Hochzeiten, Firmenfeiern, Messen) einsetzen und damit Geld verdienen. Es gibt keine versteckten Kosten, keine Lizenzgebühren und kein Abo.
+- ❌ **Quellcode Nicht-Kommerziell:** Der Quellcode ist einsehbar und darf für private Zwecke, zum Lernen und für Beiträge/Verbesserungen (Pull Requests) genutzt werden. Die kommerzielle Verwertung des Quellcodes (z. B. Weiterverkauf des Quellcodes, Erstellen kommerzieller Closed-Source-Produkte oder Bezahl-Apps) ist ohne vorherige schriftliche Genehmigung untersagt.
+- ℹ️ **Info-Button in der App:** Über das kleine Info-Symbol (ℹ️) oben rechts in der App können die Lizenz und Projekt-Details jederzeit direkt vor Ort eingesehen werden.
 
 Feedback, Fehler oder Feature-Wünsche gerne einfach als [Issue](https://github.com/mazls/lumio/issues) melden!
 
