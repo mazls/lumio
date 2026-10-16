@@ -45,12 +45,14 @@ jobs:
         run: |
           dotnet publish src/Lumio.App.Avalonia/Lumio.App.Avalonia.csproj -c Release -r linux-arm64 --self-contained true -o ./dist/linux-arm64 -p:PublishSingleFile=false -nologo
           Copy-Item run-lumio.sh ./dist/linux-arm64/run-lumio.sh
+          ((Get-Content ./dist/linux-arm64/run-lumio.sh -Raw) -replace "`r`n", "`n") | Set-Content -NoNewline -Path ./dist/linux-arm64/run-lumio.sh
           Compress-Archive -Path ./dist/linux-arm64/* -DestinationPath ./dist/Lumio-linux-arm64.zip
 
       - name: Publish Standalone (linux-x64 for PC / CachyOS / Arch / Ubuntu)
         run: |
           dotnet publish src/Lumio.App.Avalonia/Lumio.App.Avalonia.csproj -c Release -r linux-x64 --self-contained true -o ./dist/linux-x64 -p:PublishSingleFile=false -nologo
           Copy-Item run-lumio.sh ./dist/linux-x64/run-lumio.sh
+          ((Get-Content ./dist/linux-x64/run-lumio.sh -Raw) -replace "`r`n", "`n") | Set-Content -NoNewline -Path ./dist/linux-x64/run-lumio.sh
           Compress-Archive -Path ./dist/linux-x64/* -DestinationPath ./dist/Lumio-linux-x64.zip
 
       - name: Upload Artifacts (Action Run)
