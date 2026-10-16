@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Lumio.Core.Camera;
 using SkiaSharp;
 
@@ -441,9 +441,6 @@ public static class GifEncoder
         }
     }
 
-    /// <summary>
-    /// Standard variable-length LZW compressor for GIF image data.
-    /// </summary>
     private static void LzwCompress(int initCodeSize, byte[] data, Stream output)
     {
         output.WriteByte((byte)initCodeSize);
@@ -453,29 +450,65 @@ public static class GifEncoder
         var firstFree = clearCode + 2;
 
         var codeSize = initCodeSize + 1;
-        var maxCode = 1 << codeSize;
+        var maxCode = (1 << codeSize) - 1;
+        var freeEnt = firstFree;
+        var clearFlg = false;
 
-        // Hash table for (prefix << 8) | character -> code
-        var dict = new Dictionary<int, int>(4096);
+        // Hash table for (prefix << 8) | c -> code
+        // 5003 is prime for fast hash distribution
+        const int hSize = 5003;
+        var htab = new int[hSize];
+        var codetab = new int[hSize];
+        Array.Fill(htab, -1);
 
-        // Bit accumulator
+        var curAccum = 0;
         var curBits = 0;
-        var curShift = 0;
         var packet = new byte[256];
         var packetLen = 0;
 
-        void OutputBitCode(int code)
+        void OutputCode(int code)
         {
-            curBits |= code << curShift;
-            curShift += codeSize;
+            curAccum |= (code << curBits);
+            curBits += codeSize;
 
-            while (curShift >= 8)
+            while (curBits >= 8)
             {
-                packet[packetLen++] = (byte)(curBits & 0xFF);
-                curBits >>= 8;
-                curShift -= 8;
+                packet[packetLen++] = (byte)(curAccum & 0xFF);
+                curAccum >>= 8;
+                curBits -= 8;
 
-                if (packetLen == 254)
+                if (packetLen >= 254)
+                {
+                    output.WriteByte((byte)packetLen);
+                    output.Write(packet, 0, packetLen);
+                    packetLen = 0;
+                }
+            }
+
+            if (freeEnt > maxCode || clearFlg)
+            {
+                if (clearFlg)
+                {
+                    codeSize = initCodeSize + 1;
+                    maxCode = (1 << codeSize) - 1;
+                    clearFlg = false;
+                }
+                else
+                {
+                    codeSize++;
+                    maxCode = codeSize == 12 ? 4096 : ((1 << codeSize) - 1);
+                }
+            }
+
+            if (code == eofCode)
+            {
+                while (curBits > 0)
+                {
+                    packet[packetLen++] = (byte)(curAccum & 0xFF);
+                    curAccum >>= 8;
+                    curBits -= 8;
+                }
+                if (packetLen > 0)
                 {
                     output.WriteByte((byte)packetLen);
                     output.Write(packet, 0, packetLen);
@@ -484,76 +517,79 @@ public static class GifEncoder
             }
         }
 
-        void FlushBits()
+        void ClearTable()
         {
-            if (curShift > 0)
-            {
-                packet[packetLen++] = (byte)(curBits & 0xFF);
-                curBits = 0;
-                curShift = 0;
-            }
-
-            if (packetLen > 0)
-            {
-                output.WriteByte((byte)packetLen);
-                output.Write(packet, 0, packetLen);
-                packetLen = 0;
-            }
+            Array.Fill(htab, -1);
+            freeEnt = firstFree;
+            clearFlg = true;
+            OutputCode(clearCode);
         }
 
         // Start with Clear Code
-        OutputBitCode(clearCode);
+        OutputCode(clearCode);
 
         if (data.Length == 0)
         {
-            OutputBitCode(eofCode);
-            FlushBits();
+            OutputCode(eofCode);
             output.WriteByte(0x00);
             return;
         }
 
-        var prefix = (int)data[0];
+        var ent = (int)data[0];
 
         for (var i = 1; i < data.Length; i++)
         {
             var c = (int)data[i];
-            var key = (prefix << 8) | c;
+            var fcode = (c << 12) + ent;
+            var h = (c << 4) ^ ent;
+            if (h >= hSize) h -= hSize;
 
-            if (dict.TryGetValue(key, out var code))
+            if (htab[h] == fcode)
             {
-                prefix = code;
+                ent = codetab[h];
+                continue;
+            }
+
+            var disp = h == 0 ? 1 : hSize - h;
+            var matched = false;
+
+            if (htab[h] >= 0)
+            {
+                while (true)
+                {
+                    h -= disp;
+                    if (h < 0) h += hSize;
+
+                    if (htab[h] == fcode)
+                    {
+                        ent = codetab[h];
+                        matched = true;
+                        break;
+                    }
+                    if (htab[h] < 0)
+                        break;
+                }
+            }
+
+            if (matched)
+                continue;
+
+            OutputCode(ent);
+            ent = c;
+
+            if (freeEnt < 4096)
+            {
+                codetab[h] = freeEnt++;
+                htab[h] = fcode;
             }
             else
             {
-                OutputBitCode(prefix);
-
-                if (dict.Count + firstFree < 4096)
-                {
-                    dict[key] = dict.Count + firstFree;
-                    if (dict.Count + firstFree >= maxCode && codeSize < 12)
-                    {
-                        codeSize++;
-                        maxCode = 1 << codeSize;
-                    }
-                }
-                else
-                {
-                    // Table full: output Clear Code and reset
-                    OutputBitCode(clearCode);
-                    dict.Clear();
-                    codeSize = initCodeSize + 1;
-                    maxCode = 1 << codeSize;
-                }
-
-                prefix = c;
+                ClearTable();
             }
         }
 
-        OutputBitCode(prefix);
-        OutputBitCode(eofCode);
-        FlushBits();
-
-        // Sub-block terminator
+        OutputCode(ent);
+        OutputCode(eofCode);
         output.WriteByte(0x00);
     }
 }

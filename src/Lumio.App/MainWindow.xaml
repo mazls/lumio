@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Lumio"
+        Icon="pack://application:,,,/Lumio;component/Assets/app.ico"
         WindowStyle="None"
         WindowState="Maximized"
         Background="{StaticResource BackgroundBrush}"
@@ -85,19 +86,29 @@
         <Grid x:Name="IdleOverlayGrid" Visibility="Visible">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
 
-                <!-- Glowing Event Title -->
+                <!-- Glowing Event Title & Lumio Badge -->
                 <Border Background="{StaticResource GlassBrush}"
                         BorderBrush="{StaticResource GlassBorderBrush}"
                         BorderThickness="1"
                         CornerRadius="40"
-                        Padding="36,12"
+                        Padding="16,10,28,10"
                         HorizontalAlignment="Center"
                         Margin="0,0,0,24">
-                    <TextBlock x:Name="EventTitleText"
-                               Text="LUMIO"
-                               Style="{StaticResource Eyebrow}"
-                               FontSize="22"
-                               Foreground="{StaticResource AccentOrangeBrush}" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="44" Height="44" CornerRadius="22" ClipToBounds="True" Margin="0,0,14,0"
+                                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#FF3D9A" BlurRadius="18" ShadowDepth="0" Opacity="0.7" />
+                            </Border.Effect>
+                            <Image Source="pack://application:,,,/Lumio;component/Assets/logo.png" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock x:Name="EventTitleText"
+                                   Text="LUMIO"
+                                   Style="{StaticResource Eyebrow}"
+                                   FontSize="22"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource AccentOrangeBrush}" />
+                    </StackPanel>
                 </Border>
 
                 <!-- Template / Mode Selector Pills -->
@@ -219,15 +230,19 @@
 
         <!-- ==================== 6. TOP BAR (CAMERA STATUS & ADMIN LOCK) ==================== -->
         <Grid VerticalAlignment="Top" Margin="28,24" Height="60">
-            <!-- Camera & Mode Info (Left) -->
+            <!-- Camera & Mode Info (Left) with Brand Logo -->
             <Border HorizontalAlignment="Left"
                     Background="{StaticResource GlassBrush}"
                     BorderBrush="{StaticResource GlassBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="20"
-                    Padding="18,8">
-                <StackPanel Orientation="Horizontal">
-                    <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    Padding="12,6,18,6">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True" Margin="0,0,10,0"
+                            BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
+                        <Image Source="pack://application:,,,/Lumio;component/Assets/logo.png" Stretch="UniformToFill" />
+                    </Border>
+                    <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" Style="{StaticResource Caption}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </Border>

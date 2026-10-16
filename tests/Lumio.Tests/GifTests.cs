@@ -1,4 +1,4 @@
-﻿using Lumio.Imaging;
+using Lumio.Imaging;
 using SkiaSharp;
 using Xunit;
 
@@ -118,5 +118,49 @@ public sealed class GifTests
         Assert.NotNull(codec);
         // 5 forward frames bounced ping-pong = [0,1,2,3,4,3,2,1] = 8 frames!
         Assert.Equal(8, codec.FrameCount);
+    }
+
+    [Fact]
+    public void Encode_RealisticGradientPhoto_DecodesCleanlyWithoutNoise()
+    {
+        var frames = new List<SKBitmap>();
+        for (int i = 0; i < 4; i++)
+        {
+            var bmp = new SKBitmap(320, 240, SKColorType.Bgra8888, SKAlphaType.Premul);
+            using (var canvas = new SKCanvas(bmp))
+            {
+                using var paint = new SKPaint
+                {
+                    Shader = SKShader.CreateLinearGradient(
+                        new SKPoint(0, 0), new SKPoint(320, 240),
+                        new[] { SKColors.Crimson, SKColors.Navy, SKColors.DarkOrange, SKColors.LimeGreen },
+                        null, SKShaderTileMode.Clamp)
+                };
+                canvas.DrawRect(0, 0, 320, 240, paint);
+                using var font = new SKFont(SKTypeface.Default, 40);
+                using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+                canvas.DrawText($"Frame {i}", 60, 120, font, textPaint);
+            }
+            frames.Add(bmp);
+        }
+
+        using var ms = new MemoryStream();
+        GifEncoder.Encode(frames, 100, ms, true);
+        var bytes = ms.ToArray();
+
+        using var readStream = new SKMemoryStream(bytes);
+        using var codec = SKCodec.Create(readStream);
+        Assert.NotNull(codec);
+        Assert.Equal(4, codec.FrameCount);
+
+        for (int f = 0; f < codec.FrameCount; f++)
+        {
+            var decoded = new SKBitmap(codec.Info);
+            var result = codec.GetPixels(decoded.Info, decoded.GetPixels(), new SKCodecOptions(f));
+            if (result != SKCodecResult.Success)
+            {
+                throw new Exception($"Frame {f} failed with {result}! GIF byte length: {bytes.Length}");
+            }
+        }
     }
 }

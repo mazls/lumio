@@ -142,10 +142,18 @@
 
             <!-- Bottom Action: Close Button -->
             <Button Grid.Row="3"
-                    Content="Alles klar / Schließen"
                     Style="{StaticResource TouchActionButton}"
-                    Height="54"
-                    Click="OnCloseClick" />
+                    Height="52"
+                    Padding="16,0"
+                    Margin="0,8,0,0"
+                    Click="OnCloseClick">
+                <TextBlock Text="Alles klar / Schließen"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center" />
+            </Button>
         </Grid>
     </Border>
 </Window>

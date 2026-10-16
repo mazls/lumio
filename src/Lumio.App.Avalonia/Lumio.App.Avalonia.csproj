@@ -8,6 +8,7 @@
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>Lumio</AssemblyName>
     <RootNamespace>Lumio.App.Avalonia</RootNamespace>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
