@@ -108,6 +108,9 @@ public partial class MainWindow : Window
             CameraStatusText.Text = _cameraManager.FallbackReason is not null
                 ? $"Test-Modus ({_activeCamera.DisplayName})"
                 : _activeCamera.DisplayName;
+            CameraStatusText.ToolTip = _cameraManager.FallbackReason is not null
+                ? $"Fallback-Grund: {_cameraManager.FallbackReason}"
+                : _activeCamera.DisplayName;
         }
         catch (Exception ex)
         {

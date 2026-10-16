@@ -72,33 +72,91 @@ public sealed class WebcamCamera : ICameraService
 
         try
         {
-            var settings = new MediaCaptureInitializationSettings
-            {
-                StreamingCaptureMode = StreamingCaptureMode.Video,
-                PhotoCaptureSource = PhotoCaptureSource.Photo,
-            };
+            var devices = await FindDevicesAsync();
+            var device = (!string.IsNullOrEmpty(_requestedDeviceId)
+                ? devices.FirstOrDefault(d => d.Id == _requestedDeviceId)
+                : null) ?? devices.FirstOrDefault();
 
-            if (!string.IsNullOrEmpty(_requestedDeviceId))
-                settings.VideoDeviceId = _requestedDeviceId;
+            DisplayName = device?.Name ?? "Webcam";
 
             var capture = new MediaCapture();
             capture.Failed += OnCaptureFailed;
 
-            await capture.InitializeAsync(settings);
+            var initSettings = new MediaCaptureInitializationSettings
+            {
+                StreamingCaptureMode = StreamingCaptureMode.Video,
+                MemoryPreference = MediaCaptureMemoryPreference.Cpu,
+                SharingMode = MediaCaptureSharingMode.ExclusiveControl,
+            };
 
-            var frameSource = FindColorFrameSource(capture);
-            if (frameSource is null)
-                throw new CameraException("Keine kompatible Videoquelle für Live-View gefunden.");
+            if (device is not null)
+            {
+                initSettings.VideoDeviceId = device.Id;
+            }
 
-            var reader = await capture.CreateFrameReaderAsync(frameSource, MediaEncodingSubtypes.Bgra8);
+            try
+            {
+                await capture.InitializeAsync(initSettings).AsTask(cancellationToken);
+            }
+            catch (Exception)
+            {
+                // 1. Fallback: try SharedReadOnly mode (needed if Windows Hello / another process holds a handle)
+                try
+                {
+                    initSettings.SharingMode = MediaCaptureSharingMode.SharedReadOnly;
+                    capture.Dispose();
+                    capture = new MediaCapture();
+                    capture.Failed += OnCaptureFailed;
+                    await capture.InitializeAsync(initSettings).AsTask(cancellationToken);
+                }
+                catch (Exception)
+                {
+                    // 2. Fallback: try default device without specific device ID
+                    if (initSettings.VideoDeviceId is not null)
+                    {
+                        initSettings.VideoDeviceId = null;
+                        capture.Dispose();
+                        capture = new MediaCapture();
+                        capture.Failed += OnCaptureFailed;
+                        await capture.InitializeAsync(initSettings).AsTask(cancellationToken);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+
+            var source = SelectColorSource(capture);
+            var format = SelectFormat(source);
+            if (format is not null)
+            {
+                try
+                {
+                    await source.SetFormatAsync(format).AsTask(cancellationToken);
+                }
+                catch
+                {
+                    // Continue with default format if setting format is not supported by driver
+                }
+            }
+
+            MediaFrameReader reader;
+            try
+            {
+                reader = await capture.CreateFrameReaderAsync(source, MediaEncodingSubtypes.Bgra8).AsTask(cancellationToken);
+            }
+            catch
+            {
+                // Surface ISP driver fallback: acquire native format (NV12 / MJPG)
+                reader = await capture.CreateFrameReaderAsync(source).AsTask(cancellationToken);
+            }
+
+            reader.AcquisitionMode = MediaFrameReaderAcquisitionMode.Realtime;
             reader.FrameArrived += OnFrameArrived;
 
             _capture = capture;
             _reader = reader;
-
-            var devices = await FindDevicesAsync();
-            var info = devices.FirstOrDefault(d => d.Id == _requestedDeviceId);
-            DisplayName = info?.Name ?? "Webcam";
 
             Status = CameraStatus.Connected;
         }
@@ -108,11 +166,11 @@ public sealed class WebcamCamera : ICameraService
             Status = CameraStatus.Error;
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             await CleanupAsync();
             Status = CameraStatus.Error;
-            throw new CameraException($"Webcam konnte nicht initialisiert werden: {ex.Message}", ex);
+            throw new CameraException($"Webcam konnte nicht initialisiert werden ({ex.Message.Trim()})", ex);
         }
     }
 
@@ -124,7 +182,7 @@ public sealed class WebcamCamera : ICameraService
         if (_reader is null || _liveViewRunning)
             return;
 
-        var status = await _reader.StartAsync();
+        var status = await _reader.StartAsync().AsTask(cancellationToken);
         if (status != MediaFrameReaderStartStatus.Success)
             throw new CameraException($"Live-View konnte nicht gestartet werden: {status}");
 
@@ -152,7 +210,8 @@ public sealed class WebcamCamera : ICameraService
         if (Status != CameraStatus.Connected)
             throw new CameraException("Kamera ist nicht verbunden.");
 
-        if (!_liveViewRunning)
+        var wasRunning = _liveViewRunning;
+        if (!wasRunning)
             await StartLiveViewAsync(cancellationToken);
 
         TaskCompletionSource<LiveViewFrame> tcs;
@@ -168,12 +227,17 @@ public sealed class WebcamCamera : ICameraService
         try
         {
             var frame = await tcs.Task.WaitAsync(cts.Token);
-            var jpeg = JpegEncoder.EncodeBgra(frame, 95);
+            var jpeg = await Task.Run(() => JpegEncoder.EncodeBgra(frame, 95), cancellationToken);
             return new CapturedPhoto(jpeg, DateTimeOffset.Now);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             throw new CameraException("Timeout beim Warten auf ein Kamerabild.");
+        }
+        finally
+        {
+            if (!wasRunning)
+                await StopLiveViewAsync();
         }
     }
 
@@ -183,16 +247,94 @@ public sealed class WebcamCamera : ICameraService
         Status = CameraStatus.Disconnected;
     }
 
-    private static MediaFrameSource? FindColorFrameSource(MediaCapture capture)
+    public Task ApplySettingsAsync(Lumio.Core.Settings.DslrCameraSettings settings, CancellationToken cancellationToken = default)
     {
-        foreach (var source in capture.FrameSources.Values)
+        if (_capture?.VideoDeviceController is null)
+            return Task.CompletedTask;
+
+        try
         {
-            if (source.Info.SourceKind == MediaFrameSourceKind.Color)
-                return source;
+            var controller = _capture.VideoDeviceController;
+
+            // Exposure / Belichtung
+            if (controller.Exposure.Capabilities.Supported)
+            {
+                if (settings.ShutterSpeed.StartsWith("Auto", StringComparison.OrdinalIgnoreCase) || settings.ExposureCompensation.StartsWith("0", StringComparison.OrdinalIgnoreCase))
+                {
+                    controller.Exposure.TrySetAuto(true);
+                }
+                else
+                {
+                    var step = controller.Exposure.Capabilities.Step;
+                    var min = controller.Exposure.Capabilities.Min;
+                    var max = controller.Exposure.Capabilities.Max;
+                    var factor = settings.ExposureCompensation.Contains("+") ? 1.0 : (settings.ExposureCompensation.Contains("-") ? -1.0 : 0.0);
+                    controller.Exposure.TrySetValue(Math.Clamp(factor * step * 2, min, max));
+                }
+            }
+
+            // White Balance / Weißabgleich
+            if (controller.WhiteBalance.Capabilities.Supported)
+            {
+                if (settings.WhiteBalance.StartsWith("Auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    controller.WhiteBalance.TrySetAuto(true);
+                }
+                else
+                {
+                    uint temp = settings.WhiteBalance switch
+                    {
+                        var s when s.Contains("Kunstlicht") => 3200,
+                        var s when s.Contains("Leuchtstoff") => 4000,
+                        var s when s.Contains("Tageslicht") => 5400,
+                        var s when s.Contains("Blitz") => 5600,
+                        var s when s.Contains("Bewölkt") => 6500,
+                        var s when s.Contains("Schatten") => 7500,
+                        _ => 5400
+                    };
+                    controller.WhiteBalance.TrySetValue(temp);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore devices without manual controller support
         }
 
-        return capture.FrameSources.Values.FirstOrDefault();
+        return Task.CompletedTask;
     }
+
+    private static MediaFrameSource SelectColorSource(MediaCapture capture)
+    {
+        var colorSources = capture.FrameSources.Values
+            .Where(s => s.Info.SourceKind == MediaFrameSourceKind.Color)
+            .ToList();
+
+        if (colorSources.Count > 0)
+        {
+            return colorSources.FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoRecord)
+                   ?? colorSources.FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoPreview)
+                   ?? colorSources.First();
+        }
+
+        // Avoid Infrared sources (Surface Hello IR sensor)
+        var nonIr = capture.FrameSources.Values.FirstOrDefault(s => s.Info.SourceKind != MediaFrameSourceKind.Infrared);
+        if (nonIr is not null)
+            return nonIr;
+
+        return capture.FrameSources.Values.FirstOrDefault()
+               ?? throw new CameraException("Keine kompatible Videoquelle für die Kamera gefunden.");
+    }
+
+    private static MediaFrameFormat? SelectFormat(MediaFrameSource source) =>
+        source.SupportedFormats
+            .Where(f => f.VideoFormat.Width <= MaxPreviewWidth && FrameRate(f) >= 15)
+            .OrderByDescending(f => (long)f.VideoFormat.Width * f.VideoFormat.Height)
+            .ThenByDescending(FrameRate)
+            .FirstOrDefault();
+
+    private static double FrameRate(MediaFrameFormat format) =>
+        format.FrameRate.Denominator == 0 ? 0 : (double)format.FrameRate.Numerator / format.FrameRate.Denominator;
 
     private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
     {
@@ -206,16 +348,14 @@ public sealed class WebcamCamera : ICameraService
         SoftwareBitmap? converted = null;
         try
         {
-            if (softwareBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
-                softwareBitmap.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
-            {
-                converted = SoftwareBitmap.Convert(
+            var target = (softwareBitmap.BitmapPixelFormat == BitmapPixelFormat.Bgra8 &&
+                          softwareBitmap.BitmapAlphaMode == BitmapAlphaMode.Premultiplied)
+                ? softwareBitmap
+                : (converted = SoftwareBitmap.Convert(
                     softwareBitmap,
                     BitmapPixelFormat.Bgra8,
-                    BitmapAlphaMode.Premultiplied);
-            }
+                    BitmapAlphaMode.Premultiplied));
 
-            var target = converted ?? softwareBitmap;
             var width = target.PixelWidth;
             var height = target.PixelHeight;
 
@@ -233,6 +373,10 @@ public sealed class WebcamCamera : ICameraService
 
             pending?.TrySetResult(liveFrame);
             FrameReady?.Invoke(this, liveFrame);
+        }
+        catch
+        {
+            // Drop damaged frame
         }
         finally
         {
@@ -254,7 +398,11 @@ public sealed class WebcamCamera : ICameraService
             if (_liveViewRunning)
             {
                 _liveViewRunning = false;
-                await _reader.StopAsync();
+                try
+                {
+                    await _reader.StopAsync();
+                }
+                catch { }
             }
 
             _reader.Dispose();
