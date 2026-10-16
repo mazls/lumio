@@ -101,6 +101,36 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Photo Branding & Event Text -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="FOTO-BRANDING &amp; EVENT-TEXT" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <CheckBox x:Name="ShowLogoCheckBox"
+                                      Content="Lumio-Logo in Foto-Ecke einblenden"
+                                      FontSize="16"
+                                      Foreground="White"
+                                      Margin="0,0,0,10" />
+
+                            <TextBlock Text="Logo-Position" Style="{StaticResource FieldLabel}" />
+                            <ComboBox x:Name="LogoPositionComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,14" />
+
+                            <CheckBox x:Name="ShowEventTextCheckBox"
+                                      Content="Event-Text auf Fotos drucken / einblenden"
+                                      FontSize="16"
+                                      Foreground="White"
+                                      Margin="0,0,0,10" />
+
+                            <TextBlock Text="Format des Event-Textes" Style="{StaticResource FieldLabel}" />
+                            <ComboBox x:Name="EventTextFormatComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,8" />
+
+                            <TextBlock x:Name="EventTextPreviewCaption"
+                                       Text="💡 Vorschau auf dem Foto: Mein Event – 2026"
+                                       Style="{StaticResource Caption}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+
                     <!-- Camera Selection (Surface Front, Surface Back, Nikon DSLR, Simulated) -->
                     <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
                         <StackPanel>

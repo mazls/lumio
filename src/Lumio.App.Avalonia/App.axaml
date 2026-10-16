@@ -4,6 +4,39 @@
              RequestedThemeVariant="Dark">
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="{StaticResource SurfaceElevatedBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="ComboBox:pointerover /template/ Border#Background">
+            <Setter Property="Background" Value="#2A2A44" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentOrangeBrush}" />
+        </Style>
+        <Style Selector="ComboBox /template/ Border#PopupBorder">
+            <Setter Property="Background" Value="#161628" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentOrangeBrush}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Background" Value="#161628" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource AccentOrangeBrush}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
     </Application.Styles>
 
     <Application.Resources>

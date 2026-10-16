@@ -84,6 +84,26 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Photo Branding & Event Text -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="FOTO-BRANDING &amp; EVENT-TEXT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                            <CheckBox x:Name="ShowLogoCheckBox" Content="Lumio-Logo in Foto-Ecke einblenden" />
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Logo-Position" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <ComboBox x:Name="LogoPositionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="ShowEventTextCheckBox" Content="Event-Text auf Fotos drucken / einblenden" Margin="0,4,0,0" />
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Format des Event-Textes" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <ComboBox x:Name="EventTextFormatComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                <TextBlock Text="💡 Vorschau auf dem Foto: Mein Event – 2026" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,2,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Camera Selection -->
                     <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
                         <StackPanel Spacing="10">

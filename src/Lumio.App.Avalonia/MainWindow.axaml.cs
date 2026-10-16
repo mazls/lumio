@@ -302,15 +302,25 @@ public partial class MainWindow : Window
         }
 
         CountdownNumberText.Text = "🎨";
-        CountdownStatusText.Text = "Collage wird gerendert...";
+        CountdownStatusText.Text = "Foto wird aufbereitet...";
 
+        var settings = _settingsService.Current;
+        var formattedEvent = PhotoBrandingHelper.FormatEventText(settings.EventName, settings.EventTextFormat);
         var metadata = new Dictionary<string, string>
         {
-            ["EventName"] = _settingsService.Current.EventName,
-            ["Date"] = DateTime.Now.ToString("dd.MM.yyyy"),
+            ["EventName"] = formattedEvent,
+            ["Date"] = settings.EventTextFormat == "EventAndDate" ? DateTime.Now.ToString("dd.MM.yyyy") : string.Empty,
+            ["Year"] = DateTime.Now.Year.ToString(),
         };
 
-        var finalJpeg = await Task.Run(() => _renderer.Render(_activeTemplate, capturedPhotos, metadata));
+        var finalJpeg = await Task.Run(() => _renderer.Render(
+            _activeTemplate,
+            capturedPhotos,
+            metadata,
+            jpegQuality: 95,
+            embedLogo: settings.EmbedLogoOnPhotos,
+            logoPosition: settings.LogoPosition,
+            embedEventText: settings.EmbedEventTextOnPhotos));
         await _storage.SaveCollageAsync(finalJpeg, DateTimeOffset.Now);
 
         ShowReview(finalJpeg);

@@ -184,16 +184,143 @@
         </Setter>
     </Style>
 
+    <!-- ==== ComboBoxItem Style (Dark theme, ultra readable, high contrast) ==== -->
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Background" Value="{StaticResource SurfaceElevatedBrush}" />
+        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="MinHeight" Value="46" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="itemBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="8"
+                            Margin="4,2">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="itemBorder" Property="Background" Value="{StaticResource AccentOrangeBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="itemBorder" Property="Background" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="FontWeight" Value="Bold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==== Touch ComboBox ToggleButton Template ==== -->
+    <ControlTemplate x:Key="ComboBoxToggleButtonTemplate" TargetType="ToggleButton">
+        <Border x:Name="border"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="40" />
+                </Grid.ColumnDefinitions>
+                <Path Grid.Column="1"
+                      Data="M 0 0 L 6 6 L 12 0 Z"
+                      Fill="{StaticResource AccentOrangeBrush}"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentOrangeBrush}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
     <!-- ==== Touch ComboBox ==== -->
     <Style x:Key="TouchComboBox" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
-        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontSize" Value="17" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
         <Setter Property="Background" Value="{StaticResource SurfaceElevatedBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="Padding" Value="16,12" />
-        <Setter Property="MinHeight" Value="54" />
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="MinHeight" Value="52" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton Name="ToggleButton"
+                                      Template="{StaticResource ComboBoxToggleButtonTemplate}"
+                                      Grid.Column="2"
+                                      Focusable="false"
+                                      IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                      ClickMode="Press"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}" />
+                        <ContentPresenter Name="ContentSite"
+                                          IsHitTestVisible="False"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          Margin="16,4,44,4"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Left" />
+                        <Popup Name="Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Slide">
+                            <Grid Name="DropDown"
+                                  SnapsToDevicePixels="True"
+                                  MinWidth="{TemplateBinding ActualWidth}"
+                                  MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                <Border x:Name="DropDownBorder"
+                                        Background="{StaticResource SurfaceBrush}"
+                                        BorderThickness="1.5"
+                                        BorderBrush="{StaticResource AccentOrangeBrush}"
+                                        CornerRadius="14"
+                                        Padding="6"
+                                        Margin="0,4,0,8">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="6" Opacity="0.8" />
+                                    </Border.Effect>
+                                    <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="HasItems" Value="false">
+                            <Setter TargetName="DropDownBorder" Property="MinHeight" Value="95" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource AccentOrangeBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </ResourceDictionary>

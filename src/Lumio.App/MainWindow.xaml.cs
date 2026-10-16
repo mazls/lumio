@@ -522,25 +522,28 @@ public partial class MainWindow : Window
         }
 
         // Render collage if multi-shot
-        if (totalShots > 1)
-        {
-            CountdownNumberText.Text = "🎨";
-            CountdownStatusText.Text = "Collage wird gerendert...";
+        CountdownNumberText.Text = "🎨";
+        CountdownStatusText.Text = "Foto wird aufbereitet...";
 
-            var metadata = new Dictionary<string, string>
-            {
-                ["EventName"] = _settingsService.Current.EventName,
-                ["Date"] = DateTime.Now.ToString("dd.MM.yyyy"),
-            };
-
-            var renderer = new CollageRenderer();
-            _lastResultJpeg = await Task.Run(() => renderer.Render(_activeTemplate, capturedPhotos, metadata));
-            finalPath = await _storage.SaveCollageAsync(_lastResultJpeg, DateTimeOffset.Now);
-        }
-        else
+        var settings = _settingsService.Current;
+        var formattedEvent = PhotoBrandingHelper.FormatEventText(settings.EventName, settings.EventTextFormat);
+        var metadata = new Dictionary<string, string>
         {
-            _lastResultJpeg = capturedPhotos[0];
-        }
+            ["EventName"] = formattedEvent,
+            ["Date"] = settings.EventTextFormat == "EventAndDate" ? DateTime.Now.ToString("dd.MM.yyyy") : string.Empty,
+            ["Year"] = DateTime.Now.Year.ToString(),
+        };
+
+        var renderer = new CollageRenderer();
+        _lastResultJpeg = await Task.Run(() => renderer.Render(
+            _activeTemplate,
+            capturedPhotos,
+            metadata,
+            jpegQuality: 95,
+            embedLogo: settings.EmbedLogoOnPhotos,
+            logoPosition: settings.LogoPosition,
+            embedEventText: settings.EmbedEventTextOnPhotos));
+        finalPath = await _storage.SaveCollageAsync(_lastResultJpeg, DateTimeOffset.Now);
 
         _lastResultFilePath = finalPath;
         ShowReview(finalPath!, _lastResultJpeg, isGif: false, isBoomerang: false);

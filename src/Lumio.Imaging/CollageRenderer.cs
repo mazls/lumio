@@ -1,14 +1,43 @@
-﻿using SkiaSharp;
+using SkiaSharp;
 
 namespace Lumio.Imaging;
 
 public sealed class CollageRenderer
 {
+    private static SKBitmap? _logoBitmap;
+    private static readonly object _logoLock = new();
+
+    private static SKBitmap? GetLogoBitmap()
+    {
+        if (_logoBitmap is not null)
+            return _logoBitmap;
+
+        lock (_logoLock)
+        {
+            if (_logoBitmap is not null)
+                return _logoBitmap;
+
+            try
+            {
+                using var stream = typeof(CollageRenderer).Assembly.GetManifestResourceStream("Lumio.Imaging.Assets.logo.png");
+                if (stream is not null)
+                {
+                    _logoBitmap = SKBitmap.Decode(stream);
+                }
+            }
+            catch { }
+            return _logoBitmap;
+        }
+    }
+
     public byte[] Render(
         BoothTemplate template,
         IReadOnlyList<byte[]> photoJpegs,
         Dictionary<string, string>? textVariables = null,
-        int jpegQuality = 95)
+        int jpegQuality = 95,
+        bool embedLogo = true,
+        string logoPosition = "BottomRight",
+        bool embedEventText = true)
     {
         ArgumentNullException.ThrowIfNull(template);
         ArgumentNullException.ThrowIfNull(photoJpegs);
@@ -59,35 +88,74 @@ public sealed class CollageRenderer
         }
 
         // 4. Draw Dynamic Text Elements
-        foreach (var textItem in template.Texts)
+        if (embedEventText)
         {
-            var rawText = textItem.Text;
-            if (textVariables != null)
+            foreach (var textItem in template.Texts)
             {
-                foreach (var (k, v) in textVariables)
+                var rawText = textItem.Text;
+                if (textVariables != null)
                 {
-                    rawText = rawText.Replace($"{{{k}}}", v, StringComparison.OrdinalIgnoreCase);
+                    foreach (var (k, v) in textVariables)
+                    {
+                        rawText = rawText.Replace($"{{{k}}}", v, StringComparison.OrdinalIgnoreCase);
+                    }
                 }
+
+                if (string.IsNullOrWhiteSpace(rawText))
+                    continue;
+
+                var textColor = SKColor.TryParse(textItem.ColorHex, out var parsedColor) ? parsedColor : SKColors.White;
+                using var textPaint = new SKPaint
+                {
+                    IsAntialias = true,
+                    Color = textColor
+                };
+
+                var textAlign = textItem.Alignment.ToLowerInvariant() switch
+                {
+                    "left" => SKTextAlign.Left,
+                    "right" => SKTextAlign.Right,
+                    _ => SKTextAlign.Center
+                };
+
+                using var typeface = SKTypeface.FromFamilyName(textItem.FontName, textItem.Bold ? SKFontStyle.Bold : SKFontStyle.Normal);
+                using var font = new SKFont(typeface, textItem.FontSize);
+
+                canvas.DrawText(rawText, textItem.X, textItem.Y, textAlign, font, textPaint);
             }
+        }
 
-            var textColor = SKColor.TryParse(textItem.ColorHex, out var parsedColor) ? parsedColor : SKColors.White;
-            using var textPaint = new SKPaint
+        // 5. Draw Lumio Logo in selected corner
+        if (embedLogo && !string.Equals(logoPosition, "None", StringComparison.OrdinalIgnoreCase))
+        {
+            var logo = GetLogoBitmap();
+            if (logo != null)
             {
-                IsAntialias = true,
-                Color = textColor
-            };
+                var logoSize = Math.Max(70f, template.Height * 0.08f);
+                var margin = 36f;
+                var destX = logoPosition.ToLowerInvariant() switch
+                {
+                    "bottomleft" or "topleft" => margin,
+                    _ => template.Width - logoSize - margin,
+                };
+                var destY = logoPosition.ToLowerInvariant() switch
+                {
+                    "topleft" or "topright" => margin,
+                    _ => template.Height - logoSize - margin,
+                };
 
-            var textAlign = textItem.Alignment.ToLowerInvariant() switch
-            {
-                "left" => SKTextAlign.Left,
-                "right" => SKTextAlign.Right,
-                _ => SKTextAlign.Center
-            };
+                var logoRect = new SKRect(destX, destY, destX + logoSize, destY + logoSize);
 
-            using var typeface = SKTypeface.FromFamilyName(textItem.FontName, textItem.Bold ? SKFontStyle.Bold : SKFontStyle.Normal);
-            using var font = new SKFont(typeface, textItem.FontSize);
+                // Subtle circular backdrop glow for visibility on both dark and bright photos
+                using var glowPaint = new SKPaint
+                {
+                    Color = new SKColor(16, 16, 32, 160),
+                    IsAntialias = true,
+                };
+                canvas.DrawRoundRect(new SKRoundRect(logoRect, logoSize / 2f, logoSize / 2f), glowPaint);
 
-            canvas.DrawText(rawText, textItem.X, textItem.Y, textAlign, font, textPaint);
+                canvas.DrawBitmap(logo, logoRect, new SKSamplingOptions(SKFilterMode.Linear), null);
+            }
         }
 
         using var image = surface.Snapshot();
@@ -110,7 +178,7 @@ public sealed class CollageRenderer
         if (slot.CornerRadius > 0)
         {
             using var clipPath = new SKPath();
-            clipPath.AddRoundRect(slotRect, slot.CornerRadius, slot.CornerRadius);
+            clipPath.AddRoundRect(new SKRoundRect(slotRect, slot.CornerRadius, slot.CornerRadius));
             canvas.ClipPath(clipPath, antialias: true);
         }
         else
@@ -154,7 +222,7 @@ public sealed class CollageRenderer
             };
 
             if (slot.CornerRadius > 0)
-                canvas.DrawRoundRect(slotRect, slot.CornerRadius, slot.CornerRadius, borderPaint);
+                canvas.DrawRoundRect(new SKRoundRect(slotRect, slot.CornerRadius, slot.CornerRadius), borderPaint);
             else
                 canvas.DrawRect(slotRect, borderPaint);
         }

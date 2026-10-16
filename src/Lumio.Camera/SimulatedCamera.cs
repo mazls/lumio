@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Lumio.Core.Camera;
 using SkiaSharp;
 
@@ -101,6 +101,7 @@ public sealed class SimulatedCamera : ICameraService
             while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
             {
                 TestPattern.Draw(canvas, PreviewWidth, PreviewHeight, _clock.Elapsed);
+                canvas.Flush();
                 FrameReady?.Invoke(this, new LiveViewFrame(
                     bitmap.Bytes, FrameFormat.Bgra32, PreviewWidth, PreviewHeight, bitmap.RowBytes));
             }

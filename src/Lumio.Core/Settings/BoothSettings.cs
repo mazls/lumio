@@ -1,4 +1,4 @@
-﻿namespace Lumio.Core.Settings;
+namespace Lumio.Core.Settings;
 
 /// <summary>Which camera implementation the booth uses.</summary>
 public enum CameraBackend
@@ -49,6 +49,18 @@ public sealed class BoothSettings
     public bool AutoPrint { get; set; } = false;
     public string? SelectedPrinter { get; set; }
     public int MaxPrintCopiesPerSession { get; set; } = 2;
+
+    /// <summary>Whether to embed the Lumio logo in a corner of captured photos.</summary>
+    public bool EmbedLogoOnPhotos { get; set; } = true;
+
+    /// <summary>Position of the embedded logo: "BottomRight", "BottomLeft", "TopRight", "TopLeft", "None".</summary>
+    public string LogoPosition { get; set; } = "BottomRight";
+
+    /// <summary>Whether to print/embed the event text on photos.</summary>
+    public bool EmbedEventTextOnPhotos { get; set; } = true;
+
+    /// <summary>Style format for the event text: "EventAndYear" (z.B. Event – 2026), "EventAndDate" (z.B. Event • 17.10.2026), "EventOnly", "None".</summary>
+    public string EventTextFormat { get; set; } = "EventAndYear";
 
     public DslrCameraSettings CameraControl { get; set; } = new();
 

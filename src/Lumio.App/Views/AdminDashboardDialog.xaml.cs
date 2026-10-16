@@ -25,6 +25,16 @@ public sealed record TemplateOptionItem(string DisplayName, string Id)
     public override string ToString() => DisplayName;
 }
 
+public sealed record LogoPositionOption(string DisplayName, string Id)
+{
+    public override string ToString() => DisplayName;
+}
+
+public sealed record EventTextFormatOption(string DisplayName, string Id)
+{
+    public override string ToString() => DisplayName;
+}
+
 public partial class AdminDashboardDialog : Window
 {
     private readonly SettingsService _settingsService;
@@ -51,6 +61,7 @@ public partial class AdminDashboardDialog : Window
         PopulateDslrOptions();
         PopulatePrinterOptions();
         PopulateTemplateOptions();
+        PopulateBrandingOptions();
     }
 
     private void LoadCurrentSettings()
@@ -180,6 +191,35 @@ public partial class AdminDashboardDialog : Window
         }
     }
 
+    private void PopulateBrandingOptions()
+    {
+        var logoPositions = new List<LogoPositionOption>
+        {
+            new("Unten rechts (Empfohlen)", "BottomRight"),
+            new("Unten links", "BottomLeft"),
+            new("Oben rechts", "TopRight"),
+            new("Oben links", "TopLeft"),
+            new("Deaktiviert (Kein Logo)", "None"),
+        };
+        LogoPositionComboBox.ItemsSource = logoPositions;
+
+        var textFormats = new List<EventTextFormatOption>
+        {
+            new("Event & Jahr (z.B. Mein Event – 2026)", "EventAndYear"),
+            new("Event & Datum (z.B. Mein Event • 17.10.2026)", "EventAndDate"),
+            new("Nur Event-Name (z.B. Mein Event)", "EventOnly"),
+            new("Kein Text auf Fotos", "None"),
+        };
+        EventTextFormatComboBox.ItemsSource = textFormats;
+
+        var current = _settingsService.Current;
+        ShowLogoCheckBox.IsChecked = current.EmbedLogoOnPhotos;
+        LogoPositionComboBox.SelectedItem = logoPositions.FirstOrDefault(o => o.Id.Equals(current.LogoPosition, StringComparison.OrdinalIgnoreCase)) ?? logoPositions[0];
+
+        ShowEventTextCheckBox.IsChecked = current.EmbedEventTextOnPhotos;
+        EventTextFormatComboBox.SelectedItem = textFormats.FirstOrDefault(o => o.Id.Equals(current.EventTextFormat, StringComparison.OrdinalIgnoreCase)) ?? textFormats[0];
+    }
+
     private async void OnTestPrintClick(object sender, RoutedEventArgs e)
     {
         if (PrinterSelectionComboBox.SelectedItem is not PrinterOptionItem printerOption || string.IsNullOrEmpty(printerOption.Name))
@@ -283,6 +323,18 @@ public partial class AdminDashboardDialog : Window
         if (TemplateSelectionComboBox.SelectedItem is TemplateOptionItem selectedTemplate)
         {
             updated.SelectedTemplateId = selectedTemplate.Id;
+        }
+
+        updated.EmbedLogoOnPhotos = ShowLogoCheckBox.IsChecked ?? true;
+        if (LogoPositionComboBox.SelectedItem is LogoPositionOption selectedLogoPos)
+        {
+            updated.LogoPosition = selectedLogoPos.Id;
+        }
+
+        updated.EmbedEventTextOnPhotos = ShowEventTextCheckBox.IsChecked ?? true;
+        if (EventTextFormatComboBox.SelectedItem is EventTextFormatOption selectedTextFmt)
+        {
+            updated.EventTextFormat = selectedTextFmt.Id;
         }
 
         updated.CameraControl.Iso = CameraIsoComboBox.SelectedItem?.ToString() ?? "Auto";

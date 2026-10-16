@@ -12,4 +12,8 @@
     <ProjectReference Include="..\Lumio.Core\Lumio.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\logo.png" Link="Assets\logo.png" />
+  </ItemGroup>
+
 </Project>
