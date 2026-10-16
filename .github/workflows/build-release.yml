@@ -1,0 +1,79 @@
+name: Build & Release Lumio
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package Lumio
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore Lumio.slnx
+
+      - name: Run Unit Tests
+        run: dotnet test Lumio.slnx -c Release --no-restore --verbosity normal
+
+      - name: Publish Standalone (win-x64)
+        run: |
+          dotnet publish src/Lumio.App/Lumio.App.csproj -c Release -r win-x64 --self-contained true -o ./dist/win-x64 -p:PublishSingleFile=false -nologo
+          Compress-Archive -Path ./dist/win-x64/* -DestinationPath ./dist/Lumio-win-x64.zip
+
+      - name: Publish Standalone (win-arm64 for Surface)
+        run: |
+          dotnet publish src/Lumio.App/Lumio.App.csproj -c Release -r win-arm64 --self-contained true -o ./dist/win-arm64 -p:PublishSingleFile=false -nologo
+          Compress-Archive -Path ./dist/win-arm64/* -DestinationPath ./dist/Lumio-win-arm64.zip
+
+      - name: Upload Artifacts (Action Run)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lumio-Builds
+          path: |
+            ./dist/*.zip
+
+      - name: Create GitHub Release (on Tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./dist/Lumio-win-x64.zip
+            ./dist/Lumio-win-arm64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+      - name: Update Latest Release (on Main Push)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Lumio Latest Build"
+          body: |
+            Automatisch gebauter Standalone-Build von Branch `main`.
+            
+            - **Lumio-win-x64.zip**: Für normale 64-Bit Windows PCs & Laptops
+            - **Lumio-win-arm64.zip**: Für Microsoft Surface Pro / Laptop mit ARM-Prozessor
+            
+            Einfach entpacken und `Lumio.exe` oder `Lumio.bat` doppelklicken.
+          files: |
+            ./dist/Lumio-win-x64.zip
+            ./dist/Lumio-win-arm64.zip
+          draft: false
+          prerelease: false

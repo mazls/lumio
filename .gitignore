@@ -1,0 +1,22 @@
+## Build & Output
+bin/
+obj/
+publish/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+*.log
+crash.log
+
+## Local references & temporary files
+dslrBooth/
+external/
+
+## OS Files
+.DS_Store
+Thumbs.db

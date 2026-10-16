@@ -1,0 +1,106 @@
+﻿<Window x:Class="Lumio.App.Views.AdminPinDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Admin PIN"
+        Width="420"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="2"
+            CornerRadius="24"
+            Padding="24,20">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="40" ShadowDepth="10" Opacity="0.8" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Close icon button -->
+            <Button Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Style="{StaticResource CircularIconButton}"
+                    Width="40" Height="40"
+                    Click="OnCloseClick">
+                <TextBlock Text="✕" FontFamily="{StaticResource SymbolFont}" FontSize="18" Foreground="{StaticResource TextSecondaryBrush}" />
+            </Button>
+
+            <!-- Title & Subtitle -->
+            <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,5,0,16">
+                <TextBlock Text="Admin-Bereich" Style="{StaticResource H2}" HorizontalAlignment="Center" />
+                <TextBlock Text="PIN eingeben zum Entsperren" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- PIN Display (Masked Dots) -->
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,16">
+                <TextBlock x:Name="PinDisplayText"
+                           Text="••••"
+                           FontSize="36"
+                           FontFamily="{StaticResource DisplayFont}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}"
+                           HorizontalAlignment="Center" />
+                <TextBlock x:Name="ErrorMessageText"
+                           Text=""
+                           FontSize="14"
+                           FontFamily="{StaticResource DisplayFont}"
+                           Foreground="{StaticResource DangerBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,4,0,0"
+                           Visibility="Collapsed" />
+            </StackPanel>
+
+            <!-- Number Pad -->
+            <Grid Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Row="0" Grid.Column="0" Content="1" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="0" Grid.Column="1" Content="2" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="0" Grid.Column="2" Content="3" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+
+                <Button Grid.Row="1" Grid.Column="0" Content="4" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="1" Grid.Column="1" Content="5" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="1" Grid.Column="2" Content="6" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+
+                <Button Grid.Row="2" Grid.Column="0" Content="7" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="2" Grid.Column="1" Content="8" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="2" Grid.Column="2" Content="9" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+
+                <Button Grid.Row="3" Grid.Column="0" Content="C" Style="{StaticResource PinPadButton}" Click="OnClearClick" Foreground="{StaticResource DangerBrush}" />
+                <Button Grid.Row="3" Grid.Column="1" Content="0" Style="{StaticResource PinPadButton}" Click="OnDigitClick" />
+                <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource PinPadButton}" Click="OnBackspaceClick">
+                    <TextBlock Text="⌫" FontFamily="{StaticResource SymbolFont}" FontSize="24" Foreground="{StaticResource WarningBrush}" />
+                </Button>
+            </Grid>
+
+            <!-- Actions footer info -->
+            <TextBlock Grid.Row="3"
+                       Text="Standard-PIN: 1234 (in Einstellungen änderbar)"
+                       Style="{StaticResource Caption}"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,15,0,0" />
+        </Grid>
+    </Border>
+</Window>

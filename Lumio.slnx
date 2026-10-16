@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lumio.App/Lumio.App.csproj" />
+    <Project Path="src/Lumio.Camera/Lumio.Camera.csproj" />
+    <Project Path="src/Lumio.Core/Lumio.Core.csproj" />
+    <Project Path="src/Lumio.Imaging/Lumio.Imaging.csproj" />
+    <Project Path="src/Lumio.Printing/Lumio.Printing.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lumio.Tests/Lumio.Tests.csproj" />
+  </Folder>
+</Solution>

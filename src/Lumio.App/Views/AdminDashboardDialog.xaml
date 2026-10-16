@@ -1,0 +1,292 @@
+﻿<Window x:Class="Lumio.App.Views.AdminDashboardDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Lumio – Admin Dashboard"
+        Width="680" Height="720"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="2"
+            CornerRadius="24"
+            Padding="32">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="50" ShadowDepth="12" Opacity="0.85" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,24">
+                <StackPanel>
+                    <TextBlock Text="Lumio Admin-Menü" Style="{StaticResource H2}" />
+                    <TextBlock Text="Einstellungen anpassen oder Software verwalten" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                </StackPanel>
+                <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Style="{StaticResource CircularIconButton}"
+                        Width="44" Height="44"
+                        Click="OnCloseClick">
+                    <TextBlock Text="✕" FontSize="18" Foreground="{StaticResource TextSecondaryBrush}" />
+                </Button>
+            </Grid>
+
+            <!-- Settings / Content ScrollViewer -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
+                <StackPanel>
+
+                    <!-- Quick Actions Grid -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="SCHNELLAKTIONEN" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+                                        Style="{StaticResource TouchGlassButton}"
+                                        Click="OnOpenFolderClick">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="📁 " FontSize="18" />
+                                        <TextBlock Text="Fotos-Ordner" FontSize="16" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource TouchGlassButton}"
+                                        BorderBrush="{StaticResource DangerBrush}"
+                                        Click="OnExitAppClick">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🚪 " FontSize="18" />
+                                        <TextBlock Text="Zum Desktop" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Event Name -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="EVENT &amp; SPEICHERORT" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <TextBlock Text="Event-Name (z.B. Hochzeit Marcel &amp; Julia)" Style="{StaticResource FieldLabel}" />
+                            <TextBox x:Name="EventNameTextBox" Style="{StaticResource TouchTextBox}" Margin="0,0,0,14" />
+
+                            <TextBlock Text="Speicherordner für Originalfotos" Style="{StaticResource FieldLabel}" />
+                            <TextBox x:Name="OutputFolderTextBox" Style="{StaticResource TouchTextBox}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Camera Selection (Surface Front, Surface Back, Nikon DSLR, Simulated) -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="KAMERA-AUSWAHL" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <TextBlock Text="Aktive Kamera für die Booth" Style="{StaticResource FieldLabel}" />
+                            <ComboBox x:Name="CameraSelectionComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,10,10" />
+
+                            <TextBlock x:Name="CameraDetectionStatusText"
+                                       Text="Kameras werden erkannt..."
+                                       Style="{StaticResource Caption}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- DSLR & Camera Settings (ISO, Shutter, Aperture, White Balance, EV) -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="DSLR-KAMERASTEUERUNG" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- ISO -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="ISO-Empfindlichkeit" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox x:Name="CameraIsoComboBox" Style="{StaticResource TouchComboBox}" />
+                                </StackPanel>
+
+                                <!-- Shutter Speed -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Verschlusszeit" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox x:Name="CameraShutterComboBox" Style="{StaticResource TouchComboBox}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Aperture -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Blende (f-Zahl)" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox x:Name="CameraApertureComboBox" Style="{StaticResource TouchComboBox}" />
+                                </StackPanel>
+
+                                <!-- White Balance -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Weißabgleich" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox x:Name="CameraWhiteBalanceComboBox" Style="{StaticResource TouchComboBox}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Exposure Compensation -->
+                            <StackPanel Margin="0,0,0,10">
+                                <TextBlock Text="Belichtungskorrektur (Helligkeit)" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="CameraExposureCompComboBox" Style="{StaticResource TouchComboBox}" />
+                            </StackPanel>
+
+                            <TextBlock Text="💡 Tipp für Blitz &amp; Partylicht: ISO 200–400, 1/125s und Blende f/5.6."
+                                       Style="{StaticResource Caption}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Selphy & Printer Settings -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="DRUCKER &amp; CANON SELPHY" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <TextBlock Text="Fotodrucker auswählen (Selphy CP1300 wird automatisch erkannt)" Style="{StaticResource FieldLabel}" />
+                            <ComboBox x:Name="PrinterSelectionComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,12" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+                                        Style="{StaticResource TouchGlassButton}"
+                                        Click="OnTestPrintClick">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🖨️ " FontSize="16" />
+                                        <TextBlock Text="Testdruck senden" FontSize="15" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+
+                                <CheckBox Grid.Column="2"
+                                          x:Name="AutoPrintCheckBox"
+                                          Content="Auto-Druck nach Aufnahme"
+                                          FontSize="14"
+                                          FontFamily="{StaticResource DisplayFont}"
+                                          Foreground="{StaticResource TextPrimaryBrush}"
+                                          VerticalAlignment="Center" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Template Selection -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="TEMPLATES &amp; FOTOSTREIFEN" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <TextBlock Text="Standard-Template für Ausdrucke" Style="{StaticResource FieldLabel}" />
+                            <ComboBox x:Name="TemplateSelectionComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,12" />
+
+                            <Button Style="{StaticResource TouchGlassButton}"
+                                    HorizontalAlignment="Left"
+                                    Click="OnOpenTemplatesFolderClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🎨 " FontSize="16" />
+                                    <TextBlock Text="Templates-Ordner öffnen (eigene JSON-Vorlagen)" FontSize="15" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Timing & Behaviour -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="TIMING &amp; ANZEIGE" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Countdown (Sekunden)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox x:Name="CountdownTextBox" Style="{StaticResource TouchTextBox}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Vorschau-Dauer (Sekunden)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox x:Name="ReviewTextBox" Style="{StaticResource TouchTextBox}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Margin="0,0,0,14">
+                                <TextBlock Text="Pause zwischen Serienfotos (Sekunden)" Style="{StaticResource FieldLabel}" />
+                                <TextBox x:Name="MultiShotPauseTextBox" Style="{StaticResource TouchTextBox}" Width="200" HorizontalAlignment="Left" />
+                                <TextBlock Text="Zeit zum Posen-Wechseln und kurze Bildkontrolle" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="MirrorLiveViewCheckBox"
+                                      Content="Live-Vorschau spiegeln (wie ein Spiegel)"
+                                      FontSize="16"
+                                      FontFamily="{StaticResource DisplayFont}"
+                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                      VerticalContentAlignment="Center"
+                                      Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Security / PIN -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="SICHERHEIT" Style="{StaticResource Eyebrow}" Margin="0,0,0,12" />
+
+                            <TextBlock Text="Admin-PIN ändern (4-8 Ziffern)" Style="{StaticResource FieldLabel}" />
+                            <TextBox x:Name="AdminPinTextBox" Style="{StaticResource TouchTextBox}" MaxLength="8" />
+                            <TextBlock Text="Damit Gäste nicht unerlaubt auf den Desktop gelangen." Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Bottom Buttons: Save & Back -->
+            <Grid Grid.Row="2" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        Content="Zurück zur Booth"
+                        Style="{StaticResource TouchGlassButton}"
+                        Click="OnCloseClick" />
+
+                <Button Grid.Column="2"
+                        Content="Speichern"
+                        Style="{StaticResource TouchActionButton}"
+                        Click="OnSaveClick" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

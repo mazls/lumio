@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Company>Lumio</Company>
+    <Product>Lumio</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>
