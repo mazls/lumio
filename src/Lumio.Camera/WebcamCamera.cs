@@ -23,6 +23,7 @@ public sealed class WebcamCamera : ICameraService
     private MediaFrameReader? _reader;
     private TaskCompletionSource<LiveViewFrame>? _nextFrame;
     private bool _liveViewRunning;
+    private int _isProcessingFrame;
     private CameraStatus _status;
 
     public WebcamCamera(string? deviceId)
@@ -335,54 +336,86 @@ public sealed class WebcamCamera : ICameraService
             .Where(f => f.VideoFormat.Width <= MaxPreviewWidth && FrameRate(f) >= 15)
             .OrderByDescending(f => (long)f.VideoFormat.Width * f.VideoFormat.Height)
             .ThenByDescending(FrameRate)
-            .FirstOrDefault();
+            .FirstOrDefault()
+        ?? source.SupportedFormats.FirstOrDefault();
 
     private static double FrameRate(MediaFrameFormat format) =>
         format.FrameRate.Denominator == 0 ? 0 : (double)format.FrameRate.Numerator / format.FrameRate.Denominator;
 
-    private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
+    private async void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
     {
-        using var frame = sender.TryAcquireLatestFrame();
-        var videoFrame = frame?.VideoMediaFrame;
-        var softwareBitmap = videoFrame?.SoftwareBitmap;
-
-        if (softwareBitmap is null)
+        if (Interlocked.CompareExchange(ref _isProcessingFrame, 1, 0) != 0)
             return;
 
-        SoftwareBitmap? converted = null;
         try
         {
-            var target = (softwareBitmap.BitmapPixelFormat == BitmapPixelFormat.Bgra8 &&
-                          softwareBitmap.BitmapAlphaMode == BitmapAlphaMode.Premultiplied)
-                ? softwareBitmap
-                : (converted = SoftwareBitmap.Convert(
-                    softwareBitmap,
-                    BitmapPixelFormat.Bgra8,
-                    BitmapAlphaMode.Premultiplied));
+            using var frame = sender.TryAcquireLatestFrame();
+            var videoFrame = frame?.VideoMediaFrame;
+            if (videoFrame is null)
+                return;
 
-            var width = target.PixelWidth;
-            var height = target.PixelHeight;
+            SoftwareBitmap? softwareBitmap = videoFrame.SoftwareBitmap;
+            bool ownsSoftwareBitmap = false;
 
-            var pixels = new byte[width * height * 4];
-            target.CopyToBuffer(pixels.AsBuffer());
-
-            // Ensure all pixels have alpha = 255 (opaque), avoiding black screen if driver delivers alpha = 0
-            for (var i = 3; i < pixels.Length; i += 4)
+            if (softwareBitmap is null && videoFrame.Direct3DSurface is not null)
             {
-                pixels[i] = 255;
+                try
+                {
+                    softwareBitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(videoFrame.Direct3DSurface, BitmapAlphaMode.Premultiplied).AsTask();
+                    ownsSoftwareBitmap = true;
+                }
+                catch
+                {
+                    return;
+                }
             }
 
-            var liveFrame = new LiveViewFrame(pixels, FrameFormat.Bgra32, width, height, width * 4);
+            if (softwareBitmap is null)
+                return;
 
-            TaskCompletionSource<LiveViewFrame>? pending;
-            lock (_frameLock)
+            SoftwareBitmap? converted = null;
+            try
             {
-                pending = _nextFrame;
-                _nextFrame = null;
-            }
+                var target = (softwareBitmap.BitmapPixelFormat == BitmapPixelFormat.Bgra8 &&
+                              softwareBitmap.BitmapAlphaMode == BitmapAlphaMode.Premultiplied)
+                    ? softwareBitmap
+                    : (converted = SoftwareBitmap.Convert(
+                        softwareBitmap,
+                        BitmapPixelFormat.Bgra8,
+                        BitmapAlphaMode.Premultiplied));
 
-            pending?.TrySetResult(liveFrame);
-            FrameReady?.Invoke(this, liveFrame);
+                var width = target.PixelWidth;
+                var height = target.PixelHeight;
+
+                var pixels = new byte[width * height * 4];
+                target.CopyToBuffer(pixels.AsBuffer());
+
+                // Ensure all pixels have alpha = 255 (opaque), avoiding black screen if driver delivers alpha = 0
+                for (var i = 3; i < pixels.Length; i += 4)
+                {
+                    pixels[i] = 255;
+                }
+
+                var liveFrame = new LiveViewFrame(pixels, FrameFormat.Bgra32, width, height, width * 4);
+
+                TaskCompletionSource<LiveViewFrame>? pending;
+                lock (_frameLock)
+                {
+                    pending = _nextFrame;
+                    _nextFrame = null;
+                }
+
+                pending?.TrySetResult(liveFrame);
+                FrameReady?.Invoke(this, liveFrame);
+            }
+            finally
+            {
+                converted?.Dispose();
+                if (ownsSoftwareBitmap)
+                {
+                    softwareBitmap.Dispose();
+                }
+            }
         }
         catch
         {
@@ -390,7 +423,7 @@ public sealed class WebcamCamera : ICameraService
         }
         finally
         {
-            converted?.Dispose();
+            Interlocked.Exchange(ref _isProcessingFrame, 0);
         }
     }
 

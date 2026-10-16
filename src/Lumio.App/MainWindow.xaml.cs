@@ -154,16 +154,8 @@ public partial class MainWindow : Window
                 LiveViewImageControl.Source = _liveBitmap;
             }
 
-            _liveBitmap.Lock();
-            try
-            {
-                var rect = new Int32Rect(0, 0, frame.Width, frame.Height);
-                _liveBitmap.WritePixels(rect, frame.Data, frame.Stride, 0);
-            }
-            finally
-            {
-                _liveBitmap.Unlock();
-            }
+            var rect = new Int32Rect(0, 0, frame.Width, frame.Height);
+            _liveBitmap.WritePixels(rect, frame.Data, frame.Stride, 0);
         }, DispatcherPriority.Render);
     }
 

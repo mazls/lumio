@@ -14,7 +14,8 @@
         <Image x:Name="LiveViewImageControl"
                Stretch="UniformToFill"
                HorizontalAlignment="Center"
-               VerticalAlignment="Center">
+               VerticalAlignment="Center"
+               RenderTransformOrigin="50%,50%">
             <Image.RenderTransform>
                 <ScaleTransform ScaleX="-1" ScaleY="1" />
             </Image.RenderTransform>
