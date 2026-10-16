@@ -139,7 +139,7 @@ public sealed class GifTests
                 canvas.DrawRect(0, 0, 320, 240, paint);
                 using var font = new SKFont(SKTypeface.Default, 40);
                 using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
-                canvas.DrawText($"Frame {i}", 60, 120, font, textPaint);
+                canvas.DrawText($"Frame {i}", 60, 120, SKTextAlign.Left, font, textPaint);
             }
             frames.Add(bmp);
         }
