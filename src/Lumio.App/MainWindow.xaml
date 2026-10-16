@@ -145,8 +145,15 @@
                     <Button x:Name="ModeBoomerangButton"
                             Content="⚡ Boomerang"
                             Style="{StaticResource TouchGlassButton}"
+                            Margin="0,0,10,0"
                             Padding="18,10"
                             Click="OnSelectModeBoomerangClick" />
+
+                    <Button x:Name="ModeVideoButton"
+                            Content="📹 Videobotschaft"
+                            Style="{StaticResource TouchGlassButton}"
+                            Padding="18,10"
+                            Click="OnSelectModeVideoClick" />
                 </StackPanel>
 
                 <!-- Big Touch Callout Button -->
@@ -224,6 +231,48 @@
                                Margin="0,24,0,0" />
                 </StackPanel>
             </Border>
+        </Grid>
+
+        <!-- ==================== 4b. VIDEO RECORDING OVERLAY ==================== -->
+        <Grid x:Name="VideoRecordingOverlayGrid" Visibility="Collapsed" IsHitTestVisible="True">
+            <!-- Top REC Badge and Timer -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0"
+                    Background="#CC0B0D13" BorderBrush="#88FF3D9A" BorderThickness="1.5"
+                    CornerRadius="30" Padding="24,10,28,10">
+                <Border.Effect>
+                    <DropShadowEffect Color="#FF3366" BlurRadius="25" ShadowDepth="0" Opacity="0.8" />
+                </Border.Effect>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="RecBlinkDot" Width="18" Height="18" Fill="#FF3366" Margin="0,0,14,0" />
+                    <TextBlock Text="REC" FontWeight="Black" FontSize="20" Foreground="#FF3366" VerticalAlignment="Center" Margin="0,0,18,0" />
+                    <TextBlock x:Name="VideoTimerText" Text="00:00 / 00:20" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Bottom Control: Stop Recording Button -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,50">
+                <Button x:Name="StopRecordingButton"
+                        Style="{StaticResource TouchActionButton}"
+                        Background="#E01F2937"
+                        BorderBrush="#FF3366"
+                        BorderThickness="2"
+                        Height="90"
+                        Padding="40,0"
+                        Click="OnStopRecordingClick">
+                    <Button.Effect>
+                        <DropShadowEffect Color="#FF3366" BlurRadius="30" ShadowDepth="0" Opacity="0.7" />
+                    </Button.Effect>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⏹️" FontSize="36" VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <TextBlock Text="AUFNAHME BEENDEN" FontSize="26" FontWeight="ExtraBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="Tippe hier, wenn du fertig gesprochen hast"
+                           Style="{StaticResource Subtitle}"
+                           FontSize="16"
+                           HorizontalAlignment="Center"
+                           Margin="0,14,0,0" />
+            </StackPanel>
         </Grid>
 
         <!-- ==================== 5. FLASH EFFECT ==================== -->

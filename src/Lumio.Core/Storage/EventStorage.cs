@@ -1,4 +1,4 @@
-﻿using Lumio.Core.Camera;
+using Lumio.Core.Camera;
 using Lumio.Core.Settings;
 
 namespace Lumio.Core.Storage;
@@ -12,6 +12,7 @@ public sealed class EventStorage
     public const string OriginalsFolderName = "Originale";
     public const string CollagesFolderName = "Collagen";
     public const string GifsFolderName = "GIFs";
+    public const string VideosFolderName = "Videos";
 
     private readonly SettingsService _settings;
     private readonly TimeProvider _time;
@@ -32,6 +33,47 @@ public sealed class EventStorage
     public string GetOriginalsFolder() => Path.Combine(GetEventFolder(), OriginalsFolderName);
     public string GetCollagesFolder() => Path.Combine(GetEventFolder(), CollagesFolderName);
     public string GetGifsFolder() => Path.Combine(GetEventFolder(), GifsFolderName);
+    public string GetVideosFolder() => Path.Combine(GetEventFolder(), VideosFolderName);
+
+    public async Task<string> SaveVideoAsync(byte[] videoData, DateTimeOffset timestamp, string extension = "mp4", CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(videoData);
+
+        var folder = GetVideosFolder();
+        Directory.CreateDirectory(folder);
+
+        var ext = extension.TrimStart('.');
+        var baseName = $"VIDEO_{timestamp.ToLocalTime():yyyyMMdd_HHmmss}";
+        var path = Path.Combine(folder, $"{baseName}.{ext}");
+        for (var i = 1; File.Exists(path); i++)
+            path = Path.Combine(folder, $"{baseName}_{i}.{ext}");
+
+        await File.WriteAllBytesAsync(path, videoData, cancellationToken).ConfigureAwait(false);
+        return path;
+    }
+
+    public async Task<string> MoveVideoAsync(string sourcePath, DateTimeOffset timestamp, string extension = "mp4", CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+
+        var folder = GetVideosFolder();
+        Directory.CreateDirectory(folder);
+
+        var ext = extension.TrimStart('.');
+        var baseName = $"VIDEO_{timestamp.ToLocalTime():yyyyMMdd_HHmmss}";
+        var targetPath = Path.Combine(folder, $"{baseName}.{ext}");
+        for (var i = 1; File.Exists(targetPath); i++)
+            targetPath = Path.Combine(folder, $"{baseName}_{i}.{ext}");
+
+        await Task.Run(() =>
+        {
+            if (File.Exists(targetPath))
+                File.Delete(targetPath);
+            File.Move(sourcePath, targetPath);
+        }, cancellationToken).ConfigureAwait(false);
+
+        return targetPath;
+    }
 
     public async Task<string> SaveGifAsync(byte[] gifData, DateTimeOffset timestamp, string prefix = "GIF", CancellationToken cancellationToken = default)
     {
@@ -87,6 +129,7 @@ public sealed class EventStorage
         var collagesDir = GetCollagesFolder();
         var originalsDir = GetOriginalsFolder();
         var gifsDir = GetGifsFolder();
+        var videosDir = GetVideosFolder();
 
         if (Directory.Exists(collagesDir))
             list.AddRange(Directory.EnumerateFiles(collagesDir, "*.jpg"));
@@ -96,6 +139,12 @@ public sealed class EventStorage
 
         if (Directory.Exists(originalsDir))
             list.AddRange(Directory.EnumerateFiles(originalsDir, "*.jpg"));
+
+        if (Directory.Exists(videosDir))
+        {
+            list.AddRange(Directory.EnumerateFiles(videosDir, "*.mp4"));
+            list.AddRange(Directory.EnumerateFiles(videosDir, "*.avi"));
+        }
 
         return list
             .OrderByDescending(File.GetLastWriteTimeUtc)

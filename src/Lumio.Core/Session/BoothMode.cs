@@ -1,4 +1,4 @@
-﻿namespace Lumio.Core.Session;
+namespace Lumio.Core.Session;
 
 /// <summary>
 /// Active capture mode chosen by the guest on the start screen.
@@ -19,4 +19,7 @@ public enum BoothMode
 
     /// <summary>Rapid burst sequence played forward and backward (ping-pong bounce).</summary>
     Boomerang,
+
+    /// <summary>Short video greeting / guestbook message recorded from live view.</summary>
+    VideoMessage,
 }

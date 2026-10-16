@@ -286,6 +286,19 @@
                                 <TextBlock Text="Zeit zum Posen-Wechseln und kurze Bildkontrolle" Style="{StaticResource Caption}" Margin="0,4,0,0" />
                             </StackPanel>
 
+                            <StackPanel Margin="0,0,0,14">
+                                <CheckBox x:Name="EnableVideoMessagesCheckBox"
+                                          Content="Videobotschaften auf Startbildschirm anzeigen"
+                                          FontSize="16"
+                                          FontFamily="{StaticResource DisplayFont}"
+                                          Foreground="{StaticResource TextPrimaryBrush}"
+                                          VerticalContentAlignment="Center"
+                                          Margin="0,0,0,8" />
+                                <TextBlock Text="Max. Videobotschaft-Dauer (Sekunden)" Style="{StaticResource FieldLabel}" />
+                                <TextBox x:Name="VideoDurationTextBox" Style="{StaticResource TouchTextBox}" Width="200" HorizontalAlignment="Left" />
+                                <TextBlock Text="Gäste können die Aufnahme auch vor Ablauf vorzeitig beenden." Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                            </StackPanel>
+
                             <CheckBox x:Name="MirrorLiveViewCheckBox"
                                       Content="Live-Vorschau spiegeln (wie ein Spiegel)"
                                       FontSize="16"

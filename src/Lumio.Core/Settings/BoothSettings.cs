@@ -22,6 +22,8 @@ public sealed class BoothSettings
     public const int MaxReview = 60;
     public const int MinMultiShotPause = 1;
     public const int MaxMultiShotPause = 10;
+    public const int MinVideoDuration = 5;
+    public const int MaxVideoDuration = 120;
 
     public string EventName { get; set; } = "Mein Event";
 
@@ -49,6 +51,12 @@ public sealed class BoothSettings
     public bool AutoPrint { get; set; } = false;
     public string? SelectedPrinter { get; set; }
     public int MaxPrintCopiesPerSession { get; set; } = 2;
+
+    /// <summary>Maximum recording time for a video message in seconds.</summary>
+    public int VideoMessageDurationSeconds { get; set; } = 20;
+
+    /// <summary>Whether guests can choose the Video Message mode on the start screen.</summary>
+    public bool EnableVideoMessages { get; set; } = true;
 
     /// <summary>Whether to embed the Lumio logo in a corner of captured photos.</summary>
     public bool EmbedLogoOnPhotos { get; set; } = true;
@@ -78,6 +86,7 @@ public sealed class BoothSettings
         CountdownSeconds = Math.Clamp(CountdownSeconds, MinCountdown, MaxCountdown);
         MultiShotPauseSeconds = Math.Clamp(MultiShotPauseSeconds, MinMultiShotPause, MaxMultiShotPause);
         ReviewSeconds = Math.Clamp(ReviewSeconds, MinReview, MaxReview);
+        VideoMessageDurationSeconds = Math.Clamp(VideoMessageDurationSeconds, MinVideoDuration, MaxVideoDuration);
 
         if (string.IsNullOrWhiteSpace(EventName))
             EventName = "Mein Event";

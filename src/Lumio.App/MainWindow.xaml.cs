@@ -185,6 +185,12 @@ public partial class MainWindow : Window
     {
         EventTitleText.Text = settings.EventName.ToUpperInvariant();
         LiveViewScaleTransform.ScaleX = settings.MirrorLiveView ? -1 : 1;
+        ModeVideoButton.Visibility = settings.EnableVideoMessages ? Visibility.Visible : Visibility.Collapsed;
+        if (!settings.EnableVideoMessages && _activeMode == BoothMode.VideoMessage)
+        {
+            _activeMode = BoothMode.SinglePhoto;
+            UpdateModeSelectorButtons();
+        }
 
         if (!string.Equals(_activeTemplate.Id, settings.SelectedTemplateId, StringComparison.OrdinalIgnoreCase))
         {
@@ -234,6 +240,12 @@ public partial class MainWindow : Window
         UpdateModeSelectorButtons();
     }
 
+    private void OnSelectModeVideoClick(object sender, RoutedEventArgs e)
+    {
+        _activeMode = BoothMode.VideoMessage;
+        UpdateModeSelectorButtons();
+    }
+
     private void SetTemplate(string templateId)
     {
         _activeTemplate = _templateStore.GetById(templateId) ?? BuiltInTemplates.CreateSinglePhotoPostcard();
@@ -250,6 +262,7 @@ public partial class MainWindow : Window
         ModeStripButton.BorderBrush = _activeMode == BoothMode.CollageStrip ? accentBrush : glassBorderBrush;
         ModeGifButton.BorderBrush = _activeMode == BoothMode.Gif ? accentBrush : glassBorderBrush;
         ModeBoomerangButton.BorderBrush = _activeMode == BoothMode.Boomerang ? accentBrush : glassBorderBrush;
+        ModeVideoButton.BorderBrush = _activeMode == BoothMode.VideoMessage ? accentBrush : glassBorderBrush;
 
         switch (_activeMode)
         {
@@ -278,6 +291,11 @@ public partial class MainWindow : Window
                 StartButtonLabel.Text = "BOOMERANG STARTEN";
                 StartSubtitleText.Text = "Kurze Action-Bewegung vor & zurück in Dauerschleife";
                 break;
+            case BoothMode.VideoMessage:
+                StartButtonIcon.Text = "📹";
+                StartButtonLabel.Text = "BOTSCHAFT STARTEN";
+                StartSubtitleText.Text = "Nimm eine persönliche Videobotschaft fürs Gästebuch auf";
+                break;
         }
     }
 
@@ -297,7 +315,11 @@ public partial class MainWindow : Window
 
         try
         {
-            if (_activeMode == BoothMode.Boomerang)
+            if (_activeMode == BoothMode.VideoMessage)
+            {
+                await RunVideoMessageWorkflowAsync();
+            }
+            else if (_activeMode == BoothMode.Boomerang)
             {
                 await RunBoomerangWorkflowAsync();
             }
@@ -319,6 +341,74 @@ public partial class MainWindow : Window
         {
             _isCapturing = false;
         }
+    }
+
+    private CancellationTokenSource? _videoRecordingCts;
+
+    private async Task RunVideoMessageWorkflowAsync()
+    {
+        MultiShotStepText.Visibility = Visibility.Collapsed;
+
+        // 1. Countdown: 3... 2... 1...
+        for (var r = _settingsService.Current.CountdownSeconds; r > 0; r--)
+        {
+            CountdownNumberText.Text = r.ToString();
+            CountdownStatusText.Text = r == 1 ? "Bereit machen für deine Botschaft!" : "Videobotschaft startet gleich...";
+            await Task.Delay(1000);
+        }
+
+        // 2. Hide countdown overlay and show active video recording overlay
+        CountdownOverlayGrid.Visibility = Visibility.Collapsed;
+        VideoRecordingOverlayGrid.Visibility = Visibility.Visible;
+
+        var maxDurationSec = _settingsService.Current.VideoMessageDurationSeconds;
+        using var recorder = new VideoRecorder(_activeCamera!);
+        _videoRecordingCts = new CancellationTokenSource();
+
+        recorder.StartRecording();
+        var startTime = DateTime.UtcNow;
+
+        try
+        {
+            while (!_videoRecordingCts.IsCancellationRequested)
+            {
+                var elapsed = DateTime.UtcNow - startTime;
+                var totalSeconds = (int)elapsed.TotalSeconds;
+
+                if (totalSeconds >= maxDurationSec)
+                    break;
+
+                VideoTimerText.Text = $"{elapsed.Minutes:D2}:{elapsed.Seconds:D2} / {maxDurationSec / 60:D2}:{maxDurationSec % 60:D2}";
+                RecBlinkDot.Opacity = (elapsed.Milliseconds < 500) ? 1.0 : 0.2;
+
+                await Task.Delay(100);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        // 3. Processing overlay
+        VideoRecordingOverlayGrid.Visibility = Visibility.Collapsed;
+        CountdownOverlayGrid.Visibility = Visibility.Visible;
+        CountdownNumberText.Text = "⏳";
+        CountdownStatusText.Text = "Videobotschaft wird gespeichert...";
+
+        var result = await recorder.StopRecordingAsync();
+
+        // 4. Move to event storage
+        var extension = Path.GetExtension(result.VideoPath).TrimStart('.');
+        var finalPath = await _storage.MoveVideoAsync(result.VideoPath, DateTimeOffset.Now, extension: extension);
+
+        _lastResultFilePath = finalPath;
+        _lastResultJpeg = result.ThumbnailJpeg;
+
+        ShowReview(finalPath, result.ThumbnailJpeg, isGif: false, isBoomerang: false, isVideo: true);
+    }
+
+    private void OnStopRecordingClick(object sender, RoutedEventArgs e)
+    {
+        _videoRecordingCts?.Cancel();
     }
 
     private async Task RunBoomerangWorkflowAsync()
@@ -567,11 +657,29 @@ public partial class MainWindow : Window
         FlashBorder.BeginAnimation(UIElement.OpacityProperty, anim);
     }
 
-    private void ShowReview(string filePath, byte[]? jpegBytes, bool isGif, bool isBoomerang)
+    private void ShowReview(string filePath, byte[]? jpegBytes, bool isGif, bool isBoomerang, bool isVideo = false)
     {
         CountdownOverlayGrid.Visibility = Visibility.Collapsed;
+        VideoRecordingOverlayGrid.Visibility = Visibility.Collapsed;
 
-        if (isGif)
+        if (isVideo)
+        {
+            _reviewGifPlayer.Stop();
+            if (jpegBytes is not null)
+            {
+                using var stream = new MemoryStream(jpegBytes);
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.StreamSource = stream;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                ReviewImageControl.Source = bitmap;
+            }
+            PrintButton.Visibility = Visibility.Collapsed;
+            ReviewStatusTitleText.Text = "📹 VIDEOBOTSCHAFT GESPEICHERT!";
+        }
+        else if (isGif)
         {
             _reviewGifPlayer.Play(filePath);
             PrintButton.Visibility = Visibility.Collapsed;
@@ -669,6 +777,7 @@ public partial class MainWindow : Window
 
         ReviewGrid.Visibility = Visibility.Collapsed;
         CountdownOverlayGrid.Visibility = Visibility.Collapsed;
+        VideoRecordingOverlayGrid.Visibility = Visibility.Collapsed;
         IdleOverlayGrid.Visibility = Visibility.Visible;
         PrintButton.IsEnabled = true;
         PrintButtonLabelText.Text = "Drucken";

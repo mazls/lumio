@@ -72,6 +72,8 @@ public partial class AdminDashboardDialog : Window
         CountdownTextBox.Text = current.CountdownSeconds.ToString();
         MultiShotPauseTextBox.Text = current.MultiShotPauseSeconds.ToString();
         ReviewTextBox.Text = current.ReviewSeconds.ToString();
+        EnableVideoMessagesCheckBox.IsChecked = current.EnableVideoMessages;
+        VideoDurationTextBox.Text = current.VideoMessageDurationSeconds.ToString();
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         AdminPinTextBox.Text = current.AdminPin;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
@@ -301,6 +303,10 @@ public partial class AdminDashboardDialog : Window
 
         if (int.TryParse(ReviewTextBox.Text, out var review))
             updated.ReviewSeconds = review;
+
+        updated.EnableVideoMessages = EnableVideoMessagesCheckBox.IsChecked ?? true;
+        if (int.TryParse(VideoDurationTextBox.Text, out var vidDur))
+            updated.VideoMessageDurationSeconds = vidDur;
 
         updated.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         updated.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;

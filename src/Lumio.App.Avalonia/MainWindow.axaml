@@ -115,6 +115,7 @@
                     <Button x:Name="ModeStripButton" Content="🎞️ Doppelstreifen" CornerRadius="18" Padding="16,10" Click="OnSelectModeStripClick" />
                     <Button x:Name="ModeGifButton" Content="🎬 GIF" CornerRadius="18" Padding="16,10" Click="OnSelectModeGifClick" />
                     <Button x:Name="ModeBoomerangButton" Content="⚡ Boomerang" CornerRadius="18" Padding="16,10" Click="OnSelectModeBoomerangClick" />
+                    <Button x:Name="ModeVideoButton" Content="📹 Videobotschaft" CornerRadius="18" Padding="16,10" Click="OnSelectModeVideoClick" />
                 </StackPanel>
 
                 <!-- Big Touch Callout Button -->
@@ -184,6 +185,41 @@
                            FontSize="24"
                            FontWeight="Bold"
                            Foreground="White"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- ==================== 4b. VIDEO RECORDING OVERLAY ==================== -->
+        <Grid x:Name="VideoRecordingOverlayGrid" IsVisible="False" IsHitTestVisible="True">
+            <!-- Top REC Badge and Timer -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,35,0,0"
+                    Background="#CC0B0D13" BorderBrush="#88FF3D9A" BorderThickness="1.5"
+                    CornerRadius="25" Padding="20,8,24,8">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+                    <Ellipse x:Name="RecBlinkDot" Width="16" Height="16" Fill="#FF3366" VerticalAlignment="Center" />
+                    <TextBlock Text="REC" FontWeight="Black" FontSize="18" Foreground="#FF3366" VerticalAlignment="Center" />
+                    <TextBlock x:Name="VideoTimerText" Text="00:00 / 00:20" FontSize="22" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Bottom Control: Stop Recording Button -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,45" Spacing="10">
+                <Button x:Name="StopRecordingButton"
+                        Background="#E01F2937"
+                        BorderBrush="#FF3366"
+                        BorderThickness="2"
+                        Height="80"
+                        CornerRadius="40"
+                        Padding="36,0"
+                        Click="OnStopRecordingClick">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="⏹️" FontSize="30" VerticalAlignment="Center" />
+                        <TextBlock Text="AUFNAHME BEENDEN" FontSize="24" FontWeight="ExtraBold" Foreground="White" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="Tippe hier, wenn du fertig gesprochen hast"
+                           FontSize="15"
+                           Foreground="{StaticResource TextSecondaryBrush}"
                            HorizontalAlignment="Center" />
             </StackPanel>
         </Grid>

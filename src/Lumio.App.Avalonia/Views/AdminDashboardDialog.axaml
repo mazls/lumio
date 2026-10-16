@@ -201,6 +201,12 @@
                                     <NumericUpDown x:Name="ReviewUpDown" Minimum="3" Maximum="60" Value="12" CornerRadius="10" />
                                 </StackPanel>
                             </Grid>
+
+                            <CheckBox x:Name="EnableVideoMessagesCheckBox" Content="Videobotschaften auf dem Startbildschirm aktivieren" Margin="0,8,0,0" />
+                            <StackPanel Spacing="4" Margin="0,4,0,0">
+                                <TextBlock Text="Max. Videobotschaft-Dauer (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <NumericUpDown x:Name="VideoDurationUpDown" Minimum="5" Maximum="120" Value="20" CornerRadius="10" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

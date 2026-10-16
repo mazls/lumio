@@ -84,6 +84,8 @@ public partial class AdminDashboardDialog : Window
         OutputFolderTextBox.Text = current.OutputRoot;
         CountdownUpDown.Value = current.CountdownSeconds;
         ReviewUpDown.Value = current.ReviewSeconds;
+        EnableVideoMessagesCheckBox.IsChecked = current.EnableVideoMessages;
+        VideoDurationUpDown.Value = current.VideoMessageDurationSeconds;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         AdminPinTextBox.Text = current.AdminPin;
@@ -242,6 +244,8 @@ public partial class AdminDashboardDialog : Window
 
         copy.CountdownSeconds = (int)(CountdownUpDown.Value ?? 3);
         copy.ReviewSeconds = (int)(ReviewUpDown.Value ?? 12);
+        copy.EnableVideoMessages = EnableVideoMessagesCheckBox.IsChecked ?? true;
+        copy.VideoMessageDurationSeconds = (int)(VideoDurationUpDown.Value ?? 20);
         copy.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
         copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         if (!string.IsNullOrWhiteSpace(AdminPinTextBox.Text))

@@ -126,7 +126,11 @@ public partial class MainWindow : Window
 
         try
         {
-            if (_activeMode == BoothMode.Boomerang)
+            if (_activeMode == BoothMode.VideoMessage)
+            {
+                await RunVideoMessageWorkflowAsync();
+            }
+            else if (_activeMode == BoothMode.Boomerang)
             {
                 await RunBoomerangWorkflowAsync();
             }
@@ -142,10 +146,82 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             CountdownOverlayGrid.IsVisible = false;
+            VideoRecordingOverlayGrid.IsVisible = false;
             IdleOverlayGrid.IsVisible = true;
             CornerGalleryBorder.IsVisible = true;
             CameraStatusText.Text = $"Fehler: {ex.Message}";
         }
+    }
+
+    private CancellationTokenSource? _videoRecordingCts;
+
+    private async Task RunVideoMessageWorkflowAsync()
+    {
+        MultiShotStepText.IsVisible = false;
+        SeriesPreviewBorder.IsVisible = false;
+
+        // 1. Countdown: 3... 2... 1...
+        for (var r = _settingsService.Current.CountdownSeconds; r > 0; r--)
+        {
+            CountdownNumberText.Text = r.ToString();
+            CountdownStatusText.Text = r == 1 ? "Bereit machen für deine Botschaft!" : "Videobotschaft startet gleich...";
+            await Task.Delay(1000);
+        }
+
+        // 2. Switch to active video recording overlay
+        CountdownOverlayGrid.IsVisible = false;
+        VideoRecordingOverlayGrid.IsVisible = true;
+
+        var maxDurationSec = _settingsService.Current.VideoMessageDurationSeconds;
+        using var recorder = new VideoRecorder(_activeCamera!);
+        _videoRecordingCts = new CancellationTokenSource();
+
+        recorder.StartRecording();
+        var startTime = DateTime.UtcNow;
+
+        try
+        {
+            while (!_videoRecordingCts.IsCancellationRequested)
+            {
+                var elapsed = DateTime.UtcNow - startTime;
+                var totalSeconds = (int)elapsed.TotalSeconds;
+
+                if (totalSeconds >= maxDurationSec)
+                    break;
+
+                VideoTimerText.Text = $"{elapsed.Minutes:D2}:{elapsed.Seconds:D2} / {maxDurationSec / 60:D2}:{maxDurationSec % 60:D2}";
+                RecBlinkDot.Opacity = (elapsed.Milliseconds < 500) ? 1.0 : 0.2;
+
+                await Task.Delay(100);
+            }
+        }
+        catch (OperationCanceledException) { }
+
+        // 3. Processing overlay
+        VideoRecordingOverlayGrid.IsVisible = false;
+        CountdownOverlayGrid.IsVisible = true;
+        CountdownNumberText.Text = "⏳";
+        CountdownStatusText.Text = "Videobotschaft wird gespeichert...";
+
+        var result = await recorder.StopRecordingAsync();
+
+        // 4. Move to storage
+        var extension = Path.GetExtension(result.VideoPath).TrimStart('.');
+        var finalPath = await _storage.MoveVideoAsync(result.VideoPath, DateTimeOffset.Now, extension: extension);
+
+        if (result.ThumbnailJpeg is not null)
+        {
+            ShowReview(result.ThumbnailJpeg);
+        }
+        else
+        {
+            OnDoneReviewClick(null, new RoutedEventArgs());
+        }
+    }
+
+    private void OnStopRecordingClick(object? sender, RoutedEventArgs e)
+    {
+        _videoRecordingCts?.Cancel();
     }
 
     private async Task RunBoomerangWorkflowAsync()
@@ -351,10 +427,11 @@ public partial class MainWindow : Window
         catch { }
 
         ReviewGrid.IsVisible = true;
+        PrintButton.IsVisible = _activeMode != BoothMode.Gif && _activeMode != BoothMode.Boomerang && _activeMode != BoothMode.VideoMessage;
         StartReviewCountdown();
         RefreshGalleryCorner();
 
-        if (_settingsService.Current.AutoPrint && _activeMode != BoothMode.Gif && _activeMode != BoothMode.Boomerang)
+        if (_settingsService.Current.AutoPrint && _activeMode != BoothMode.Gif && _activeMode != BoothMode.Boomerang && _activeMode != BoothMode.VideoMessage)
         {
             _ = PrintCurrentPhotoAsync();
         }
@@ -384,6 +461,8 @@ public partial class MainWindow : Window
     {
         _reviewTimer?.Stop();
         ReviewGrid.IsVisible = false;
+        VideoRecordingOverlayGrid.IsVisible = false;
+        CountdownOverlayGrid.IsVisible = false;
         IdleOverlayGrid.IsVisible = true;
         CornerGalleryBorder.IsVisible = true;
     }
@@ -425,6 +504,7 @@ public partial class MainWindow : Window
     private void OnSelectModeStripClick(object? sender, RoutedEventArgs e) => SetMode(BoothMode.CollageStrip);
     private void OnSelectModeGifClick(object? sender, RoutedEventArgs e) => SetMode(BoothMode.Gif);
     private void OnSelectModeBoomerangClick(object? sender, RoutedEventArgs e) => SetMode(BoothMode.Boomerang);
+    private void OnSelectModeVideoClick(object? sender, RoutedEventArgs e) => SetMode(BoothMode.VideoMessage);
 
     private void SetMode(BoothMode mode)
     {
@@ -440,12 +520,14 @@ public partial class MainWindow : Window
 
     private void UpdateModeButtons()
     {
+        ModeVideoButton.IsVisible = _settingsService.Current.EnableVideoMessages;
         StartButtonLabel.Text = _activeMode switch
         {
             BoothMode.CollageQuad => "COLLAGE STARTEN",
             BoothMode.CollageStrip => "STREIFEN STARTEN",
             BoothMode.Gif => "GIF STARTEN",
             BoothMode.Boomerang => "BOOMERANG STARTEN",
+            BoothMode.VideoMessage => "BOTSCHAFT STARTEN",
             _ => "FOTO STARTEN"
         };
         StartButtonIcon.Text = _activeMode switch
@@ -454,6 +536,7 @@ public partial class MainWindow : Window
             BoothMode.CollageStrip => "🎞️",
             BoothMode.Gif => "🎬",
             BoothMode.Boomerang => "⚡",
+            BoothMode.VideoMessage => "📹",
             _ => "📸"
         };
     }
@@ -587,6 +670,11 @@ public partial class MainWindow : Window
             {
                 UpdateLiveViewMirror();
                 EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
+                ModeVideoButton.IsVisible = _settingsService.Current.EnableVideoMessages;
+                if (!_settingsService.Current.EnableVideoMessages && _activeMode == BoothMode.VideoMessage)
+                {
+                    SetMode(BoothMode.SinglePhoto);
+                }
                 _activeTemplate = _templateStore.GetById(_settingsService.Current.SelectedTemplateId)
                                   ?? BuiltInTemplates.CreateSinglePhotoPostcard();
                 await StartCameraAsync();
