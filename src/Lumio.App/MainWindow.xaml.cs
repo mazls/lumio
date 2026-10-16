@@ -1,10 +1,11 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Lumio.App.Services;
 using Lumio.App.Views;
 using Lumio.Camera;
 using Lumio.Core.Camera;
@@ -36,6 +37,11 @@ public partial class MainWindow : Window
     private BoothMode _activeMode = BoothMode.SinglePhoto;
     private BoothTemplate _activeTemplate;
 
+    // Dedicated Native GIF Players
+    private readonly GifPlayer _reviewGifPlayer;
+    private readonly GifPlayer _galleryGifPlayer;
+    private readonly GifPlayer _cornerGifPlayer;
+
     // Gallery state
     private List<string> _galleryPhotos = [];
     private int _galleryCurrentIndex;
@@ -49,6 +55,10 @@ public partial class MainWindow : Window
         SelphyPrintService? printService = null)
     {
         InitializeComponent();
+
+        _reviewGifPlayer = new GifPlayer(ReviewImageControl);
+        _galleryGifPlayer = new GifPlayer(GalleryMainImage);
+        _cornerGifPlayer = new GifPlayer(CornerThumbnailImage);
 
         _settingsService = settingsService;
         _storage = storage;
@@ -553,13 +563,13 @@ public partial class MainWindow : Window
 
         if (isGif)
         {
-            XamlAnimatedGif.AnimationBehavior.SetSourceUri(ReviewImageControl, new Uri(filePath));
+            _reviewGifPlayer.Play(filePath);
             PrintButton.Visibility = Visibility.Collapsed;
             ReviewStatusTitleText.Text = isBoomerang ? "⚡ BOOMERANG GESPEICHERT!" : "🎬 GIF GESPEICHERT!";
         }
         else
         {
-            XamlAnimatedGif.AnimationBehavior.SetSourceUri(ReviewImageControl, null);
+            _reviewGifPlayer.Stop();
             using var stream = jpegBytes is not null
                 ? (Stream)new MemoryStream(jpegBytes)
                 : new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -644,7 +654,7 @@ public partial class MainWindow : Window
     private void ReturnToIdle()
     {
         _reviewTimer?.Stop();
-        XamlAnimatedGif.AnimationBehavior.SetSourceUri(ReviewImageControl, null);
+        _reviewGifPlayer.Stop();
         ReviewImageControl.Source = null;
 
         ReviewGrid.Visibility = Visibility.Collapsed;
@@ -665,6 +675,7 @@ public partial class MainWindow : Window
             var photos = _storage.GetEventPhotos();
             if (photos.Count == 0)
             {
+                _cornerGifPlayer.Stop();
                 CornerGalleryBorder.Visibility = Visibility.Collapsed;
                 return;
             }
@@ -674,11 +685,11 @@ public partial class MainWindow : Window
 
             if (isGif)
             {
-                XamlAnimatedGif.AnimationBehavior.SetSourceUri(CornerThumbnailImage, new Uri(latest));
+                _cornerGifPlayer.Play(latest);
             }
             else
             {
-                XamlAnimatedGif.AnimationBehavior.SetSourceUri(CornerThumbnailImage, null);
+                _cornerGifPlayer.Stop();
                 using var fileStream = new FileStream(latest, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
@@ -721,13 +732,13 @@ public partial class MainWindow : Window
             var isGif = path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
             if (isGif)
             {
-                XamlAnimatedGif.AnimationBehavior.SetSourceUri(GalleryMainImage, new Uri(path));
+                _galleryGifPlayer.Play(path);
                 GalleryPrintButton.IsEnabled = false;
                 GalleryPrintButtonLabel.Text = "🎬 Animiertes GIF";
             }
             else
             {
-                XamlAnimatedGif.AnimationBehavior.SetSourceUri(GalleryMainImage, null);
+                _galleryGifPlayer.Stop();
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
@@ -767,7 +778,7 @@ public partial class MainWindow : Window
 
     private void OnCloseGalleryClick(object sender, RoutedEventArgs e)
     {
-        XamlAnimatedGif.AnimationBehavior.SetSourceUri(GalleryMainImage, null);
+        _galleryGifPlayer.Stop();
         GalleryMainImage.Source = null;
         GalleryOverlayGrid.Visibility = Visibility.Collapsed;
         UpdateCornerGalleryThumbnail();
@@ -861,6 +872,10 @@ public partial class MainWindow : Window
 
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        _reviewGifPlayer.Dispose();
+        _galleryGifPlayer.Dispose();
+        _cornerGifPlayer.Dispose();
+
         if (_activeCamera is not null)
         {
             _activeCamera.FrameReady -= OnCameraFrameReady;
