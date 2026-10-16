@@ -3,7 +3,9 @@ bin/
 obj/
 publish/
 publish-pi/
+publish-linux-x64/
 dist/
+*.zip
 [Dd]ebug/
 [Rr]elease/
 *.user

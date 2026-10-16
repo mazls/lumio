@@ -8,12 +8,16 @@ chmod +x "$DIR/Lumio"
 
 # Check for gphoto2 (recommended for Nikon DSLRs)
 if ! command -v gphoto2 &> /dev/null; then
-    echo "Hinweis: 'gphoto2' wurde nicht gefunden. Fuer Nikon DSLRs bitte installieren mit: sudo apt install -y gphoto2"
+    echo "Hinweis: 'gphoto2' wurde nicht gefunden. Fuer Nikon DSLRs bitte installieren:"
+    echo "  - Arch / CachyOS / Manjaro:   sudo pacman -S gphoto2"
+    echo "  - Debian / Ubuntu / Pi OS:    sudo apt install -y gphoto2"
 fi
 
 # Check for CUPS (recommended for Canon Selphy)
 if ! command -v lp &> /dev/null; then
-    echo "Hinweis: 'cups' wurde nicht gefunden. Fuer Canon Selphy Drucke bitte installieren mit: sudo apt install -y cups"
+    echo "Hinweis: 'cups' wurde nicht gefunden. Fuer Canon Selphy Drucke bitte installieren:"
+    echo "  - Arch / CachyOS / Manjaro:   sudo pacman -S cups && sudo systemctl enable --now cups"
+    echo "  - Debian / Ubuntu / Pi OS:    sudo apt install -y cups"
 fi
 
 echo "Starte Lumio Photobooth..."

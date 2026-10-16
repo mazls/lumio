@@ -56,17 +56,22 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 Einfach unter **[Releases](https://github.com/mazls/lumio/releases)** die passende ZIP-Datei laden:
 - **`Lumio-win-x64.zip`** für normale Windows-Laptops und PCs
 - **`Lumio-win-arm64.zip`** für Microsoft Surface mit ARM/Snapdragon-Prozessor
+- **`Lumio-linux-x64.zip`** für **Linux PCs** (CachyOS, Arch Linux, Ubuntu, Debian, Fedora etc.)
 - **`Lumio-linux-arm64.zip`** für **Raspberry Pi 4 / 5** (64-Bit OS)
 
-Es muss keine .NET Runtime installiert werden, da alle Releases komplett eigenständig gebündelt sind.
+Es muss keine .NET Runtime vorinstalliert sein, da alle Releases komplett eigenständig gebündelt (self-contained) sind.
 
-#### Auf dem Raspberry Pi starten:
+#### Auf Linux (CachyOS, Arch, Ubuntu oder Raspberry Pi) starten:
 ```bash
-# Empfohlene Pakete fuer Nikon & Selphy-Druck installieren
+# Auf Arch Linux / CachyOS / Manjaro:
+sudo pacman -S gphoto2 cups
+sudo systemctl enable --now cups
+
+# Oder auf Debian / Ubuntu / Raspberry Pi OS:
 sudo apt update && sudo apt install -y gphoto2 cups
 
 # Release entpacken und starten
-unzip Lumio-linux-arm64.zip -d lumio
+unzip Lumio-linux-x64.zip -d lumio   # bzw. Lumio-linux-arm64.zip auf dem Pi
 cd lumio
 chmod +x run-lumio.sh Lumio
 ./run-lumio.sh
