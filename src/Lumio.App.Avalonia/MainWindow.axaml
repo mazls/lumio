@@ -16,7 +16,7 @@
                HorizontalAlignment="Center"
                VerticalAlignment="Center">
             <Image.RenderTransform>
-                <ScaleTransform x:Name="LiveViewScaleTransform" ScaleX="-1" ScaleY="1" />
+                <ScaleTransform ScaleX="-1" ScaleY="1" />
             </Image.RenderTransform>
         </Image>
 

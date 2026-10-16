@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Lumio.App.Avalonia.Views;
@@ -61,7 +62,7 @@ public partial class MainWindow : Window
 
     private async Task InitializeBoothAsync()
     {
-        LiveViewScaleTransform.ScaleX = _settingsService.Current.MirrorLiveView ? -1 : 1;
+        UpdateLiveViewMirror();
         EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
         UpdateModeButtons();
         await StartCameraAsync();
@@ -574,11 +575,16 @@ public partial class MainWindow : Window
             }
             else
             {
-                LiveViewScaleTransform.ScaleX = _settingsService.Current.MirrorLiveView ? -1 : 1;
+                UpdateLiveViewMirror();
                 EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
                 await StartCameraAsync();
             }
         }
+    }
+
+    private void UpdateLiveViewMirror()
+    {
+        LiveViewImageControl.RenderTransform = new ScaleTransform(_settingsService.Current.MirrorLiveView ? -1 : 1, 1);
     }
 
     private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
