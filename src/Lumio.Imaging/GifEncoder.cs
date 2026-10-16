@@ -206,15 +206,25 @@ public static class GifEncoder
         var height = frames[0].Height;
         var delayHundredths = Math.Max(1, frameDelayMs / 10);
 
+        // Pre-quantize all frames so first frame's palette can be used as Global Color Table
+        var quantizedFrames = new List<(byte[] Palette, byte[] Pixels)>(frames.Count);
+        foreach (var frame in frames)
+        {
+            quantizedFrames.Add(QuantizeFrame(frame));
+        }
+
         // 1. Header: GIF89a
         output.Write("GIF89a"u8);
 
         // 2. Logical Screen Descriptor (16-bit width, 16-bit height, packed, bg, aspect)
         WriteShort(output, width);
         WriteShort(output, height);
-        output.WriteByte(0x70); // No global color table, 8 bits/pixel color resolution
+        output.WriteByte(0xF7); // GCT present (0x80) | 8 bits/pixel (0x70) | 256 colors (0x07) = 0xF7
         output.WriteByte(0x00); // Background color index
         output.WriteByte(0x00); // Pixel aspect ratio
+
+        // Global Color Table (768 bytes RGB required by Windows WIC / WPF decoder)
+        output.Write(quantizedFrames[0].Palette);
 
         // 3. Netscape 2.0 Loop Extension
         if (loop)
@@ -230,9 +240,10 @@ public static class GifEncoder
         }
 
         // 4. Frames
-        foreach (var frame in frames)
+        for (var i = 0; i < frames.Count; i++)
         {
-            var (palette, indexedPixels) = QuantizeFrame(frame);
+            var frame = frames[i];
+            var (palette, indexedPixels) = quantizedFrames[i];
 
             // Graphics Control Extension (GCE)
             output.WriteByte(0x21); // Extension Introducer

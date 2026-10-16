@@ -1,29 +1,26 @@
 using System.IO;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using XamlAnimatedGif;
 
 namespace Lumio.App.Services;
 
 /// <summary>
-/// High-performance native WPF animated GIF player using WPF's built-in BitmapDecoder.
-/// Ensures zero-latency playback without third-party dependencies or visual tree race conditions.
+/// Professional WPF animated GIF player powered by XamlAnimatedGif.
+/// Provides smooth, hardware-accelerated playback with full GIF89a standard support.
 /// </summary>
 public sealed class GifPlayer : IDisposable
 {
     private readonly Image _targetImage;
-    private readonly DispatcherTimer _timer;
-    private List<BitmapFrame> _frames = [];
-    private int _currentIndex;
+
+    private bool _isPlaying;
 
     public GifPlayer(Image targetImage)
     {
         _targetImage = targetImage;
-        _timer = new DispatcherTimer(DispatcherPriority.Render);
-        _timer.Tick += OnTick;
     }
 
-    public bool IsPlaying => _timer.IsEnabled;
+    public bool IsPlaying => _isPlaying;
 
     public void Play(string filePath)
     {
@@ -34,44 +31,14 @@ public sealed class GifPlayer : IDisposable
 
         try
         {
-            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var decoder = BitmapDecoder.Create(
-                stream,
-                BitmapCreateOptions.None,
-                BitmapCacheOption.OnLoad);
-
-            _frames = decoder.Frames.ToList();
-            if (_frames.Count == 0)
-                return;
-
-            // Extract delay time from GIF metadata or default to 100ms
-            var delayMs = 100;
-            if (_frames[0].Metadata is BitmapMetadata metadata && metadata.ContainsQuery("/grctlext/Delay"))
-            {
-                try
-                {
-                    var delayVal = Convert.ToInt32(metadata.GetQuery("/grctlext/Delay"));
-                    if (delayVal > 0)
-                        delayMs = delayVal * 10;
-                }
-                catch
-                {
-                    delayMs = 100;
-                }
-            }
-
-            _currentIndex = 0;
-            _targetImage.Source = _frames[0];
-
-            if (_frames.Count > 1)
-            {
-                _timer.Interval = TimeSpan.FromMilliseconds(Math.Max(30, delayMs));
-                _timer.Start();
-            }
+            var uri = new Uri(filePath, UriKind.Absolute);
+            AnimationBehavior.SetAutoStart(_targetImage, true);
+            AnimationBehavior.SetRepeatBehavior(_targetImage, System.Windows.Media.Animation.RepeatBehavior.Forever);
+            AnimationBehavior.SetSourceUri(_targetImage, uri);
+            _isPlaying = true;
         }
         catch
         {
-            // Fallback: try static image load
             try
             {
                 var bmp = new BitmapImage();
@@ -91,17 +58,13 @@ public sealed class GifPlayer : IDisposable
 
     public void Stop()
     {
-        _timer.Stop();
-        _frames.Clear();
-    }
-
-    private void OnTick(object? sender, EventArgs e)
-    {
-        if (_frames.Count <= 1)
-            return;
-
-        _currentIndex = (_currentIndex + 1) % _frames.Count;
-        _targetImage.Source = _frames[_currentIndex];
+        _isPlaying = false;
+        try
+        {
+            AnimationBehavior.SetSourceUri(_targetImage, null);
+        }
+        catch { }
+        _targetImage.Source = null;
     }
 
     public void Dispose()
