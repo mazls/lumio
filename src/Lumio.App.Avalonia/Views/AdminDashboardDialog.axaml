@@ -1,0 +1,145 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Lumio.App.Avalonia.Views.AdminDashboardDialog"
+        Title="Lumio – Admin Dashboard"
+        Width="640"
+        Height="720"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="None"
+        Background="Transparent"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="2"
+            CornerRadius="24"
+            Padding="28,24">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,18">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Lumio Admin-Menü" FontSize="24" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Einstellungen anpassen oder Software verwalten" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+                <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Width="36" Height="36" CornerRadius="18"
+                        Background="{StaticResource GlassBrush}"
+                        Click="OnCloseClick">
+                    <TextBlock Text="✕" FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+            </Grid>
+
+            <!-- Settings Content -->
+            <ScrollViewer Grid.Row="1" Margin="0,0,-6,0" Padding="0,0,6,0">
+                <StackPanel Spacing="16">
+
+                    <!-- Quick Actions -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="SCHNELLAKTIONEN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0" CornerRadius="12" Padding="10" Click="OnOpenFolderClick">
+                                    <TextBlock Text="📁 Fotos" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                </Button>
+                                <Button Grid.Column="2" CornerRadius="12" Padding="10" Click="OnAboutClick">
+                                    <TextBlock Text="ℹ️ Info" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                </Button>
+                                <Button Grid.Column="4" CornerRadius="12" Padding="10" Background="{StaticResource DangerBrush}" Foreground="White" Click="OnExitAppClick">
+                                    <TextBlock Text="🚪 Beenden" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Event Name -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="EVENT-NAME" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <TextBox x:Name="EventNameTextBox" CornerRadius="10" FontSize="15" Padding="10,8" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Camera Backend -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="KAMERA-AUSWAHL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <ComboBox x:Name="CameraSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10">
+                                <ComboBoxItem Content="Nikon DSLR / Z-Serie (USB / gphoto2)" Tag="Nikon" />
+                                <ComboBoxItem Content="Raspberry Pi Camera / USB-Webcam" Tag="Webcam" />
+                                <ComboBoxItem Content="Virtuelle Kamera (Testmodus)" Tag="Simulated" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Timing -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="TIMER &amp; ZEITEN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="Countdown (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <NumericUpDown x:Name="CountdownUpDown" Minimum="1" Maximum="15" Value="3" CornerRadius="10" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="4">
+                                    <TextBlock Text="Vorschau (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <NumericUpDown x:Name="ReviewUpDown" Minimum="3" Maximum="60" Value="12" CornerRadius="10" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Printer & Selphy -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="DRUCKER (CANON SELPHY / CUPS)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <ComboBox x:Name="PrinterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                            <CheckBox x:Name="AutoPrintCheckBox" Content="Automatischer Sofortdruck nach der Aufnahme" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Admin PIN -->
+                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="ADMIN-PIN ÄNDERN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                            <TextBox x:Name="AdminPinTextBox" CornerRadius="10" FontSize="15" MaxLength="8" PasswordChar="•" Padding="10,8" />
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Bottom Save / Close Buttons -->
+            <Grid Grid.Row="2" Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="1.5*" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Content="Abbrechen" CornerRadius="14" Height="46" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnCloseClick" />
+                <Button Grid.Column="2" Content="Speichern &amp; Übernehmen" Background="{StaticResource AccentGradientBrush}" Foreground="White" FontWeight="Bold" CornerRadius="14" Height="46" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnSaveClick" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

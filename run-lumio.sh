@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+cd "$DIR"
+
+# Ensure execution permissions
+chmod +x "$DIR/Lumio"
+
+# Check for gphoto2 (recommended for Nikon DSLRs)
+if ! command -v gphoto2 &> /dev/null; then
+    echo "Hinweis: 'gphoto2' wurde nicht gefunden. Fuer Nikon DSLRs bitte installieren mit: sudo apt install -y gphoto2"
+fi
+
+# Check for CUPS (recommended for Canon Selphy)
+if ! command -v lp &> /dev/null; then
+    echo "Hinweis: 'cups' wurde nicht gefunden. Fuer Canon Selphy Drucke bitte installieren mit: sudo apt install -y cups"
+fi
+
+echo "Starte Lumio Photobooth..."
+./Lumio "$@"

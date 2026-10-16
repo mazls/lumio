@@ -1,0 +1,331 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Lumio.App.Avalonia.MainWindow"
+        Title="Lumio"
+        WindowState="FullScreen"
+        Background="{StaticResource BackgroundBrush}"
+        Focusable="True"
+        KeyDown="OnWindowKeyDown">
+
+    <Grid x:Name="RootGrid">
+
+        <!-- ==================== 1. LIVE VIEW & BACKGROUND LAYER ==================== -->
+        <Image x:Name="LiveViewImageControl"
+               Stretch="UniformToFill"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center">
+            <Image.RenderTransform>
+                <ScaleTransform ScaleX="-1" ScaleY="1" />
+            </Image.RenderTransform>
+        </Image>
+
+        <!-- Top and Bottom Vignette Overlays -->
+        <Border Background="#99000000" Height="140" VerticalAlignment="Top" IsHitTestVisible="False" />
+        <Border Background="#BB000000" Height="180" VerticalAlignment="Bottom" IsHitTestVisible="False" />
+
+        <!-- ==================== 2. REVIEW LAYER (CAPTURED PHOTO) ==================== -->
+        <Grid x:Name="ReviewGrid" IsVisible="False" Background="{StaticResource BackgroundBrush}">
+            <Image x:Name="ReviewImageControl"
+                   Stretch="Uniform"
+                   Margin="40,50,40,130"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+
+            <!-- Bottom Review Actions Bar -->
+            <Border VerticalAlignment="Bottom"
+                    Background="{StaticResource GlassBrush}"
+                    BorderBrush="{StaticResource GlassBorderBrush}"
+                    BorderThickness="0,1.5,0,0"
+                    Padding="36,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock x:Name="ReviewStatusTitleText" Text="FOTO GESPEICHERT!" FontSize="18" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" />
+                        <TextBlock x:Name="ReviewTimerText" Text="Zurück in 12s" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock x:Name="PrintStatusFeedbackText" Text="" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" IsVisible="False" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <!-- Print Button -->
+                    <Button x:Name="PrintButton"
+                            Grid.Column="2"
+                            Background="{StaticResource SurfaceElevatedBrush}"
+                            BorderBrush="{StaticResource AccentBrush}"
+                            BorderThickness="1.5"
+                            CornerRadius="20"
+                            Padding="24,12"
+                            Click="OnPrintPhotoClick">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🖨️ " FontSize="20" VerticalAlignment="Center" />
+                            <TextBlock x:Name="PrintButtonLabelText" Text="Drucken" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Done / Next Photo Button -->
+                    <Button Grid.Column="4"
+                            Content="Fertig / Nächstes Foto"
+                            Background="{StaticResource AccentGradientBrush}"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            FontSize="18"
+                            CornerRadius="20"
+                            Padding="32,14"
+                            Click="OnDoneReviewClick" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ==================== 3. IDLE / WELCOME OVERLAY ==================== -->
+        <Grid x:Name="IdleOverlayGrid" IsVisible="True">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+
+                <!-- Glowing Event Title -->
+                <Border Background="{StaticResource GlassBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="30"
+                        Padding="32,10"
+                        HorizontalAlignment="Center">
+                    <TextBlock x:Name="EventTitleText"
+                               Text="LUMIO"
+                               FontSize="22"
+                               FontWeight="ExtraBold"
+                               Foreground="{StaticResource AccentOrangeBrush}" />
+                </Border>
+
+                <!-- Mode Selector Pills -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button x:Name="ModeSingleButton" Content="📸 Einzelfoto" CornerRadius="18" Padding="16,10" Click="OnSelectModeSingleClick" />
+                    <Button x:Name="ModeQuadButton" Content="🖼️ 4er Collage" CornerRadius="18" Padding="16,10" Click="OnSelectModeQuadClick" />
+                    <Button x:Name="ModeStripButton" Content="🎞️ Doppelstreifen" CornerRadius="18" Padding="16,10" Click="OnSelectModeStripClick" />
+                    <Button x:Name="ModeGifButton" Content="🎬 GIF" CornerRadius="18" Padding="16,10" Click="OnSelectModeGifClick" />
+                    <Button x:Name="ModeBoomerangButton" Content="⚡ Boomerang" CornerRadius="18" Padding="16,10" Click="OnSelectModeBoomerangClick" />
+                </StackPanel>
+
+                <!-- Big Touch Callout Button -->
+                <Button x:Name="StartCaptureButton"
+                        Background="{StaticResource AccentGradientBrush}"
+                        Foreground="White"
+                        Height="100"
+                        CornerRadius="50"
+                        Padding="50,0"
+                        HorizontalAlignment="Center"
+                        Click="OnStartCaptureClick">
+                    <StackPanel Orientation="Horizontal" Spacing="14">
+                        <TextBlock x:Name="StartButtonIcon" Text="📸" FontSize="40" VerticalAlignment="Center" />
+                        <TextBlock x:Name="StartButtonLabel" Text="FOTO STARTEN" FontSize="32" FontWeight="ExtraBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <TextBlock x:Name="StartSubtitleText"
+                           Text="Tippe auf den Button, um den Countdown zu starten"
+                           FontSize="18"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- ==================== 4. COUNTDOWN OVERLAY ==================== -->
+        <Grid x:Name="CountdownOverlayGrid" IsVisible="False" IsHitTestVisible="False" Background="#55000000">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <!-- Multi-shot step indicator -->
+                <TextBlock x:Name="MultiShotStepText"
+                           Text="Foto 1 von 4"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource AccentOrangeBrush}"
+                           HorizontalAlignment="Center"
+                           IsVisible="False" />
+
+                <!-- Between-shots preview -->
+                <Border x:Name="SeriesPreviewBorder"
+                        Width="480" Height="320"
+                        CornerRadius="16"
+                        BorderBrush="{StaticResource AccentBrush}"
+                        BorderThickness="3"
+                        ClipToBounds="True"
+                        Background="#111"
+                        IsVisible="False">
+                    <Image x:Name="SeriesPreviewImage" Stretch="UniformToFill" />
+                </Border>
+
+                <!-- Big Countdown Circle -->
+                <Border Width="220" Height="220"
+                        CornerRadius="110"
+                        Background="{StaticResource AccentGradientBrush}"
+                        BorderBrush="#88FFFFFF"
+                        BorderThickness="3">
+                    <TextBlock x:Name="CountdownNumberText"
+                               Text="3"
+                               FontSize="96"
+                               FontWeight="ExtraBold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock x:Name="CountdownStatusText"
+                           Text="Bereit machen..."
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- ==================== 5. FLASH EFFECT ==================== -->
+        <Border x:Name="FlashBorder" Background="White" Opacity="0" IsHitTestVisible="False" />
+
+        <!-- ==================== 6. TOP BAR (CAMERA STATUS & BUTTONS) ==================== -->
+        <Grid VerticalAlignment="Top" Margin="24,20" Height="50">
+            <!-- Camera & Mode Info (Left) -->
+            <Border HorizontalAlignment="Left"
+                    Background="{StaticResource GlassBrush}"
+                    BorderBrush="{StaticResource GlassBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="18"
+                    Padding="16,6">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Top Right: Info & Admin Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                <!-- Info Button -->
+                <Button x:Name="AboutButton"
+                        Width="44" Height="44"
+                        CornerRadius="22"
+                        Background="{StaticResource GlassBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}"
+                        ToolTip.Tip="Über Lumio &amp; Lizenz"
+                        Click="OnAboutClick">
+                    <TextBlock Text="ℹ️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+
+                <!-- Admin Lock Button -->
+                <Button Width="44" Height="44"
+                        CornerRadius="22"
+                        Background="{StaticResource GlassBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}"
+                        ToolTip.Tip="Admin-Bereich (PIN erforderlich)"
+                        Click="OnAdminLockClick">
+                    <TextBlock Text="🔒" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ==================== 7. CORNER GALLERY THUMBNAIL (BOTTOM-LEFT) ==================== -->
+        <Border x:Name="CornerGalleryBorder"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="24,20"
+                CornerRadius="16"
+                Background="{StaticResource GlassBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1.5"
+                Padding="8"
+                Cursor="Hand"
+                PointerReleased="OnCornerGalleryClick"
+                IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+                <Border Width="68" Height="68" CornerRadius="10" ClipToBounds="True" Background="#222">
+                    <Image x:Name="CornerThumbnailImage" Stretch="UniformToFill" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="GALERIE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                    <TextBlock x:Name="GalleryCountText" Text="1 Foto" FontSize="14" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Tippen zum Ansehen" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ==================== 8. FULLSCREEN EVENT GALLERY OVERLAY ==================== -->
+        <Grid x:Name="GalleryOverlayGrid" IsVisible="False" Background="#F4080811">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="28,20">
+                <StackPanel>
+                    <TextBlock Text="EVENT-GALERIE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                    <TextBlock x:Name="GalleryIndexTitleText" Text="Foto 1 von 10" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,2,0,0" />
+                </StackPanel>
+
+                <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                        CornerRadius="16" Padding="18,8"
+                        Background="{StaticResource GlassBrush}"
+                        Click="OnCloseGalleryClick">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="✕" FontSize="16" />
+                        <TextBlock Text="Zurück zur Booth" FontSize="15" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- Main Image & Navigation -->
+            <Grid Grid.Row="1" Margin="20,0">
+                <Image x:Name="GalleryMainImage" Stretch="Uniform" Margin="80,10" />
+
+                <Button HorizontalAlignment="Left" VerticalAlignment="Center"
+                        Width="60" Height="74" CornerRadius="16"
+                        Background="{StaticResource GlassBrush}"
+                        Click="OnGalleryPrevClick">
+                    <TextBlock Text="◀" FontSize="26" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+
+                <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Width="60" Height="74" CornerRadius="16"
+                        Background="{StaticResource GlassBrush}"
+                        Click="OnGalleryNextClick">
+                    <TextBlock Text="▶" FontSize="26" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+            </Grid>
+
+            <!-- Footer: Reprint -->
+            <Border Grid.Row="2"
+                    Background="{StaticResource GlassBrush}"
+                    BorderBrush="{StaticResource GlassBorderBrush}"
+                    BorderThickness="0,1.5,0,0"
+                    Padding="28,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock x:Name="GalleryPhotoInfoText" Text="" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock x:Name="GalleryPrintStatusText" Text="" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" IsVisible="False" />
+                    </StackPanel>
+
+                    <Button x:Name="GalleryPrintButton"
+                            Grid.Column="1"
+                            Background="{StaticResource AccentGradientBrush}"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            FontSize="16"
+                            CornerRadius="18"
+                            Padding="28,12"
+                            Click="OnGalleryPrintClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="🖨️ " FontSize="18" />
+                            <TextBlock x:Name="GalleryPrintButtonLabel" Text="Foto drucken" FontSize="16" FontWeight="Bold" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Grid>
+</Window>

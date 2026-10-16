@@ -1,7 +1,11 @@
-﻿using System.Drawing;
+using System.Diagnostics;
+using System.IO;
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Printing;
-using System.IO;
+#endif
 
 namespace Lumio.Printing;
 
@@ -13,22 +17,112 @@ public sealed class SelphyPrintService
 
     public static IReadOnlyList<PrinterDeviceInfo> GetInstalledPrinters()
     {
-        var list = new List<PrinterDeviceInfo>();
-        var defaultPrinter = new PrinterSettings().PrinterName;
-
-        foreach (string printer in PrinterSettings.InstalledPrinters)
+        if (OperatingSystem.IsWindows())
         {
-            var isSelphy = SelphyKeywords.Any(k => printer.Contains(k, StringComparison.OrdinalIgnoreCase));
-            var isDefault = string.Equals(printer, defaultPrinter, StringComparison.OrdinalIgnoreCase);
-            list.Add(new PrinterDeviceInfo(printer, isSelphy, isDefault));
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+            var list = new List<PrinterDeviceInfo>();
+            try
+            {
+                var defaultPrinter = new PrinterSettings().PrinterName;
+
+                foreach (string printer in PrinterSettings.InstalledPrinters)
+                {
+                    var isSelphy = SelphyKeywords.Any(k => printer.Contains(k, StringComparison.OrdinalIgnoreCase));
+                    var isDefault = string.Equals(printer, defaultPrinter, StringComparison.OrdinalIgnoreCase);
+                    list.Add(new PrinterDeviceInfo(printer, isSelphy, isDefault));
+                }
+
+                return list
+                    .OrderByDescending(p => p.IsSelphy)
+                    .ThenByDescending(p => p.IsDefault)
+                    .ThenBy(p => p.Name)
+                    .ToList();
+            }
+            catch
+            {
+                return list;
+            }
+#else
+            return [];
+#endif
         }
 
-        // Put Selphy printers first, then default printer, then others
+        // Linux / Raspberry Pi CUPS print discovery
+        return GetLinuxInstalledPrinters();
+    }
+
+    private static IReadOnlyList<PrinterDeviceInfo> GetLinuxInstalledPrinters()
+    {
+        var list = new List<PrinterDeviceInfo>();
+        try
+        {
+            var defaultPrinter = GetLinuxDefaultPrinter();
+            using var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = "lpstat",
+                Arguments = "-p",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+
+            if (proc is not null)
+            {
+                while (proc.StandardOutput.ReadLine() is { } line)
+                {
+                    // Format: printer Canon_SELPHY_CP1300 is idle. enabled since...
+                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2 && string.Equals(parts[0], "printer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var name = parts[1];
+                        var isSelphy = SelphyKeywords.Any(k => name.Contains(k, StringComparison.OrdinalIgnoreCase));
+                        var isDef = string.Equals(name, defaultPrinter, StringComparison.OrdinalIgnoreCase);
+                        list.Add(new PrinterDeviceInfo(name, isSelphy, isDef));
+                    }
+                }
+                proc.WaitForExit();
+            }
+        }
+        catch
+        {
+            // lpstat not available or failed
+        }
+
         return list
             .OrderByDescending(p => p.IsSelphy)
             .ThenByDescending(p => p.IsDefault)
             .ThenBy(p => p.Name)
             .ToList();
+    }
+
+    private static string? GetLinuxDefaultPrinter()
+    {
+        try
+        {
+            using var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = "lpstat",
+                Arguments = "-d",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+
+            if (proc is not null)
+            {
+                var output = proc.StandardOutput.ReadToEnd();
+                proc.WaitForExit();
+                // Output: system default destination: Canon_SELPHY_CP1300
+                var colonIndex = output.IndexOf(':');
+                if (colonIndex >= 0)
+                {
+                    return output[(colonIndex + 1)..].Trim();
+                }
+            }
+        }
+        catch { }
+
+        return null;
     }
 
     public static string? AutoDetectSelphyPrinter()
@@ -48,6 +142,20 @@ public sealed class SelphyPrintService
             throw new InvalidOperationException("Kein Drucker gefunden oder ausgewählt.");
         }
 
+        if (OperatingSystem.IsWindows())
+        {
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+            await PrintWindowsAsync(jpegData, targetPrinter, copies, cancellationToken).ConfigureAwait(false);
+            return;
+#endif
+        }
+
+        await PrintLinuxAsync(jpegData, targetPrinter, copies, cancellationToken).ConfigureAwait(false);
+    }
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+    private static async Task PrintWindowsAsync(byte[] jpegData, string targetPrinter, int copies, CancellationToken cancellationToken)
+    {
         await Task.Run(() =>
         {
             using var imageStream = new MemoryStream(jpegData);
@@ -113,7 +221,6 @@ public sealed class SelphyPrintService
         {
             foreach (PaperSize size in doc.PrinterSettings.PaperSizes)
             {
-                // Canon Selphy postcard paper is "Postcard", "Postcard 100 x 148 mm", "4 x 6 in", or similar
                 var name = size.PaperName.ToLowerInvariant();
                 if (name.Contains("postcard") || name.Contains("postkarte") || name.Contains("4x6") || name.Contains("4 x 6") || name.Contains("100 x 148") || name.Contains("10x15"))
                 {
@@ -125,6 +232,43 @@ public sealed class SelphyPrintService
         catch
         {
             // Fallback to default paper size
+        }
+    }
+#endif
+
+    private static async Task PrintLinuxAsync(byte[] jpegData, string targetPrinter, int copies, CancellationToken cancellationToken)
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"lumio_print_{Guid.NewGuid():N}.jpg");
+        try
+        {
+            await File.WriteAllBytesAsync(tempFile, jpegData, cancellationToken).ConfigureAwait(false);
+            using var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = "lp",
+                Arguments = $"-d \"{targetPrinter}\" -n {Math.Clamp(copies, 1, 10)} -o media=Custom.100x148mm -o fit-to-page \"{tempFile}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+            });
+
+            if (proc is not null)
+            {
+                await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                if (proc.ExitCode != 0)
+                {
+                    var err = await proc.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    throw new InvalidOperationException($"CUPS Druckfehler (Code {proc.ExitCode}): {err}");
+                }
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
+            catch { }
         }
     }
 }

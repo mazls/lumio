@@ -41,6 +41,12 @@ jobs:
           dotnet publish src/Lumio.App/Lumio.App.csproj -c Release -r win-arm64 --self-contained true -o ./dist/win-arm64 -p:PublishSingleFile=false -nologo
           Compress-Archive -Path ./dist/win-arm64/* -DestinationPath ./dist/Lumio-win-arm64.zip
 
+      - name: Publish Standalone (linux-arm64 for Raspberry Pi)
+        run: |
+          dotnet publish src/Lumio.App.Avalonia/Lumio.App.Avalonia.csproj -c Release -r linux-arm64 --self-contained true -o ./dist/linux-arm64 -p:PublishSingleFile=false -nologo
+          Copy-Item run-lumio.sh ./dist/linux-arm64/run-lumio.sh
+          Compress-Archive -Path ./dist/linux-arm64/* -DestinationPath ./dist/Lumio-linux-arm64.zip
+
       - name: Upload Artifacts (Action Run)
         uses: actions/upload-artifact@v4
         with:
@@ -55,6 +61,7 @@ jobs:
           files: |
             ./dist/Lumio-win-x64.zip
             ./dist/Lumio-win-arm64.zip
+            ./dist/Lumio-linux-arm64.zip
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -70,10 +77,12 @@ jobs:
             
             - **Lumio-win-x64.zip**: Für normale 64-Bit Windows PCs & Laptops
             - **Lumio-win-arm64.zip**: Für Microsoft Surface Pro / Laptop mit ARM-Prozessor
+            - **Lumio-linux-arm64.zip**: Für Raspberry Pi (Pi 4 / Pi 5 mit 64-Bit Raspberry Pi OS)
             
-            Einfach entpacken und `Lumio.exe` oder `Lumio.bat` doppelklicken.
+            Einfach entpacken und starten (`Lumio.exe` auf Windows, `./run-lumio.sh` auf dem Raspberry Pi).
           files: |
             ./dist/Lumio-win-x64.zip
             ./dist/Lumio-win-arm64.zip
+            ./dist/Lumio-linux-arm64.zip
           draft: false
           prerelease: false

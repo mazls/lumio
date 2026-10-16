@@ -35,16 +35,18 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
-## Unterstützte Hardware
+## Unterstützte Hardware & Plattformen
 
-1. **Kameras**:
-   - **Nikon DSLR & Z-Serie**: Getestet mit Nikon D5600 und Nikon Z 50 II per USB
-   - **Webcams**: Jede USB-Webcam oder integrierte Kamera (z. B. Surface Front- und Rückkamera mit automatischer Umschaltung)
-   - **Simulierte Test-Kamera**: Integrierte virtuelle Kamera mit Testbildern – praktisch zum Testen auf der Couch ohne angeschlossene Kamera
-2. **Drucker**:
-   - Canon Selphy CP1300 (und CP1500 / CP1200 über den normalen Windows-Druckertreiber)
-3. **Geräte**:
-   - Getestet auf Microsoft Surface (ARM64) sowie normalen Intel/AMD Windows 10 & 11 PCs (x64).
+1. **Plattformen & Betriebssysteme**:
+   - **Windows (x64)**: Normale PCs, Laptops & Touchscreen-All-in-Ones (Windows 10 & 11)
+   - **Microsoft Surface (win-arm64)**: Native ARM64-Version für Surface Pro & Surface Laptop
+   - **Raspberry Pi (linux-arm64)**: Getestet auf Raspberry Pi 4 & Raspberry Pi 5 (64-Bit Raspberry Pi OS / Debian)
+2. **Kameras**:
+   - **Nikon DSLR & Z-Serie**: Getestet mit Nikon D5600 und Nikon Z 50 II per USB (Windows PTP & Linux `gphoto2`)
+   - **Webcams & Pi Cams**: USB-Webcams, integrierte Surface-Kameras sowie Raspberry Pi Camera Modules
+   - **Simulierte Test-Kamera**: Integrierte virtuelle Testkamera mit Live-Zeitstempel zum Testen ohne Hardware
+3. **Drucker**:
+   - Canon Selphy CP1300 (sowie CP1500 / CP1200 / CP1000) über den Windows-Druckertreiber oder CUPS auf Linux/Raspberry Pi
 
 ---
 
@@ -52,10 +54,23 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ### Fertige Version herunterladen (ohne Installation)
 Einfach unter **[Releases](https://github.com/mazls/lumio/releases)** die passende ZIP-Datei laden:
-- **`Lumio-win-x64.zip`** für normale Laptops und PCs
-- **`Lumio-win-arm64.zip`** für Surface-Geräte mit Snapdragon/ARM-Prozessor
+- **`Lumio-win-x64.zip`** für normale Windows-Laptops und PCs
+- **`Lumio-win-arm64.zip`** für Microsoft Surface mit ARM/Snapdragon-Prozessor
+- **`Lumio-linux-arm64.zip`** für **Raspberry Pi 4 / 5** (64-Bit OS)
 
-Entpacken und die `Lumio.exe` oder `Lumio.bat` starten – fertig! Es muss keine .NET Runtime installiert werden, da alles eigenständig gebündelt ist.
+Es muss keine .NET Runtime installiert werden, da alle Releases komplett eigenständig gebündelt sind.
+
+#### Auf dem Raspberry Pi starten:
+```bash
+# Empfohlene Pakete fuer Nikon & Selphy-Druck installieren
+sudo apt update && sudo apt install -y gphoto2 cups
+
+# Release entpacken und starten
+unzip Lumio-linux-arm64.zip -d lumio
+cd lumio
+chmod +x run-lumio.sh Lumio
+./run-lumio.sh
+```
 
 ---
 

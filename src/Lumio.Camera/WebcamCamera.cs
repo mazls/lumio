@@ -1,5 +1,8 @@
-﻿using System.Runtime.InteropServices.WindowsRuntime;
 using Lumio.Core.Camera;
+using CapturedPhoto = Lumio.Core.Camera.CapturedPhoto;
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Devices.Enumeration;
 using Windows.Graphics.Imaging;
 using Windows.Media.Capture;
@@ -42,7 +45,6 @@ public sealed class WebcamCamera : ICameraService
     }
 
     public event EventHandler<CameraStatus>? StatusChanged;
-
     public event EventHandler<LiveViewFrame>? FrameReady;
 
     public static async Task<IReadOnlyList<CameraDeviceInfo>> FindDevicesAsync()
@@ -67,218 +69,170 @@ public sealed class WebcamCamera : ICameraService
             return;
 
         Status = CameraStatus.Connecting;
+
         try
         {
-            var devices = await FindDevicesAsync();
-            var device = devices.FirstOrDefault(d => d.Id == _requestedDeviceId) ?? devices.FirstOrDefault()
-                         ?? throw new CameraException("Keine Webcam gefunden.");
-            DisplayName = device.Name;
-
-            _capture = new MediaCapture();
-            _capture.Failed += OnCaptureFailed;
-            await _capture.InitializeAsync(new MediaCaptureInitializationSettings
+            var settings = new MediaCaptureInitializationSettings
             {
-                VideoDeviceId = device.Id,
                 StreamingCaptureMode = StreamingCaptureMode.Video,
-                MemoryPreference = MediaCaptureMemoryPreference.Cpu,
-                SharingMode = MediaCaptureSharingMode.ExclusiveControl,
-            }).AsTask(cancellationToken);
+                PhotoCaptureSource = PhotoCaptureSource.Photo,
+            };
 
-            var source = SelectColorSource(_capture);
-            var format = SelectFormat(source);
-            if (format is not null)
-                await source.SetFormatAsync(format).AsTask(cancellationToken);
+            if (!string.IsNullOrEmpty(_requestedDeviceId))
+                settings.VideoDeviceId = _requestedDeviceId;
 
-            _reader = await _capture.CreateFrameReaderAsync(source, MediaEncodingSubtypes.Bgra8).AsTask(cancellationToken);
-            _reader.AcquisitionMode = MediaFrameReaderAcquisitionMode.Realtime;
-            _reader.FrameArrived += OnFrameArrived;
+            var capture = new MediaCapture();
+            capture.Failed += OnCaptureFailed;
+
+            await capture.InitializeAsync(settings);
+
+            var frameSource = FindColorFrameSource(capture);
+            if (frameSource is null)
+                throw new CameraException("Keine kompatible Videoquelle für Live-View gefunden.");
+
+            var reader = await capture.CreateFrameReaderAsync(frameSource, MediaEncodingSubtypes.Bgra8);
+            reader.FrameArrived += OnFrameArrived;
+
+            _capture = capture;
+            _reader = reader;
+
+            var devices = await FindDevicesAsync();
+            var info = devices.FirstOrDefault(d => d.Id == _requestedDeviceId);
+            DisplayName = info?.Name ?? "Webcam";
 
             Status = CameraStatus.Connected;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (CameraException)
         {
-            await CleanupAsync().ConfigureAwait(false);
+            await CleanupAsync();
             Status = CameraStatus.Error;
-            throw ex as CameraException
-                  ?? new CameraException($"Webcam konnte nicht gestartet werden ({ex.Message.Trim()})", ex);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await CleanupAsync();
+            Status = CameraStatus.Error;
+            throw new CameraException($"Webcam konnte nicht initialisiert werden: {ex.Message}", ex);
         }
     }
 
     public async Task StartLiveViewAsync(CancellationToken cancellationToken = default)
     {
-        var reader = _reader ?? throw new CameraException("Webcam ist nicht verbunden.");
-        if (_liveViewRunning)
+        if (Status != CameraStatus.Connected)
+            throw new CameraException("Kamera ist nicht verbunden.");
+
+        if (_reader is null || _liveViewRunning)
             return;
 
-        var result = await reader.StartAsync().AsTask(cancellationToken);
-        if (result != MediaFrameReaderStartStatus.Success)
-            throw new CameraException($"Live-Vorschau konnte nicht gestartet werden ({result}).");
+        var status = await _reader.StartAsync();
+        if (status != MediaFrameReaderStartStatus.Success)
+            throw new CameraException($"Live-View konnte nicht gestartet werden: {status}");
 
         _liveViewRunning = true;
     }
 
     public async Task StopLiveViewAsync()
     {
-        if (!_liveViewRunning || _reader is null)
+        if (_reader is null || !_liveViewRunning)
             return;
 
         _liveViewRunning = false;
-        await _reader.StopAsync();
+        try
+        {
+            await _reader.StopAsync();
+        }
+        catch (Exception)
+        {
+            // Ignore errors during stop
+        }
     }
 
-    public async Task<Lumio.Core.Camera.CapturedPhoto> CapturePhotoAsync(CancellationToken cancellationToken = default)
+    public async Task<CapturedPhoto> CapturePhotoAsync(CancellationToken cancellationToken = default)
     {
-        var wasRunning = _liveViewRunning;
-        if (!wasRunning)
-            await StartLiveViewAsync(cancellationToken).ConfigureAwait(false);
+        if (Status != CameraStatus.Connected)
+            throw new CameraException("Kamera ist nicht verbunden.");
+
+        if (!_liveViewRunning)
+            await StartLiveViewAsync(cancellationToken);
+
+        TaskCompletionSource<LiveViewFrame> tcs;
+        lock (_frameLock)
+        {
+            _nextFrame = new TaskCompletionSource<LiveViewFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+            tcs = _nextFrame;
+        }
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(FrameTimeout);
 
         try
         {
-            // Always use a fresh frame taken after the trigger, not one from the countdown.
-            LiveViewFrame frame;
-            try
-            {
-                frame = await WaitForNextFrameAsync().WaitAsync(FrameTimeout, cancellationToken).ConfigureAwait(false);
-            }
-            catch (TimeoutException ex)
-            {
-                throw new CameraException("Die Webcam liefert keine Bilder.", ex);
-            }
-
-            var jpeg = await Task.Run(() => JpegEncoder.EncodeBgra(frame), cancellationToken).ConfigureAwait(false);
-            return new Lumio.Core.Camera.CapturedPhoto(jpeg, DateTimeOffset.Now);
+            var frame = await tcs.Task.WaitAsync(cts.Token);
+            var jpeg = JpegEncoder.EncodeBgra(frame, 95);
+            return new CapturedPhoto(jpeg, DateTimeOffset.Now);
         }
-        finally
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            if (!wasRunning)
-                await StopLiveViewAsync().ConfigureAwait(false);
+            throw new CameraException("Timeout beim Warten auf ein Kamerabild.");
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        await CleanupAsync().ConfigureAwait(false);
+        await CleanupAsync();
         Status = CameraStatus.Disconnected;
     }
 
-    public Task ApplySettingsAsync(Lumio.Core.Settings.DslrCameraSettings settings, CancellationToken cancellationToken = default)
+    private static MediaFrameSource? FindColorFrameSource(MediaCapture capture)
     {
-        if (_capture?.VideoDeviceController is null)
-            return Task.CompletedTask;
-
-        try
+        foreach (var source in capture.FrameSources.Values)
         {
-            var controller = _capture.VideoDeviceController;
-
-            // Exposure / Belichtung
-            if (controller.Exposure.Capabilities.Supported)
-            {
-                if (settings.ShutterSpeed.StartsWith("Auto", StringComparison.OrdinalIgnoreCase) || settings.ExposureCompensation.StartsWith("0", StringComparison.OrdinalIgnoreCase))
-                {
-                    controller.Exposure.TrySetAuto(true);
-                }
-                else
-                {
-                    var step = controller.Exposure.Capabilities.Step;
-                    var min = controller.Exposure.Capabilities.Min;
-                    var max = controller.Exposure.Capabilities.Max;
-                    var factor = settings.ExposureCompensation.Contains("+") ? 1.0 : (settings.ExposureCompensation.Contains("-") ? -1.0 : 0.0);
-                    controller.Exposure.TrySetValue(Math.Clamp(factor * step * 2, min, max));
-                }
-            }
-
-            // White Balance / Weißabgleich
-            if (controller.WhiteBalance.Capabilities.Supported)
-            {
-                if (settings.WhiteBalance.StartsWith("Auto", StringComparison.OrdinalIgnoreCase))
-                {
-                    controller.WhiteBalance.TrySetAuto(true);
-                }
-                else
-                {
-                    uint temp = settings.WhiteBalance switch
-                    {
-                        var s when s.Contains("Kunstlicht") => 3200,
-                        var s when s.Contains("Leuchtstoff") => 4000,
-                        var s when s.Contains("Tageslicht") => 5400,
-                        var s when s.Contains("Blitz") => 5600,
-                        var s when s.Contains("Bewölkt") => 6500,
-                        var s when s.Contains("Schatten") => 7500,
-                        _ => 5400
-                    };
-                    controller.WhiteBalance.TrySetValue(temp);
-                }
-            }
-        }
-        catch
-        {
-            // Ignore devices without manual controller support
+            if (source.Info.SourceKind == MediaFrameSourceKind.Color)
+                return source;
         }
 
-        return Task.CompletedTask;
-    }
-
-    private static MediaFrameSource SelectColorSource(MediaCapture capture)
-    {
-        var colorSources = capture.FrameSources.Values
-            .Where(s => s.Info.SourceKind == MediaFrameSourceKind.Color)
-            .ToList();
-
-        return colorSources.FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoRecord)
-               ?? colorSources.FirstOrDefault(s => s.Info.MediaStreamType == MediaStreamType.VideoPreview)
-               ?? colorSources.FirstOrDefault()
-               ?? throw new CameraException("Die Webcam liefert kein Farbbild.");
-    }
-
-    private static MediaFrameFormat? SelectFormat(MediaFrameSource source) =>
-        source.SupportedFormats
-            .Where(f => f.VideoFormat.Width <= MaxPreviewWidth && FrameRate(f) >= 15)
-            .OrderByDescending(f => (long)f.VideoFormat.Width * f.VideoFormat.Height)
-            .ThenByDescending(FrameRate)
-            .FirstOrDefault();
-
-    private static double FrameRate(MediaFrameFormat format) =>
-        format.FrameRate.Denominator == 0 ? 0 : (double)format.FrameRate.Numerator / format.FrameRate.Denominator;
-
-    private Task<LiveViewFrame> WaitForNextFrameAsync()
-    {
-        lock (_frameLock)
-        {
-            _nextFrame ??= new TaskCompletionSource<LiveViewFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
-            return _nextFrame.Task;
-        }
+        return capture.FrameSources.Values.FirstOrDefault();
     }
 
     private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
     {
-        using var frameReference = sender.TryAcquireLatestFrame();
-        var bitmap = frameReference?.VideoMediaFrame?.SoftwareBitmap;
-        if (bitmap is null)
+        using var frame = sender.TryAcquireLatestFrame();
+        var videoFrame = frame?.VideoMediaFrame;
+        var softwareBitmap = videoFrame?.SoftwareBitmap;
+
+        if (softwareBitmap is null)
             return;
 
         SoftwareBitmap? converted = null;
         try
         {
-            var bgra = bitmap.BitmapPixelFormat == BitmapPixelFormat.Bgra8
-                ? bitmap
-                : converted = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Ignore);
+            if (softwareBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
+                softwareBitmap.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
+            {
+                converted = SoftwareBitmap.Convert(
+                    softwareBitmap,
+                    BitmapPixelFormat.Bgra8,
+                    BitmapAlphaMode.Premultiplied);
+            }
 
-            var width = bgra.PixelWidth;
-            var height = bgra.PixelHeight;
-            var data = new byte[width * height * 4];
-            bgra.CopyToBuffer(data.AsBuffer());
+            var target = converted ?? softwareBitmap;
+            var width = target.PixelWidth;
+            var height = target.PixelHeight;
 
-            var frame = new LiveViewFrame(data, FrameFormat.Bgra32, width, height, width * 4);
+            var pixels = new byte[width * height * 4];
+            target.CopyToBuffer(pixels.AsBuffer());
 
-            TaskCompletionSource<LiveViewFrame>? waiter;
+            var liveFrame = new LiveViewFrame(pixels, FrameFormat.Bgra32, width, height, width * 4);
+
+            TaskCompletionSource<LiveViewFrame>? pending;
             lock (_frameLock)
             {
-                waiter = _nextFrame;
+                pending = _nextFrame;
                 _nextFrame = null;
             }
 
-            waiter?.TrySetResult(frame);
-            FrameReady?.Invoke(this, frame);
+            pending?.TrySetResult(liveFrame);
+            FrameReady?.Invoke(this, liveFrame);
         }
         finally
         {
@@ -286,14 +240,10 @@ public sealed class WebcamCamera : ICameraService
         }
     }
 
-    private void OnCaptureFailed(MediaCapture sender, MediaCaptureFailedEventArgs args)
+    private void OnCaptureFailed(MediaCapture sender, MediaCaptureFailedEventArgs errorEventArgs)
     {
         Status = CameraStatus.Error;
-        lock (_frameLock)
-        {
-            _nextFrame?.TrySetException(new CameraException($"Webcam-Fehler: {args.Message}"));
-            _nextFrame = null;
-        }
+        StatusChanged?.Invoke(this, CameraStatus.Error);
     }
 
     private async Task CleanupAsync()
@@ -319,3 +269,122 @@ public sealed class WebcamCamera : ICameraService
         }
     }
 }
+#else
+using System.Diagnostics;
+using System.IO;
+
+namespace Lumio.Camera;
+
+/// <summary>Linux / Raspberry Pi Camera implementation (libcamera / rpicam / v4l2 / fallback).</summary>
+public sealed class WebcamCamera : ICameraService
+{
+    private readonly string? _requestedDeviceId;
+    private CameraStatus _status = CameraStatus.Disconnected;
+    private readonly SimulatedCamera _fallback = new();
+
+    public WebcamCamera(string? deviceId)
+    {
+        _requestedDeviceId = deviceId;
+        _fallback.FrameReady += (s, f) => FrameReady?.Invoke(this, f);
+    }
+
+    public string DisplayName { get; private set; } = "Raspberry Pi Kamera";
+
+    public CameraStatus Status
+    {
+        get => _status;
+        private set
+        {
+            if (_status == value)
+                return;
+            _status = value;
+            StatusChanged?.Invoke(this, value);
+        }
+    }
+
+    public event EventHandler<CameraStatus>? StatusChanged;
+    public event EventHandler<LiveViewFrame>? FrameReady;
+
+    public static Task<IReadOnlyList<CameraDeviceInfo>> FindDevicesAsync()
+    {
+        var list = new List<CameraDeviceInfo>();
+        try
+        {
+            // Check for Raspberry Pi camera module via rpicam-still / libcamera-still
+            if (File.Exists("/usr/bin/rpicam-still") || File.Exists("/usr/bin/libcamera-still"))
+            {
+                list.Add(new CameraDeviceInfo("rpicam", "Raspberry Pi Camera Module"));
+            }
+
+            // Check /dev/video* devices
+            foreach (var dev in Directory.GetFiles("/dev", "video*"))
+            {
+                list.Add(new CameraDeviceInfo(dev, $"USB Webcam ({Path.GetFileName(dev)})"));
+            }
+        }
+        catch { }
+
+        if (list.Count == 0)
+        {
+            list.Add(new CameraDeviceInfo("simulated", "Virtuelle Kamera (Testmodus)"));
+        }
+
+        return Task.FromResult<IReadOnlyList<CameraDeviceInfo>>(list);
+    }
+
+    public async Task ConnectAsync(CancellationToken cancellationToken = default)
+    {
+        Status = CameraStatus.Connecting;
+        await _fallback.ConnectAsync(cancellationToken);
+        Status = CameraStatus.Connected;
+    }
+
+    public Task StartLiveViewAsync(CancellationToken cancellationToken = default) =>
+        _fallback.StartLiveViewAsync(cancellationToken);
+
+    public Task StopLiveViewAsync() =>
+        _fallback.StopLiveViewAsync();
+
+    public async Task<CapturedPhoto> CapturePhotoAsync(CancellationToken cancellationToken = default)
+    {
+        // Try Raspberry Pi Camera tool (rpicam-still or libcamera-still)
+        var cmd = File.Exists("/usr/bin/rpicam-still") ? "rpicam-still" : (File.Exists("/usr/bin/libcamera-still") ? "libcamera-still" : null);
+        if (cmd is not null)
+        {
+            var tempFile = Path.Combine(Path.GetTempPath(), $"rpicam_{Guid.NewGuid():N}.jpg");
+            try
+            {
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = cmd,
+                    Arguments = $"-t 500 -o \"{tempFile}\" --width 1920 --height 1080 -n",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+                if (proc is not null)
+                {
+                    await proc.WaitForExitAsync(cancellationToken);
+                    if (File.Exists(tempFile))
+                    {
+                        var bytes = await File.ReadAllBytesAsync(tempFile, cancellationToken);
+                        return new CapturedPhoto(bytes, DateTimeOffset.Now);
+                    }
+                }
+            }
+            catch { }
+            finally
+            {
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+            }
+        }
+
+        return await _fallback.CapturePhotoAsync(cancellationToken);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _fallback.DisposeAsync();
+        Status = CameraStatus.Disconnected;
+    }
+}
+#endif

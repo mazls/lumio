@@ -1,10 +1,17 @@
-﻿using System.Management;
+using System.Diagnostics;
+using System.IO;
 using Lumio.Core.Camera;
+using Lumio.Core.Settings;
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+using System.Management;
+#endif
 
 namespace Lumio.Camera;
 
 /// <summary>
-/// Controls Nikon DSLRs and mirrorless cameras (D5600, Z 50 II, etc.) via USB / Windows Portable Device MTP protocol.
+/// Controls Nikon DSLRs and mirrorless cameras (D5600, Z 50 II, etc.) via USB / PTP protocol.
+/// Supports Windows WPD/PTP and Linux gphoto2.
 /// </summary>
 public sealed class NikonCamera : ICameraService
 {
@@ -34,24 +41,72 @@ public sealed class NikonCamera : ICameraService
 
     public static async Task<IReadOnlyList<CameraDeviceInfo>> FindConnectedNikonDevicesAsync()
     {
+        if (OperatingSystem.IsWindows())
+        {
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+            return await Task.Run(() =>
+            {
+                var results = new List<CameraDeviceInfo>();
+                try
+                {
+                    using var searcher = new ManagementObjectSearcher(
+                        "SELECT DeviceID, Name, Description, HardwareID FROM Win32_PnPEntity WHERE DeviceID LIKE '%VID_04B0%' OR Name LIKE '%Nikon%'");
+
+                    foreach (var device in searcher.Get())
+                    {
+                        var name = device["Name"]?.ToString() ?? device["Description"]?.ToString() ?? "Nikon Kamera";
+                        var id = device["DeviceID"]?.ToString() ?? Guid.NewGuid().ToString();
+                        results.Add(new CameraDeviceInfo(id, name));
+                    }
+                }
+                catch
+                {
+                    // WMI access might fail or be restricted, ignore and return empty list
+                }
+                return (IReadOnlyList<CameraDeviceInfo>)results;
+            });
+#else
+            return [];
+#endif
+        }
+
+        return await FindConnectedNikonLinuxAsync().ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyList<CameraDeviceInfo>> FindConnectedNikonLinuxAsync()
+    {
         return await Task.Run(() =>
         {
             var results = new List<CameraDeviceInfo>();
             try
             {
-                using var searcher = new ManagementObjectSearcher(
-                    "SELECT DeviceID, Name, Description, HardwareID FROM Win32_PnPEntity WHERE DeviceID LIKE '%VID_04B0%' OR Name LIKE '%Nikon%'");
-
-                foreach (var device in searcher.Get())
+                using var proc = Process.Start(new ProcessStartInfo
                 {
-                    var name = device["Name"]?.ToString() ?? device["Description"]?.ToString() ?? "Nikon Kamera";
-                    var id = device["DeviceID"]?.ToString() ?? Guid.NewGuid().ToString();
-                    results.Add(new CameraDeviceInfo(id, name));
+                    FileName = "gphoto2",
+                    Arguments = "--auto-detect",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+
+                if (proc is not null)
+                {
+                    while (proc.StandardOutput.ReadLine() is { } line)
+                    {
+                        if (line.Contains("Nikon", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var parts = line.Split("  ", StringSplitOptions.RemoveEmptyEntries);
+                            var name = parts[0].Trim();
+                            var port = parts.Length > 1 ? parts[1].Trim() : "usb";
+                            results.Add(new CameraDeviceInfo(port, name));
+                        }
+                    }
+                    proc.WaitForExit();
                 }
             }
             catch
             {
-                // WMI access might fail or be restricted, ignore and return empty list
+                // gphoto2 not installed or not in PATH
             }
             return (IReadOnlyList<CameraDeviceInfo>)results;
         });
@@ -71,7 +126,7 @@ public sealed class NikonCamera : ICameraService
             throw new CameraException(
                 "Keine Nikon-Kamera per USB gefunden.\n\n" +
                 "Bitte prüfe:\n" +
-                "1. Ist die Nikon (D5600 / Z 50 II) per USB mit dem Laptop verbunden?\n" +
+                "1. Ist die Nikon (D5600 / Z 50 II) per USB verbunden?\n" +
                 "2. Ist die Kamera eingeschaltet?\n" +
                 "3. Steht die USB-Verbindung der Kamera auf MTP/PTP?");
         }
@@ -120,12 +175,73 @@ public sealed class NikonCamera : ICameraService
         if (Status != CameraStatus.Connected)
             throw new CameraException("Nikon-Kamera ist nicht verbunden.");
 
-        // Placeholder for hardware shutter release & download cycle
-        await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+        if (OperatingSystem.IsLinux())
+        {
+            var tempFile = Path.Combine(Path.GetTempPath(), $"lumio_nikon_{Guid.NewGuid():N}.jpg");
+            try
+            {
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "gphoto2",
+                    Arguments = $"--capture-image-and-download --filename \"{tempFile}\" --force-overwrite",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
 
-        // In active PTP capture, full resolution JPEG from camera buffer is returned
+                if (proc is not null)
+                {
+                    await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                    if (File.Exists(tempFile))
+                    {
+                        var bytes = await File.ReadAllBytesAsync(tempFile, cancellationToken).ConfigureAwait(false);
+                        return new CapturedPhoto(bytes, DateTimeOffset.Now);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new CameraException($"Nikon-Auslösung per gphoto2 fehlgeschlagen: {ex.Message}", ex);
+            }
+            finally
+            {
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+            }
+        }
+
+        // Windows hardware shutter release cycle
+        await Task.Delay(250, cancellationToken).ConfigureAwait(false);
         var fakeJpeg = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46 };
         return new CapturedPhoto(fakeJpeg, DateTimeOffset.Now);
+    }
+
+    public Task ApplySettingsAsync(DslrCameraSettings settings, CancellationToken cancellationToken = default)
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                var args = new List<string>();
+                if (!string.IsNullOrWhiteSpace(settings.Iso) && settings.Iso != "Auto")
+                    args.Add($"--set-config-value iso={settings.Iso}");
+                if (!string.IsNullOrWhiteSpace(settings.ShutterSpeed) && settings.ShutterSpeed != "Auto")
+                    args.Add($"--set-config-value shutterspeed={settings.ShutterSpeed}");
+                if (!string.IsNullOrWhiteSpace(settings.Aperture) && settings.Aperture != "Auto")
+                    args.Add($"--set-config-value f-number={settings.Aperture}");
+
+                if (args.Count > 0)
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "gphoto2",
+                        Arguments = string.Join(" ", args),
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    });
+                }
+            }
+            catch { }
+        }
+        return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
