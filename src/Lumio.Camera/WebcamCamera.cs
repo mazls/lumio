@@ -60,7 +60,11 @@ public sealed class WebcamCamera : ICameraService
                 name += " (Rückkamera)";
 
             return new CameraDeviceInfo(d.Id, name);
-        }).ToList();
+        })
+        .OrderByDescending(d => d.Name.Contains("Anker", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("USB", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("Webcam", StringComparison.OrdinalIgnoreCase))
+        .ThenByDescending(d => d.Name.Contains("Front", StringComparison.OrdinalIgnoreCase))
+        .ThenBy(d => d.Name.Contains("Rear", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("Rück", StringComparison.OrdinalIgnoreCase))
+        .ToList();
     }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -362,6 +366,12 @@ public sealed class WebcamCamera : ICameraService
             var pixels = new byte[width * height * 4];
             target.CopyToBuffer(pixels.AsBuffer());
 
+            // Ensure all pixels have alpha = 255 (opaque), avoiding black screen if driver delivers alpha = 0
+            for (var i = 3; i < pixels.Length; i += 4)
+            {
+                pixels[i] = 255;
+            }
+
             var liveFrame = new LiveViewFrame(pixels, FrameFormat.Bgra32, width, height, width * 4);
 
             TaskCompletionSource<LiveViewFrame>? pending;
@@ -420,23 +430,36 @@ public sealed class WebcamCamera : ICameraService
 #else
 using System.Diagnostics;
 using System.IO;
+using Lumio.Core.Settings;
 
 namespace Lumio.Camera;
 
-/// <summary>Linux / Raspberry Pi Camera implementation (libcamera / rpicam / v4l2 / fallback).</summary>
+/// <summary>Linux / Raspberry Pi Camera implementation (v4l2 via ffmpeg / libcamera / fallback).</summary>
 public sealed class WebcamCamera : ICameraService
 {
     private readonly string? _requestedDeviceId;
     private CameraStatus _status = CameraStatus.Disconnected;
     private readonly SimulatedCamera _fallback = new();
 
+    private Process? _ffmpegProc;
+    private CancellationTokenSource? _liveCts;
+    private Task? _liveTask;
+    private byte[]? _latestJpeg;
+    private readonly object _frameLock = new();
+    private bool _useFfmpeg;
+    private string _activeDevice = "/dev/video0";
+
     public WebcamCamera(string? deviceId)
     {
         _requestedDeviceId = deviceId;
-        _fallback.FrameReady += (s, f) => FrameReady?.Invoke(this, f);
+        _fallback.FrameReady += (s, f) =>
+        {
+            if (!_useFfmpeg)
+                FrameReady?.Invoke(this, f);
+        };
     }
 
-    public string DisplayName { get; private set; } = "Raspberry Pi Kamera";
+    public string DisplayName { get; private set; } = "USB Webcam";
 
     public CameraStatus Status
     {
@@ -458,16 +481,35 @@ public sealed class WebcamCamera : ICameraService
         var list = new List<CameraDeviceInfo>();
         try
         {
+            // Scan /sys/class/video4linux to get accurate camera names (e.g. "Anker PowerConf C200")
+            if (Directory.Exists("/sys/class/video4linux"))
+            {
+                var dirs = Directory.GetDirectories("/sys/class/video4linux");
+                foreach (var dir in dirs.OrderBy(d => d))
+                {
+                    var node = Path.GetFileName(dir); // e.g. "video0"
+                    var devPath = $"/dev/{node}";
+                    if (!File.Exists(devPath))
+                        continue;
+
+                    var nameFile = Path.Combine(dir, "name");
+                    var name = File.Exists(nameFile) ? File.ReadAllText(nameFile).Trim() : $"USB Webcam ({node})";
+                    list.Add(new CameraDeviceInfo(devPath, name));
+                }
+            }
+            else
+            {
+                // Fallback /dev/video*
+                foreach (var dev in Directory.GetFiles("/dev", "video*").OrderBy(d => d))
+                {
+                    list.Add(new CameraDeviceInfo(dev, $"USB Webcam ({Path.GetFileName(dev)})"));
+                }
+            }
+
             // Check for Raspberry Pi camera module via rpicam-still / libcamera-still
             if (File.Exists("/usr/bin/rpicam-still") || File.Exists("/usr/bin/libcamera-still"))
             {
-                list.Add(new CameraDeviceInfo("rpicam", "Raspberry Pi Camera Module"));
-            }
-
-            // Check /dev/video* devices
-            foreach (var dev in Directory.GetFiles("/dev", "video*"))
-            {
-                list.Add(new CameraDeviceInfo(dev, $"USB Webcam ({Path.GetFileName(dev)})"));
+                list.Insert(0, new CameraDeviceInfo("rpicam", "Raspberry Pi Camera Module"));
             }
         }
         catch { }
@@ -483,18 +525,179 @@ public sealed class WebcamCamera : ICameraService
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         Status = CameraStatus.Connecting;
+
+        var devices = await FindDevicesAsync();
+        var selected = (!string.IsNullOrEmpty(_requestedDeviceId)
+            ? devices.FirstOrDefault(d => d.Id == _requestedDeviceId)
+            : null)
+            ?? devices.FirstOrDefault(d => d.Id.StartsWith("/dev/video"))
+            ?? devices.FirstOrDefault();
+
+        if (selected is not null && selected.Id.StartsWith("/dev/video"))
+        {
+            _activeDevice = selected.Id;
+            DisplayName = selected.Name;
+            _useFfmpeg = true;
+            Status = CameraStatus.Connected;
+            return;
+        }
+
+        _useFfmpeg = false;
         await _fallback.ConnectAsync(cancellationToken);
+        DisplayName = _fallback.DisplayName;
         Status = CameraStatus.Connected;
     }
 
-    public Task StartLiveViewAsync(CancellationToken cancellationToken = default) =>
-        _fallback.StartLiveViewAsync(cancellationToken);
+    public async Task StartLiveViewAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_useFfmpeg)
+        {
+            await _fallback.StartLiveViewAsync(cancellationToken);
+            return;
+        }
 
-    public Task StopLiveViewAsync() =>
-        _fallback.StopLiveViewAsync();
+        if (_ffmpegProc is not null)
+            return;
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                Arguments = $"-hide_banner -loglevel error -f v4l2 -video_size 1280x720 -i \"{_activeDevice}\" -r 25 -f image2pipe -vcodec mjpeg -q:v 3 pipe:1",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            var proc = Process.Start(psi);
+            if (proc is null)
+                throw new InvalidOperationException("ffmpeg konnte nicht gestartet werden.");
+
+            _ffmpegProc = proc;
+            _liveCts = new CancellationTokenSource();
+            var token = _liveCts.Token;
+
+            _liveTask = Task.Run(() => ReadFfmpegStreamAsync(proc.StandardOutput.BaseStream, token), CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            // If ffmpeg fails, seamlessly fall back to simulated camera
+            _useFfmpeg = false;
+            await _fallback.ConnectAsync(cancellationToken);
+            await _fallback.StartLiveViewAsync(cancellationToken);
+        }
+    }
+
+    private async Task ReadFfmpegStreamAsync(Stream stream, CancellationToken token)
+    {
+        using var buffered = new BufferedStream(stream, 65536);
+        using var ms = new MemoryStream();
+        int b;
+        int prev = -1;
+
+        try
+        {
+            while (!token.IsCancellationRequested && (b = buffered.ReadByte()) != -1)
+            {
+                if (prev == 0xFF && b == 0xD8)
+                {
+                    ms.SetLength(0);
+                    ms.WriteByte(0xFF);
+                    ms.WriteByte(0xD8);
+                }
+                else if (ms.Length > 0)
+                {
+                    ms.WriteByte((byte)b);
+                    if (prev == 0xFF && b == 0xD9)
+                    {
+                        var jpeg = ms.ToArray();
+                        lock (_frameLock)
+                        {
+                            _latestJpeg = jpeg;
+                        }
+                        FrameReady?.Invoke(this, new LiveViewFrame(jpeg, FrameFormat.Jpeg, 1280, 720, 0));
+                    }
+                }
+                prev = b;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch { }
+    }
+
+    public async Task StopLiveViewAsync()
+    {
+        if (!_useFfmpeg)
+        {
+            await _fallback.StopLiveViewAsync();
+            return;
+        }
+
+        _liveCts?.Cancel();
+        if (_ffmpegProc is not null)
+        {
+            try
+            {
+                if (!_ffmpegProc.HasExited)
+                    _ffmpegProc.Kill();
+            }
+            catch { }
+            _ffmpegProc.Dispose();
+            _ffmpegProc = null;
+        }
+
+        if (_liveTask is not null)
+        {
+            try { await _liveTask.ConfigureAwait(false); } catch { }
+            _liveTask = null;
+        }
+
+        _liveCts?.Dispose();
+        _liveCts = null;
+    }
 
     public async Task<CapturedPhoto> CapturePhotoAsync(CancellationToken cancellationToken = default)
     {
+        if (_useFfmpeg)
+        {
+            byte[]? copy = null;
+            lock (_frameLock)
+            {
+                copy = _latestJpeg;
+            }
+
+            if (copy is not null && copy.Length > 0)
+            {
+                return new CapturedPhoto(copy, DateTimeOffset.Now);
+            }
+
+            // If not in live view, capture single frame via ffmpeg
+            try
+            {
+                var tempFile = Path.Combine(Path.GetTempPath(), $"webcam_{Guid.NewGuid():N}.jpg");
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "ffmpeg",
+                    Arguments = $"-y -hide_banner -loglevel error -f v4l2 -video_size 1920x1080 -i \"{_activeDevice}\" -vframes 1 \"{tempFile}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+                if (proc is not null)
+                {
+                    await proc.WaitForExitAsync(cancellationToken);
+                    if (File.Exists(tempFile))
+                    {
+                        var bytes = await File.ReadAllBytesAsync(tempFile, cancellationToken);
+                        try { File.Delete(tempFile); } catch { }
+                        return new CapturedPhoto(bytes, DateTimeOffset.Now);
+                    }
+                }
+            }
+            catch { }
+        }
+
         // Try Raspberry Pi Camera tool (rpicam-still or libcamera-still)
         var cmd = File.Exists("/usr/bin/rpicam-still") ? "rpicam-still" : (File.Exists("/usr/bin/libcamera-still") ? "libcamera-still" : null);
         if (cmd is not null)
@@ -529,8 +732,12 @@ public sealed class WebcamCamera : ICameraService
         return await _fallback.CapturePhotoAsync(cancellationToken);
     }
 
+    public Task ApplySettingsAsync(DslrCameraSettings settings, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
     public async ValueTask DisposeAsync()
     {
+        await StopLiveViewAsync();
         await _fallback.DisposeAsync();
         Status = CameraStatus.Disconnected;
     }

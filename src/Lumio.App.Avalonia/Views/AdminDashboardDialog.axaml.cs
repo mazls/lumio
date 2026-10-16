@@ -41,6 +41,7 @@ public partial class AdminDashboardDialog : Window
         CountdownUpDown.Value = current.CountdownSeconds;
         ReviewUpDown.Value = current.ReviewSeconds;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
+        MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         AdminPinTextBox.Text = current.AdminPin;
 
         CameraSelectionComboBox.SelectedIndex = current.CameraBackend switch
@@ -76,6 +77,7 @@ public partial class AdminDashboardDialog : Window
         copy.CountdownSeconds = (int)(CountdownUpDown.Value ?? 3);
         copy.ReviewSeconds = (int)(ReviewUpDown.Value ?? 12);
         copy.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
+        copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         if (!string.IsNullOrWhiteSpace(AdminPinTextBox.Text))
             copy.AdminPin = AdminPinTextBox.Text.Trim();
 

@@ -61,6 +61,7 @@ public partial class MainWindow : Window
 
     private async Task InitializeBoothAsync()
     {
+        LiveViewScaleTransform.ScaleX = _settingsService.Current.MirrorLiveView ? -1 : 1;
         EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
         UpdateModeButtons();
         await StartCameraAsync();
@@ -573,6 +574,7 @@ public partial class MainWindow : Window
             }
             else
             {
+                LiveViewScaleTransform.ScaleX = _settingsService.Current.MirrorLiveView ? -1 : 1;
                 EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
                 await StartCameraAsync();
             }

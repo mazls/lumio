@@ -18,6 +18,11 @@ if ! command -v lp &> /dev/null; then
     echo "Hinweis: 'cups' wurde nicht gefunden. Fuer Canon Selphy Drucke bitte installieren:"
     echo "  - Arch / CachyOS / Manjaro:   sudo pacman -S cups && sudo systemctl enable --now cups"
     echo "  - Debian / Ubuntu / Pi OS:    sudo apt install -y cups"
+# Check for ffmpeg (recommended for USB Webcams like Anker / Logitech)
+if ! command -v ffmpeg &> /dev/null; then
+    echo "Hinweis: 'ffmpeg' wurde nicht gefunden. Fuer USB-Webcams (z. B. Anker) bitte installieren:"
+    echo "  - Arch / CachyOS / Manjaro:   sudo pacman -S ffmpeg"
+    echo "  - Debian / Ubuntu / Pi OS:    sudo apt install -y ffmpeg"
 fi
 
 echo "Starte Lumio Photobooth..."

@@ -130,6 +130,18 @@ public partial class MainWindow : Window
             if (GalleryOverlayGrid.Visibility == Visibility.Visible)
                 return;
 
+            if (frame.Format == FrameFormat.Jpeg)
+            {
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.StreamSource = new MemoryStream(frame.Data);
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.EndInit();
+                bi.Freeze();
+                LiveViewImageControl.Source = bi;
+                return;
+            }
+
             if (_liveBitmap is null || _liveBitmap.PixelWidth != frame.Width || _liveBitmap.PixelHeight != frame.Height)
             {
                 _liveBitmap = new WriteableBitmap(
@@ -137,7 +149,7 @@ public partial class MainWindow : Window
                     frame.Height,
                     96,
                     96,
-                    PixelFormats.Bgra32,
+                    PixelFormats.Bgr32,
                     null);
                 LiveViewImageControl.Source = _liveBitmap;
             }
