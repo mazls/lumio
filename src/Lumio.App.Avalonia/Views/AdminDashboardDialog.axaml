@@ -78,8 +78,30 @@
                             </StackPanel>
 
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Speicherordner für Fotos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <TextBox x:Name="OutputFolderTextBox" CornerRadius="10" FontSize="14" Padding="10,8" />
+                                <TextBlock Text="Speicherordner für Fotos &amp; Videos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="OutputFolderTextBox" Grid.Column="0" CornerRadius="10" FontSize="14" Padding="10,8" />
+                                    <Button Grid.Column="2" Content="📁 Durchsuchen..." CornerRadius="10" Padding="12,8" Click="OnBrowseOutputFolderClick" />
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel x:Name="UsbDrivesPanel" Spacing="4" Margin="0,4,0,0">
+                                <TextBlock Text="Erkannte USB-Laufwerke / Wechseldatenträger:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="UsbDrivesComboBox" Grid.Column="0" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                    <Button x:Name="SelectUsbButton" Grid.Column="2" Content="Als Speicherort wählen" CornerRadius="10" Padding="12,8" Click="OnSelectUsbDriveClick" />
+                                </Grid>
+                                <TextBlock x:Name="UsbStatusText" Text="" FontSize="11" Foreground="{StaticResource AccentOrangeBrush}" Margin="2,2,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </Border>

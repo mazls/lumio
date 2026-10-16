@@ -96,8 +96,30 @@
                             <TextBlock Text="Event-Name (z.B. Hochzeit Marcel &amp; Julia)" Style="{StaticResource FieldLabel}" />
                             <TextBox x:Name="EventNameTextBox" Style="{StaticResource TouchTextBox}" Margin="0,0,0,14" />
 
-                            <TextBlock Text="Speicherordner für Originalfotos" Style="{StaticResource FieldLabel}" />
-                            <TextBox x:Name="OutputFolderTextBox" Style="{StaticResource TouchTextBox}" />
+                            <TextBlock Text="Speicherordner für Originalfotos &amp; Videos" Style="{StaticResource FieldLabel}" />
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="OutputFolderTextBox" Grid.Column="0" Style="{StaticResource TouchTextBox}" />
+                                <Button Grid.Column="2" Content="📁 Durchsuchen..." Style="{StaticResource TouchGlassButton}" Padding="16,8" Click="OnBrowseOutputFolderClick" />
+                            </Grid>
+
+                            <StackPanel x:Name="UsbDrivesPanel">
+                                <TextBlock Text="Erkannte USB-Laufwerke / Wechseldatenträger:" Style="{StaticResource FieldLabel}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="UsbDrivesComboBox" Grid.Column="0" Style="{StaticResource TouchComboBox}" />
+                                    <Button x:Name="SelectUsbButton" Grid.Column="2" Content="Als Speicherort wählen" Style="{StaticResource TouchGlassButton}" Padding="16,8" Click="OnSelectUsbDriveClick" />
+                                </Grid>
+                                <TextBlock x:Name="UsbStatusText" Text="" Style="{StaticResource Caption}" Foreground="{StaticResource AccentOrangeBrush}" Margin="2,6,0,0" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

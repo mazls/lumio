@@ -1,4 +1,4 @@
-﻿using Lumio.Core.Camera;
+using Lumio.Core.Camera;
 using Lumio.Core.Session;
 using Lumio.Core.Settings;
 using Lumio.Core.Storage;
@@ -108,6 +108,49 @@ public class EventStorageTests
         Assert.DoesNotContain("?", result);
         Assert.DoesNotContain("<", result);
         Assert.DoesNotContain(">", result);
+    }
+
+    [Fact]
+    public void UsbDriveDetector_DetectDrives_ExecutesSafely()
+    {
+        var drives = UsbDriveDetector.DetectDrives();
+        Assert.NotNull(drives);
+        // List may be empty if no USB drive is plugged in, but must never throw
+    }
+
+    [Fact]
+    public async Task EventStorage_Fallback_RecoversWhenPrimaryPathIsUnwritable()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 17, 12, 0, 0, TimeSpan.Zero));
+        var tempSettingsFile = Path.Combine(Path.GetTempPath(), $"settings_{Guid.NewGuid():N}.json");
+        var store = new SettingsStore(tempSettingsFile);
+        var settingsService = new SettingsService(store);
+
+        // Point to an invalid path that cannot be created (e.g. invalid drive letter or reserved chars)
+        var invalidPath = OperatingSystem.IsWindows() ? @"Z:\NonExistentDrive_Lumio_99" : "/proc/unwritable_lumio";
+        settingsService.Update(new BoothSettings
+        {
+            OutputRoot = invalidPath,
+            EventName = "FallbackTest",
+        });
+
+        var storage = new EventStorage(settingsService, time);
+
+        // Saving original should safely fallback to internal storage without throwing
+        var fakePhoto = new CapturedPhoto(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, DateTimeOffset.UtcNow);
+        var savedPath = await storage.SaveOriginalAsync(fakePhoto);
+
+        Assert.NotNull(savedPath);
+        Assert.True(File.Exists(savedPath));
+        Assert.Contains(EventStorage.OriginalsFolderName, savedPath);
+
+        // Cleanup
+        try
+        {
+            if (File.Exists(savedPath)) File.Delete(savedPath);
+            if (File.Exists(tempSettingsFile)) File.Delete(tempSettingsFile);
+        }
+        catch { }
     }
 }
 

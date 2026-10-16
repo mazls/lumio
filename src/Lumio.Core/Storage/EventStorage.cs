@@ -30,10 +30,32 @@ public sealed class EventStorage
         return Path.Combine(settings.OutputRoot, $"{date}_{SanitizeFileName(settings.EventName)}");
     }
 
-    public string GetOriginalsFolder() => Path.Combine(GetEventFolder(), OriginalsFolderName);
-    public string GetCollagesFolder() => Path.Combine(GetEventFolder(), CollagesFolderName);
-    public string GetGifsFolder() => Path.Combine(GetEventFolder(), GifsFolderName);
-    public string GetVideosFolder() => Path.Combine(GetEventFolder(), VideosFolderName);
+    public static string GetDefaultInternalRoot() =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Lumio");
+
+    public string GetOriginalsFolder() => GetSafeFolder(OriginalsFolderName);
+    public string GetCollagesFolder() => GetSafeFolder(CollagesFolderName);
+    public string GetGifsFolder() => GetSafeFolder(GifsFolderName);
+    public string GetVideosFolder() => GetSafeFolder(VideosFolderName);
+
+    private string GetSafeFolder(string subFolderName)
+    {
+        var primaryFolder = Path.Combine(GetEventFolder(), subFolderName);
+        try
+        {
+            Directory.CreateDirectory(primaryFolder);
+            return primaryFolder;
+        }
+        catch
+        {
+            // Fail-safe: if USB drive is disconnected, unwritable or removed, write to internal drive
+            var date = _time.GetLocalNow().ToString("yyyy-MM-dd");
+            var fallbackEvent = Path.Combine(GetDefaultInternalRoot(), $"{date}_{SanitizeFileName(_settings.Current.EventName)}");
+            var fallbackFolder = Path.Combine(fallbackEvent, subFolderName);
+            Directory.CreateDirectory(fallbackFolder);
+            return fallbackFolder;
+        }
+    }
 
     public async Task<string> SaveVideoAsync(byte[] videoData, DateTimeOffset timestamp, string extension = "mp4", CancellationToken cancellationToken = default)
     {

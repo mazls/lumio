@@ -62,6 +62,7 @@ public partial class AdminDashboardDialog : Window
         PopulatePrinterOptions();
         PopulateTemplateOptions();
         PopulateBrandingOptions();
+        PopulateUsbDrives();
     }
 
     private void LoadCurrentSettings()
@@ -387,6 +388,50 @@ public partial class AdminDashboardDialog : Window
         {
             ExitRequested = true;
             Close();
+        }
+    }
+
+    private void PopulateUsbDrives()
+    {
+        var drives = UsbDriveDetector.DetectDrives();
+        if (drives.Count > 0)
+        {
+            UsbDrivesComboBox.ItemsSource = drives;
+            var currentRoot = _settingsService.Current.OutputRoot;
+            var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
+            UsbDrivesComboBox.SelectedItem = matched;
+            SelectUsbButton.IsEnabled = true;
+            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+        }
+        else
+        {
+            UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
+            UsbDrivesComboBox.SelectedIndex = 0;
+            SelectUsbButton.IsEnabled = false;
+            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+        }
+    }
+
+    private void OnSelectUsbDriveClick(object sender, RoutedEventArgs e)
+    {
+        if (UsbDrivesComboBox.SelectedItem is UsbDriveInfo drive)
+        {
+            OutputFolderTextBox.Text = drive.RootPath;
+            UsbStatusText.Text = $"✅ Speicherort auf USB-Laufwerk '{drive.Name}' gesetzt!";
+        }
+    }
+
+    private void OnBrowseOutputFolderClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Speicherordner für Fotos & Videos wählen",
+            InitialDirectory = Directory.Exists(OutputFolderTextBox.Text) ? OutputFolderTextBox.Text : null,
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            OutputFolderTextBox.Text = dialog.FolderName;
         }
     }
 

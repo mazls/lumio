@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Lumio.Camera;
 using Lumio.Core.Camera;
 using Lumio.Core.Settings;
@@ -75,6 +76,7 @@ public partial class AdminDashboardDialog : Window
         PopulatePrinterOptions();
         PopulateTemplateOptions();
         PopulateBrandingOptions();
+        PopulateUsbDrives();
     }
 
     private void LoadSettings()
@@ -314,6 +316,53 @@ public partial class AdminDashboardDialog : Window
     {
         ExitRequested = true;
         Close();
+    }
+
+    private void PopulateUsbDrives()
+    {
+        var drives = UsbDriveDetector.DetectDrives();
+        if (drives.Count > 0)
+        {
+            UsbDrivesComboBox.ItemsSource = drives;
+            var currentRoot = _settingsService.Current.OutputRoot;
+            var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
+            UsbDrivesComboBox.SelectedItem = matched;
+            SelectUsbButton.IsEnabled = true;
+            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+        }
+        else
+        {
+            UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
+            UsbDrivesComboBox.SelectedIndex = 0;
+            SelectUsbButton.IsEnabled = false;
+            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+        }
+    }
+
+    private void OnSelectUsbDriveClick(object? sender, RoutedEventArgs e)
+    {
+        if (UsbDrivesComboBox.SelectedItem is UsbDriveInfo drive)
+        {
+            OutputFolderTextBox.Text = drive.RootPath;
+            UsbStatusText.Text = $"✅ Speicherort auf USB-Laufwerk '{drive.Name}' gesetzt!";
+        }
+    }
+
+    private async void OnBrowseOutputFolderClick(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Speicherordner für Fotos & Videos wählen",
+            AllowMultiple = false,
+        });
+
+        if (folders.Count > 0)
+        {
+            OutputFolderTextBox.Text = folders[0].Path.LocalPath;
+        }
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
