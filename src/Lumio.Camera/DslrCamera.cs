@@ -6,19 +6,26 @@ using Lumio.Core.Settings;
 
 #if WINDOWS || NET10_0_WINDOWS10_0_19041_0
 using System.Management;
+using CameraControl.Devices;
+using CameraControl.Devices.Classes;
 #endif
 
 namespace Lumio.Camera;
 
 /// <summary>
-/// Universal DSLR and Mirrorless camera driver supporting all major brands
-/// (Nikon, Canon, Sony, Fujifilm, Panasonic, Olympus, etc.).
-/// - Windows: digiCamControl HTTP API (with fallback to direct PTP/WMI for Nikon)
+/// Universal DSLR and Mirrorless camera driver supporting Nikon, Canon, Sony, Fuji, etc.
+/// - Windows: In-process direct USB tethering engine via WPD / PTP (just like dslrBooth, zero external software)
 /// - Linux: gphoto2 CLI &amp; MJPEG movie streaming
 /// </summary>
 public class DslrCamera : ICameraService
 {
     private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(5) };
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+    private static CameraDeviceManager? _deviceManager;
+    private static readonly object _managerLock = new();
+    private ICameraDevice? _cameraDevice;
+#endif
 
     private readonly BoothSettings? _settings;
     private readonly string _digiCamUrl;
@@ -50,6 +57,22 @@ public class DslrCamera : ICameraService
         _digiCamUrl = settings?.DigiCamControlUrl ?? BoothSettings.DefaultDigiCamControlUrl;
     }
 
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+    private static CameraDeviceManager GetOrCreateDeviceManager()
+    {
+        lock (_managerLock)
+        {
+            if (_deviceManager == null)
+            {
+                _deviceManager = new CameraDeviceManager("");
+                _deviceManager.DisableNativeDrivers = false;
+                _deviceManager.UseExperimentalDrivers = true;
+            }
+            return _deviceManager;
+        }
+    }
+#endif
+
     public static async Task<IReadOnlyList<CameraDeviceInfo>> FindConnectedDevicesAsync(string? digiCamUrl = null)
     {
         if (OperatingSystem.IsWindows())
@@ -64,28 +87,40 @@ public class DslrCamera : ICameraService
     {
         var results = new List<CameraDeviceInfo>();
 
-        // 1. Try checking digiCamControl web server
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+        // 1. Check in-process CameraDeviceManager
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(800));
-            var resp = await HttpClient.GetStringAsync($"{digiCamUrl.TrimEnd('/')}/?slc=list&param1=cameras", cts.Token);
-            var lines = resp.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var serial in lines)
+            await Task.Run(() =>
             {
-                if (!string.IsNullOrWhiteSpace(serial) && !serial.StartsWith("Unknow", StringComparison.OrdinalIgnoreCase))
+                var mgr = GetOrCreateDeviceManager();
+                mgr.ConnectToCamera();
+
+                foreach (ICameraDevice dev in mgr.ConnectedDevices)
                 {
-                    results.Add(new CameraDeviceInfo(serial, $"DSLR (digiCamControl: {serial})"));
+                    if (dev.IsConnected)
+                    {
+                        var name = !string.IsNullOrWhiteSpace(dev.DisplayName)
+                            ? dev.DisplayName
+                            : (!string.IsNullOrWhiteSpace(dev.DeviceName) ? dev.DeviceName : "DSLR Kamera");
+
+                        var id = !string.IsNullOrWhiteSpace(dev.SerialNumber)
+                            ? dev.SerialNumber
+                            : (!string.IsNullOrWhiteSpace(dev.PortName) ? dev.PortName : Guid.NewGuid().ToString());
+
+                        results.Add(new CameraDeviceInfo(id, $"📷 {name}"));
+                    }
                 }
-            }
+            });
+
             if (results.Count > 0)
                 return results;
         }
-        catch
+        catch (Exception ex)
         {
-            // digiCamControl not running or not responding
+            Debug.WriteLine($"In-process CameraDeviceManager scan error: {ex.Message}");
         }
 
-#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
         // 2. Query Windows PnP for USB DSLRs (Nikon, Canon, Sony, Fuji)
         try
         {
@@ -105,7 +140,6 @@ public class DslrCamera : ICameraService
                     var name = device["Name"]?.ToString() ?? device["Description"]?.ToString() ?? "DSLR Kamera";
                     var id = device["DeviceID"]?.ToString() ?? Guid.NewGuid().ToString();
 
-                    // Strictly filter out printers, print queues, network endpoints
                     if (pnpClass.Equals("Printer", StringComparison.OrdinalIgnoreCase) ||
                         pnpClass.Equals("PrintQueue", StringComparison.OrdinalIgnoreCase) ||
                         name.Contains("Printer", StringComparison.OrdinalIgnoreCase) ||
@@ -116,7 +150,6 @@ public class DslrCamera : ICameraService
                         continue;
                     }
 
-                    // Format Nikon Z50II and other known cameras nicely
                     if (name.Contains("Z50", StringComparison.OrdinalIgnoreCase) || id.Contains("VID_04B0&PID_0455", StringComparison.OrdinalIgnoreCase))
                     {
                         name = "Nikon Z 50 II (USB)";
@@ -130,10 +163,7 @@ public class DslrCamera : ICameraService
                 }
             });
         }
-        catch
-        {
-            // WMI error ignored
-        }
+        catch { }
 #endif
 
         return results;
@@ -157,7 +187,6 @@ public class DslrCamera : ICameraService
 
                 if (proc is not null)
                 {
-                    // Skip header lines
                     var lineNum = 0;
                     while (proc.StandardOutput.ReadLine() is { } line)
                     {
@@ -165,7 +194,6 @@ public class DslrCamera : ICameraService
                         if (lineNum <= 2 || string.IsNullOrWhiteSpace(line))
                             continue;
 
-                        // Example line: "Nikon DSC D5600               usb:001,005"
                         var parts = line.Split("  ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                         if (parts.Length > 0)
                         {
@@ -177,10 +205,7 @@ public class DslrCamera : ICameraService
                     proc.WaitForExit();
                 }
             }
-            catch
-            {
-                // gphoto2 not installed
-            }
+            catch { }
             return (IReadOnlyList<CameraDeviceInfo>)results;
         });
     }
@@ -194,11 +219,41 @@ public class DslrCamera : ICameraService
 
         if (OperatingSystem.IsWindows())
         {
-            // Only probe the tethering web service if an instance is already running (never auto-start external GUI apps)
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+            try
+            {
+                var mgr = GetOrCreateDeviceManager();
+                await Task.Run(() =>
+                {
+                    mgr.ConnectToCamera();
+                }, cancellationToken);
+
+                ICameraDevice? dev = mgr.SelectedCameraDevice;
+                if (dev == null || !dev.IsConnected)
+                {
+                    dev = mgr.ConnectedDevices.Cast<ICameraDevice>().FirstOrDefault(d => d.IsConnected);
+                }
+
+                if (dev != null && dev.IsConnected)
+                {
+                    _cameraDevice = dev;
+                    DisplayName = !string.IsNullOrWhiteSpace(dev.DisplayName)
+                        ? dev.DisplayName
+                        : (!string.IsNullOrWhiteSpace(dev.DeviceName) ? dev.DeviceName : "DSLR Kamera");
+                    Status = CameraStatus.Connected;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Direct DSLR connection error: {ex.Message}");
+            }
+#endif
+
+            // Fallback: check if an external digiCamControl service is already running
             var status = await DigiCamControlManager.GetStatusAsync(_digiCamUrl);
             if (status.IsReachable)
             {
-                // Check if camera is connected through the driver
                 try
                 {
                     using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -221,10 +276,11 @@ public class DslrCamera : ICameraService
 
             Status = CameraStatus.Error;
             throw new CameraException(
-                "Keine DSLR/Systemkamera über Tethering-Dienst verbunden.\n\n" +
-                "Empfohlene Lösung (ohne externe Zusatzprogramme):\n" +
-                "• Nikon Z 50 II: An der Kamera Setup-Menü 🔧 -> 'USB-Verbindung' -> 'USB-Streaming (UVC/UAC)' aktivieren. In Lumio oben direkt '📷 Nikon Z 50 II' auswählen (Plug & Play mit 60 FPS!).\n" +
-                "• Nikon D5600: 'Nikon Webcam Utility' installieren (kostenlos von Nikon) und Kamera-Flugmodus einschalten.");
+                "Keine DSLR/Systemkamera per USB gefunden.\n\n" +
+                "Bitte prüfen:\n" +
+                "1. Ist die Kamera (Nikon, Canon, Sony) per USB verbunden und eingeschaltet?\n" +
+                "2. Bei Nikon D5600: Kamera-Flugmodus auf AN stellen (damit SnapBridge Bluetooth den USB-Port nicht blockiert).\n" +
+                "3. Bei Nikon Z 50 II: Direkt per USB anstecken (kann auch nativ per USB-Streaming UVC genutzt werden).");
         }
         else
         {
@@ -257,6 +313,22 @@ public class DslrCamera : ICameraService
 
         _liveViewCts = new CancellationTokenSource();
         var token = _liveViewCts.Token;
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+        if (_cameraDevice is not null)
+        {
+            try
+            {
+                _cameraDevice.StartLiveView();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StartLiveView error: {ex.Message}");
+            }
+            _liveViewTask = Task.Run(() => RunNativeLiveViewLoopAsync(token), CancellationToken.None);
+            return Task.CompletedTask;
+        }
+#endif
 
         if (OperatingSystem.IsWindows() && _useDigiCamControl)
         {
@@ -291,6 +363,17 @@ public class DslrCamera : ICameraService
             _liveViewCts = null;
             _liveViewTask = null;
         }
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+        if (_cameraDevice is not null)
+        {
+            try
+            {
+                _cameraDevice.StopLiveView();
+            }
+            catch { }
+        }
+#endif
     }
 
     public async Task<CapturedPhoto> CapturePhotoAsync(CancellationToken cancellationToken = default)
@@ -298,17 +381,61 @@ public class DslrCamera : ICameraService
         if (Status != CameraStatus.Connected)
             throw new CameraException("DSLR ist nicht verbunden.");
 
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+        if (_cameraDevice is not null)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            void OnPhotoCaptured(object sender, PhotoCapturedEventArgs e)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        var tempPath = Path.Combine(Path.GetTempPath(), $"lumio_capture_{Guid.NewGuid():N}.jpg");
+                        e.CameraDevice.TransferFile(e.Handle, tempPath);
+                        if (File.Exists(tempPath))
+                        {
+                            var bytes = await File.ReadAllBytesAsync(tempPath).ConfigureAwait(false);
+                            try { File.Delete(tempPath); } catch { }
+                            tcs.TrySetResult(bytes);
+                        }
+                        else
+                        {
+                            tcs.TrySetException(new CameraException("Foto konnte nicht von der Kamera übertragen werden."));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.TrySetException(ex);
+                    }
+                });
+            }
+
+            _cameraDevice.PhotoCaptured += OnPhotoCaptured;
+            try
+            {
+                _cameraDevice.CapturePhoto();
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                var bytes = await tcs.Task.WaitAsync(linkedCts.Token).ConfigureAwait(false);
+                return new CapturedPhoto(bytes, DateTimeOffset.Now);
+            }
+            finally
+            {
+                _cameraDevice.PhotoCaptured -= OnPhotoCaptured;
+            }
+        }
+#endif
+
         if (OperatingSystem.IsWindows() && _useDigiCamControl)
         {
             try
             {
-                // Trigger capture in digiCamControl
                 await HttpClient.GetStringAsync($"{_digiCamUrl.TrimEnd('/')}/?slc=capture", cancellationToken);
-
-                // Wait for the photo to be transferred
                 await Task.Delay(600, cancellationToken);
 
-                // Query last captured file
                 var last = await HttpClient.GetStringAsync($"{_digiCamUrl.TrimEnd('/')}/?slc=get&param1=lastcaptured", cancellationToken);
                 var filename = last.Trim().Trim('"', '\r', '\n');
                 if (!string.IsNullOrWhiteSpace(filename) && filename != "-")
@@ -358,7 +485,6 @@ public class DslrCamera : ICameraService
             }
         }
 
-        // Direct hardware shutter release simulation / fallback
         await Task.Delay(250, cancellationToken).ConfigureAwait(false);
         var placeholder = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46 };
         return new CapturedPhoto(placeholder, DateTimeOffset.Now);
@@ -366,6 +492,40 @@ public class DslrCamera : ICameraService
 
     public async Task ApplySettingsAsync(DslrCameraSettings settings, CancellationToken cancellationToken = default)
     {
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+        if (_cameraDevice is not null)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(settings.Iso) && settings.Iso != DslrOptions.Auto && _cameraDevice.IsoNumber != null)
+                {
+                    _cameraDevice.IsoNumber.SetValue(settings.Iso);
+                }
+                if (!string.IsNullOrWhiteSpace(settings.ShutterSpeed) && settings.ShutterSpeed != DslrOptions.Auto && _cameraDevice.ShutterSpeed != null)
+                {
+                    _cameraDevice.ShutterSpeed.SetValue(settings.ShutterSpeed);
+                }
+                if (!string.IsNullOrWhiteSpace(settings.Aperture) && settings.Aperture != DslrOptions.Auto && _cameraDevice.FNumber != null)
+                {
+                    _cameraDevice.FNumber.SetValue(settings.Aperture);
+                }
+                if (!string.IsNullOrWhiteSpace(settings.WhiteBalance) && settings.WhiteBalance != DslrOptions.Auto && _cameraDevice.WhiteBalance != null)
+                {
+                    _cameraDevice.WhiteBalance.SetValue(settings.WhiteBalance);
+                }
+                if (!string.IsNullOrWhiteSpace(settings.ExposureCompensation) && _cameraDevice.ExposureCompensation != null)
+                {
+                    _cameraDevice.ExposureCompensation.SetValue(settings.ExposureCompensation);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to apply in-process camera settings: {ex.Message}");
+            }
+            return;
+        }
+#endif
+
         if (OperatingSystem.IsWindows() && _useDigiCamControl)
         {
             try
@@ -416,6 +576,30 @@ public class DslrCamera : ICameraService
         await StopLiveViewAsync().ConfigureAwait(false);
         Status = CameraStatus.Disconnected;
     }
+
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+    private async Task RunNativeLiveViewLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested && Status == CameraStatus.Connected && _cameraDevice != null)
+        {
+            try
+            {
+                var liveView = _cameraDevice.GetLiveViewImage();
+                if (liveView?.ImageData is { Length: > 100 } data)
+                {
+                    FrameReady?.Invoke(this, new LiveViewFrame(data, FrameFormat.Jpeg, liveView.ImageWidth, liveView.ImageHeight, 0));
+                }
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LiveView frame error: {ex.Message}");
+            }
+
+            await Task.Delay(33, token).ConfigureAwait(false); // ~30 fps
+        }
+    }
+#endif
 
     private async Task RunDigiCamLiveViewLoopAsync(CancellationToken token)
     {

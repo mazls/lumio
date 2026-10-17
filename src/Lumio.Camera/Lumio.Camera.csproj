@@ -16,6 +16,53 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
     <PackageReference Include="System.Management" Version="10.0.13" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Reference Include="CameraControl.Devices">
+      <HintPath>Libs\CameraControl.Devices.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="PortableDeviceLib">
+      <HintPath>Libs\PortableDeviceLib.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Canon.Eos.Framework">
+      <HintPath>Libs\Canon.Eos.Framework.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Interop.PortableDeviceApiLib">
+      <HintPath>Libs\Interop.PortableDeviceApiLib.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Interop.PortableDeviceTypesLib">
+      <HintPath>Libs\Interop.PortableDeviceTypesLib.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Interop.WIA">
+      <HintPath>Libs\Interop.WIA.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Rssdp.NetCore">
+      <HintPath>Libs\Rssdp.NetCore.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="websocket-sharp">
+      <HintPath>Libs\websocket-sharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Accord">
+      <HintPath>Libs\Accord.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Accord.Video">
+      <HintPath>Libs\Accord.Video.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Accord.Video.DirectShow">
+      <HintPath>Libs\Accord.Video.DirectShow.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <None Include="Libs\*.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
-
 </Project>

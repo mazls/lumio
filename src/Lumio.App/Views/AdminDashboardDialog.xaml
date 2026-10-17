@@ -174,7 +174,7 @@
                             <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="18" Margin="0,0,0,14">
                                 <StackPanel>
                                     <TextBlock Text="DSLR / SYSTEMKAMERA (NIKON, CANON, SONY)" Style="{StaticResource Eyebrow}" Margin="0,0,0,8" />
-                                    <TextBlock Text="Für Systemkameras mit USB-Streaming (z.B. Nikon Z 50 II) wird keine Zusatzsoftware benötigt – direkt oben als Kamera auswählbar." Style="{StaticResource Caption}" Margin="0,0,0,12" />
+                                    <TextBlock Text="Integrierte native USB-Tethering-Engine (wie in dslrBooth – läuft direkt in Lumio ohne jede Zusatzsoftware)." Style="{StaticResource Caption}" Margin="0,0,0,12" />
 
                                     <!-- Status Box -->
                                     <Border Background="#1A1A28" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1.5" CornerRadius="12" Padding="14,10">
