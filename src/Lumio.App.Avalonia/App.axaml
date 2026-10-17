@@ -39,6 +39,13 @@
         </Style>
 
         <!-- TabControl & TabItem Touch Styling -->
+        <Style Selector="TabControl">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
         <Style Selector="TabItem">
             <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -47,9 +54,11 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1.5" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Margin" Value="0,0,8,0" />
-            <Setter Property="Padding" Value="18,10" />
-            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="Margin" Value="4,0" />
+            <Setter Property="Padding" Value="10,12" />
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="TabItem:selected">
             <Setter Property="Background" Value="{StaticResource AccentGradientBrush}" />
