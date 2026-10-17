@@ -3,14 +3,33 @@ param([switch]$Rebuild)
 
 $exe = "$PSScriptRoot\publish\Lumio.exe"
 
-# Detect whether sources are newer than published executable
+# Detect system architecture (Surface ARM64 vs Intel/AMD x64)
+$arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "win-arm64" } else { "win-x64" }
+
+# Detect whether sources are newer than published executable or architecture mismatch
 $needsPublish = $Rebuild -or (-not (Test-Path $exe))
 if (-not $needsPublish -and (Test-Path $exe)) {
-    $exeTime = (Get-Item $exe).LastWriteTime
-    $sources = Get-ChildItem -Path "$PSScriptRoot\src" -Recurse -Include *.cs,*.xaml,*.axaml,*.csproj
-    $latestSource = ($sources | Measure-Object -Property LastWriteTime -Maximum).Maximum
-    if ($latestSource -gt $exeTime) {
+    # Check if executable architecture matches current machine
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($exe)
+        $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+        $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+        $expectedMachine = if ($arch -eq "win-arm64") { 0xAA64 } else { 0x8664 }
+        if ($machine -ne $expectedMachine) {
+            Write-Host "Architektur-Wechsel erkannt ($arch). Neu-Kompilierung erforderlich..." -ForegroundColor Yellow
+            $needsPublish = $true
+        }
+    } catch {
         $needsPublish = $true
+    }
+
+    if (-not $needsPublish) {
+        $exeTime = (Get-Item $exe).LastWriteTime
+        $sources = Get-ChildItem -Path "$PSScriptRoot\src" -Recurse -Include *.cs,*.xaml,*.axaml,*.csproj
+        $latestSource = ($sources | Measure-Object -Property LastWriteTime -Maximum).Maximum
+        if ($latestSource -gt $exeTime) {
+            $needsPublish = $true
+        }
     }
 }
 
@@ -50,9 +69,14 @@ if ($needsPublish) {
         }
     }
 
-    # 3. Detect system architecture (Surface ARM64 vs Intel/AMD x64)
-    $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "win-arm64" } else { "win-x64" }
     Write-Host "Lumio wird gebaut und als vollständiges Standalone-Paket gebündelt ($arch)..." -ForegroundColor Cyan
+
+    # Sauberen Publish-Ordner gewährleisten, um gemischte Architekturen (x64 / ARM64) zu verhindern
+    if (Test-Path "$PSScriptRoot\publish") {
+        Get-ChildItem -Path "$PSScriptRoot\publish" -Recurse | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
+    } else {
+        New-Item -ItemType Directory -Path "$PSScriptRoot\publish" -Force | Out-Null
+    }
 
     & $dotnet publish "$PSScriptRoot\src\Lumio.App\Lumio.App.csproj" -c Release -r $arch --self-contained true -o "$PSScriptRoot\publish" -nologo
     $exe = "$PSScriptRoot\publish\Lumio.exe"
