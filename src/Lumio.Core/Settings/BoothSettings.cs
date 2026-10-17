@@ -65,7 +65,7 @@ public sealed class BoothSettings
     public string? DigiCamControlExePath { get; set; }
 
     /// <summary>Automatically launch digiCamControl in the background when Lumio starts.</summary>
-    public bool AutoStartDigiCamControl { get; set; } = false;
+    public bool AutoStartDigiCamControl { get; set; } = true;
 
     /// <summary>Shows Lumio's own touch keyboard for text fields in the admin menu.</summary>
     public bool OnScreenKeyboardEnabled { get; set; } = false;

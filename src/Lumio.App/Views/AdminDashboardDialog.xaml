@@ -170,62 +170,25 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- digiCamControl & Universal DSLR Bridge -->
+                            <!-- DSLR / Systemkamera Status & Driver -->
                             <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="18" Margin="0,0,0,14">
                                 <StackPanel>
-                                    <TextBlock Text="DSLR-STEUERUNG &amp; WEBSERVER (DIGICAMCONTROL)" Style="{StaticResource Eyebrow}" Margin="0,0,0,8" />
-                                    <TextBlock Text="Ermöglicht Live-View &amp; Auslösung für Nikon D5600, Canon EOS, Sony Alpha &amp; Co." Style="{StaticResource Caption}" Margin="0,0,0,12" />
+                                    <TextBlock Text="DSLR / SYSTEMKAMERA (NIKON, CANON, SONY)" Style="{StaticResource Eyebrow}" Margin="0,0,0,8" />
+                                    <TextBlock Text="Nativ integrierte Tethering-Engine für Live-View &amp; Auslösung (wie in dslrBooth – läuft vollautomatisch im Hintergrund)." Style="{StaticResource Caption}" Margin="0,0,0,12" />
 
                                     <!-- Status Box -->
-                                    <Border Background="#1A1A28" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1.5" CornerRadius="12" Padding="14,10" Margin="0,0,0,12">
+                                    <Border Background="#1A1A28" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1.5" CornerRadius="12" Padding="14,10">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Ellipse x:Name="DigiCamStatusIndicator" Grid.Column="0" Width="10" Height="10" Fill="{StaticResource DangerBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                            <TextBlock x:Name="DigiCamStatusText" Grid.Column="1" Text="digiCamControl ist derzeit nicht aktiv" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
-                                            <Button Grid.Column="2" Content="🔄 Prüfen" Style="{StaticResource TouchGlassButton}" Padding="12,6" FontSize="13" Click="OnCheckDigiCamStatusClick" />
+                                            <Ellipse x:Name="DigiCamStatusIndicator" Grid.Column="0" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                            <TextBlock x:Name="DigiCamStatusText" Grid.Column="1" Text="Kamera-Treiber bereit" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <Button Grid.Column="2" Content="🔄 Aktualisieren" Style="{StaticResource TouchGlassButton}" Padding="12,6" FontSize="13" Click="OnCheckDigiCamStatusClick" />
                                         </Grid>
                                     </Border>
-
-                                    <!-- Start & Stop Action Buttons -->
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="10" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="10" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button x:Name="StartDigiCamButton" Grid.Column="0" Content="▶️ Controller starten" Style="{StaticResource TouchGlassButton}" BorderBrush="{StaticResource SuccessBrush}" Padding="12,10" Click="OnStartDigiCamClick" />
-                                        <Button x:Name="StopDigiCamButton" Grid.Column="2" Content="⏹️ Beenden" Style="{StaticResource TouchGlassButton}" BorderBrush="{StaticResource DangerBrush}" Padding="12,10" Click="OnStopDigiCamClick" />
-                                        <Button x:Name="DownloadDigiCamButton" Grid.Column="4" Content="⬇️ Download" Style="{StaticResource TouchGlassButton}" Padding="12,10" ToolTip="digiCamControl Website öffnen" Click="OnDownloadDigiCamClick" />
-                                    </Grid>
-
-                                    <!-- Autostart CheckBox -->
-                                    <CheckBox x:Name="AutoStartDigiCamCheckBox"
-                                              Content="digiCamControl automatisch im Hintergrund mit Lumio starten"
-                                              FontSize="15"
-                                              Foreground="White"
-                                              Margin="0,0,0,12" />
-
-                                    <!-- CameraControl.exe Path -->
-                                    <TextBlock Text="Installationspfad (CameraControl.exe):" Style="{StaticResource FieldLabel}" />
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="10" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox x:Name="DigiCamExePathTextBox" Grid.Column="0" Style="{StaticResource TouchTextBox}" GotFocus="OnInputGotFocus" />
-                                        <Button Grid.Column="2" Content="📁 Suchen..." Style="{StaticResource TouchGlassButton}" Padding="14,8" Click="OnBrowseDigiCamExeClick" />
-                                    </Grid>
-
-                                    <!-- Webserver URL -->
-                                    <TextBlock Text="Webserver-Adresse (Standard: http://localhost:5513):" Style="{StaticResource FieldLabel}" />
-                                    <TextBox x:Name="DigiCamUrlTextBox" Style="{StaticResource TouchTextBox}" GotFocus="OnInputGotFocus" />
                                 </StackPanel>
                             </Border>
 

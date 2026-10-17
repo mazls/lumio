@@ -194,16 +194,24 @@ public class DslrCamera : ICameraService
 
         if (OperatingSystem.IsWindows())
         {
-            // Check if digiCamControl is running
+            // If background camera engine is not responding yet, start it silently
+            var status = await DigiCamControlManager.GetStatusAsync(_digiCamUrl);
+            if (!status.IsReachable)
+            {
+                await DigiCamControlManager.StartAsync(_settings?.DigiCamControlExePath, _digiCamUrl, minimized: true);
+            }
+
+            // Check if camera is connected through the driver
             try
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(TimeSpan.FromMilliseconds(1200));
+                cts.CancelAfter(TimeSpan.FromSeconds(3));
                 var test = await HttpClient.GetStringAsync($"{_digiCamUrl.TrimEnd('/')}/?slc=get&param1=camera", cts.Token);
-                if (!string.IsNullOrWhiteSpace(test))
+                var camName = test?.Trim();
+                if (!string.IsNullOrWhiteSpace(camName) && !camName.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase) && camName != "null")
                 {
                     _useDigiCamControl = true;
-                    DisplayName = $"DSLR ({test.Trim()})";
+                    DisplayName = $"DSLR ({camName})";
                     Status = CameraStatus.Connected;
                     return;
                 }
@@ -213,30 +221,13 @@ public class DslrCamera : ICameraService
                 _useDigiCamControl = false;
             }
 
-            // Fallback: check USB hardware directly
-            var devices = await FindConnectedDevicesAsync(_digiCamUrl);
             Status = CameraStatus.Error;
-
-            if (devices.Count > 0)
-            {
-                var detectedCam = devices[0].Name;
-                throw new CameraException(
-                    $"Kamera '{detectedCam}' per USB erkannt, aber digiCamControl ist unter Windows nicht aktiv.\n\n" +
-                    "So bringst du das Bild in die Software:\n\n" +
-                    "Empfohlen für Nikon Z 50 II (plug & play ohne Zusatzprogramme):\n" +
-                    "1. An der Kamera: Menü (🔧 Setup) ➔ 'USB-Verbindung' ➔ auf 'USB-Streaming (UVC/UAC)' stellen.\n" +
-                    "2. In Lumio: Admin-Menü (Zahnrad) ➔ Kamera ➔ 'Webcam' wählen (erscheint sofort mit 60fps Live-View!).\n\n" +
-                    "Alternative für MTP-Tethering:\n" +
-                    "1. digiCamControl starten (Webserver auf Port 5513 aktivieren).\n" +
-                    "2. Kamera-Modus auf DSLR lassen.");
-            }
-
             throw new CameraException(
-                "Keine DSLR/Systemkamera gefunden.\n\n" +
-                "Tipps für Windows:\n" +
-                "1. Ist die Kamera per USB verbunden und eingeschaltet?\n" +
-                "2. Für Nikon Z 50 II: Im Kamera-Menü (🔧 Setup) auf 'USB-Streaming (UVC/UAC)' stellen und als Webcam wählen.\n" +
-                "3. Für MTP-Steuerung: digiCamControl im Hintergrund starten.");
+                "Keine DSLR/Systemkamera erkannt.\n\n" +
+                "Bitte prüfe:\n" +
+                "1. Ist die Kamera (Nikon, Canon, Sony) per USB verbunden und eingeschaltet?\n" +
+                "2. Ist der Flugmodus an der Kamera AN? (Wichtig bei Nikon D5600/SnapBridge, damit Bluetooth den USB-Port nicht sperrt)\n" +
+                "3. Für Nikon Z 50 II: Kann alternativ direkt auf 'USB-Streaming (UVC)' gestellt und als 'Webcam' gewählt werden.");
         }
         else
         {
