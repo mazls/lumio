@@ -14,6 +14,9 @@ public static class DigiCamControlManager
 
     public static string? FindExecutable(string? configuredPath = null)
     {
+        if (!OperatingSystem.IsWindows())
+            return null;
+
         if (!string.IsNullOrWhiteSpace(configuredPath) && File.Exists(configuredPath))
             return configuredPath;
 
@@ -41,6 +44,9 @@ public static class DigiCamControlManager
     /// </summary>
     public static void EnsureWebserverEnabled()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         try
         {
             var programData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "digiCamControl");
@@ -74,8 +80,11 @@ public static class DigiCamControlManager
 
     public static async Task<DigiCamStatus> GetStatusAsync(string url)
     {
-        var procs = Process.GetProcessesByName("CameraControl");
-        bool hasProc = procs.Length > 0;
+        bool hasProc = false;
+        if (OperatingSystem.IsWindows())
+        {
+            try { hasProc = Process.GetProcessesByName("CameraControl").Length > 0; } catch { }
+        }
 
         try
         {
@@ -100,6 +109,9 @@ public static class DigiCamControlManager
 
     public static async Task<bool> StartAsync(string? exePath, string url, bool minimized = true)
     {
+        if (!OperatingSystem.IsWindows())
+            return false;
+
         var resolved = FindExecutable(exePath);
         if (resolved is null || !File.Exists(resolved))
         {
@@ -147,17 +159,20 @@ public static class DigiCamControlManager
         }
         catch { }
 
-        foreach (var p in Process.GetProcessesByName("CameraControl"))
+        if (OperatingSystem.IsWindows())
         {
-            try
+            foreach (var p in Process.GetProcessesByName("CameraControl"))
             {
-                p.CloseMainWindow();
-                if (!p.WaitForExit(1000))
+                try
                 {
-                    p.Kill();
+                    p.CloseMainWindow();
+                    if (!p.WaitForExit(1000))
+                    {
+                        p.Kill();
+                    }
                 }
+                catch { }
             }
-            catch { }
         }
     }
 }
