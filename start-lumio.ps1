@@ -1,6 +1,14 @@
 # Lumio Starter Script
 param([switch]$Rebuild)
 
+# Vorherige Instanzen beenden, damit Dateien bei Build/Start nicht blockiert sind
+$running = Get-Process Lumio -ErrorAction SilentlyContinue
+if ($running) {
+    Write-Host "Beende vorherige Lumio-Instanz..." -ForegroundColor Yellow
+    $running | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 600
+}
+
 $exe = "$PSScriptRoot\publish\Lumio.exe"
 
 # Detect system architecture (Surface ARM64 vs Intel/AMD x64)
