@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using Lumio.Camera;
 using Lumio.Core.Camera;
 using Lumio.Core.Settings;
@@ -44,6 +45,7 @@ public partial class AdminDashboardDialog : Window
     private readonly EventStorage _storage;
     private readonly TemplateStore _templateStore;
     private readonly SelphyPrintService _printService;
+    private readonly CameraManager? _cameraManager;
     private TextBox? _currentFocusedTextBox;
 
     public bool ExitRequested { get; private set; }
@@ -52,13 +54,15 @@ public partial class AdminDashboardDialog : Window
         SettingsService settingsService,
         EventStorage storage,
         TemplateStore? templateStore = null,
-        SelphyPrintService? printService = null)
+        SelphyPrintService? printService = null,
+        CameraManager? cameraManager = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
         _storage = storage;
         _templateStore = templateStore ?? new TemplateStore();
         _printService = printService ?? new SelphyPrintService();
+        _cameraManager = cameraManager;
 
         LoadCurrentSettings();
         _ = PopulateCameraOptionsAsync();
@@ -538,5 +542,92 @@ public partial class AdminDashboardDialog : Window
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private async void OnTakeTestPhotoClick(object sender, RoutedEventArgs e)
+    {
+        TakeTestPhotoButton.IsEnabled = false;
+        TakeTestPhotoButton.Content = "⏳ Aufnahme...";
+
+        try
+        {
+            if (CameraSelectionComboBox.SelectedItem is not CameraOptionItem selectedCam)
+            {
+                MessageBox.Show(this, "Bitte wähle zuerst eine Kamera aus der Liste aus.", "Testfoto", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dslrSettings = new DslrCameraSettings();
+            if (CameraIsoComboBox.SelectedItem is DslrOption iso) dslrSettings.Iso = iso.Value;
+            if (CameraShutterComboBox.SelectedItem is DslrOption shutter) dslrSettings.ShutterSpeed = shutter.Value;
+            if (CameraApertureComboBox.SelectedItem is DslrOption aperture) dslrSettings.Aperture = aperture.Value;
+            if (CameraWhiteBalanceComboBox.SelectedItem is DslrOption wb) dslrSettings.WhiteBalance = wb.Value;
+            if (CameraExposureCompComboBox.SelectedItem is DslrOption ev) dslrSettings.ExposureCompensation = ev.Value;
+
+            var tempSettings = _settingsService.Current.Clone();
+            tempSettings.CameraBackend = selectedCam.Backend;
+            tempSettings.WebcamDeviceId = selectedCam.DeviceId;
+            tempSettings.CameraControl = dslrSettings;
+
+            ICameraService? camera = null;
+            bool shouldDispose = false;
+
+            if (_cameraManager != null)
+            {
+                camera = await _cameraManager.GetCameraAsync(tempSettings);
+            }
+            else
+            {
+                camera = tempSettings.CameraBackend switch
+                {
+                    CameraBackend.Webcam => new WebcamCamera(tempSettings.WebcamDeviceId),
+                    CameraBackend.Dslr or CameraBackend.Nikon => new DslrCamera(tempSettings),
+                    _ => new SimulatedCamera()
+                };
+                shouldDispose = true;
+                await camera.ConnectAsync();
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+            var photo = await camera.CapturePhotoAsync(cts.Token);
+
+            if (photo.JpegData is { Length: > 100 })
+            {
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.StreamSource = new MemoryStream(photo.JpegData);
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.EndInit();
+                bi.Freeze();
+
+                TestPhotoImage.Source = bi;
+                TestPhotoStatusText.Text = $"Auflösung: {bi.PixelWidth} × {bi.PixelHeight} px  •  Größe: {photo.JpegData.Length / 1024} KB  •  Aufgenommen: {DateTime.Now:HH:mm:ss}";
+                TestPhotoOverlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                MessageBox.Show(this, "Die Kamera hat keine Bilddaten zurückgegeben.", "Testfoto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
+            if (shouldDispose && camera != null)
+            {
+                await camera.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Testfoto fehlgeschlagen:\n\n{ex.Message}", "Testfoto-Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            TakeTestPhotoButton.IsEnabled = true;
+            TakeTestPhotoButton.Content = "📸 Testfoto";
+        }
+    }
+
+    private void OnCloseTestPhotoClick(object sender, RoutedEventArgs e)
+    {
+        TestPhotoOverlay.Visibility = Visibility.Collapsed;
+        TestPhotoImage.Source = null;
     }
 }

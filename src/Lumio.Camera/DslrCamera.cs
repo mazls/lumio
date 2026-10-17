@@ -67,6 +67,7 @@ public class DslrCamera : ICameraService
                 _deviceManager = new CameraDeviceManager("");
                 _deviceManager.DisableNativeDrivers = false;
                 _deviceManager.UseExperimentalDrivers = true;
+                _deviceManager.DetectWebcams = false;
             }
             return _deviceManager;
         }
@@ -580,19 +581,50 @@ public class DslrCamera : ICameraService
 #if WINDOWS || NET10_0_WINDOWS10_0_19041_0
     private async Task RunNativeLiveViewLoopAsync(CancellationToken token)
     {
+        int errorCount = 0;
         while (!token.IsCancellationRequested && Status == CameraStatus.Connected && _cameraDevice != null)
         {
             try
             {
                 var liveView = _cameraDevice.GetLiveViewImage();
-                if (liveView?.ImageData is { Length: > 100 } data)
+                if (liveView?.ImageData is { Length: > 100 } raw)
                 {
-                    FrameReady?.Invoke(this, new LiveViewFrame(data, FrameFormat.Jpeg, liveView.ImageWidth, liveView.ImageHeight, 0));
+                    errorCount = 0;
+                    int pos = liveView.ImageDataPosition;
+                    if (pos < 0 || pos >= raw.Length) pos = 0;
+
+                    // Verify or locate JPEG SOI header (0xFF, 0xD8)
+                    if (raw.Length > pos + 1 && (raw[pos] != 0xFF || raw[pos + 1] != 0xD8))
+                    {
+                        for (int i = 0; i < Math.Min(raw.Length - 1, 4096); i++)
+                        {
+                            if (raw[i] == 0xFF && raw[i + 1] == 0xD8)
+                            {
+                                pos = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    int count = raw.Length - pos;
+                    if (count > 100 && raw[pos] == 0xFF && raw[pos + 1] == 0xD8)
+                    {
+                        var jpegBytes = new byte[count];
+                        Buffer.BlockCopy(raw, pos, jpegBytes, 0, count);
+                        int width = liveView.ImageWidth > 0 ? liveView.ImageWidth : 1024;
+                        int height = liveView.ImageHeight > 0 ? liveView.ImageHeight : 680;
+                        FrameReady?.Invoke(this, new LiveViewFrame(jpegBytes, FrameFormat.Jpeg, width, height, 0));
+                    }
                 }
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
+                errorCount++;
+                if (errorCount % 40 == 0)
+                {
+                    try { _cameraDevice.StartLiveView(); } catch { }
+                }
                 Debug.WriteLine($"LiveView frame error: {ex.Message}");
             }
 

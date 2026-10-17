@@ -1119,7 +1119,7 @@ public partial class MainWindow : Window
 
         if (pinDialog.ShowDialog() == true && pinDialog.IsAuthenticated)
         {
-            var adminDashboard = new AdminDashboardDialog(_settingsService, _storage, _templateStore, _printService)
+            var adminDashboard = new AdminDashboardDialog(_settingsService, _storage, _templateStore, _printService, _cameraManager)
             {
                 Owner = this,
             };

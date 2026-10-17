@@ -166,7 +166,30 @@
                                     <CheckBox x:Name="MirrorLiveViewCheckBox"
                                               Content="Live-Vorschau horizontal spiegeln (wie ein Spiegel)"
                                               FontSize="16"
-                                              Foreground="White" />
+                                              Foreground="White"
+                                              Margin="0,0,0,14" />
+
+                                    <!-- Test Photo Action -->
+                                    <Border Background="#12121E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <TextBlock Text="Testfoto aufnehmen (Vorschau)" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                                <TextBlock Text="Löst ein Testbild aus und zeigt die Vorschau an. Wird NICHT auf der Festplatte gespeichert."
+                                                           Style="{StaticResource Caption}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                            </StackPanel>
+                                            <Button x:Name="TakeTestPhotoButton" Grid.Column="1"
+                                                    Content="📸 Testfoto"
+                                                    Style="{StaticResource TouchGlassButton}"
+                                                    Padding="16,10"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"
+                                                    Click="OnTakeTestPhotoClick" />
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                             </Border>
 
@@ -477,6 +500,45 @@
 
                 <Button Grid.Column="0" Content="Zurück zur Booth" Style="{StaticResource TouchGlassButton}" Click="OnCloseClick" />
                 <Button Grid.Column="2" Content="Speichern &amp; Übernehmen" Style="{StaticResource TouchActionButton}" Click="OnSaveClick" />
+            </Grid>
+
+            <!-- Test Photo Preview Modal Overlay -->
+            <Grid x:Name="TestPhotoOverlay" Grid.Row="0" Grid.RowSpan="4" Background="#F00A0A12" Visibility="Collapsed">
+                <Border Background="{StaticResource SurfaceElevatedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1.5" CornerRadius="20" Margin="24" Padding="20">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="📸 Testfoto Vorschau" Style="{StaticResource H2}" FontSize="20" />
+                                <TextBlock Text="Temporäre Vorschau zur Fokus- &amp; Belichtungsprüfung. Bild wird NICHT gespeichert."
+                                           Style="{StaticResource Caption}" Foreground="{StaticResource AccentBrush}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Style="{StaticResource CircularIconButton}"
+                                    Width="36" Height="36"
+                                    Click="OnCloseTestPhotoClick">
+                                <TextBlock Text="✕" FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Image Preview -->
+                        <Border Grid.Row="1" Background="#0A0A12" CornerRadius="12" ClipToBounds="True">
+                            <Image x:Name="TestPhotoImage" Stretch="Uniform" />
+                        </Border>
+
+                        <!-- Footer -->
+                        <Grid Grid.Row="2" Margin="0,14,0,0">
+                            <TextBlock x:Name="TestPhotoStatusText" VerticalAlignment="Center" Style="{StaticResource Caption}" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <Button HorizontalAlignment="Right" Content="Vorschau schließen" Style="{StaticResource TouchGlassButton}" Padding="20,10" Click="OnCloseTestPhotoClick" />
+                        </Grid>
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
     </Border>
