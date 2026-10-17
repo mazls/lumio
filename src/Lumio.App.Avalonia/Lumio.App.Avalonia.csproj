@@ -9,6 +9,9 @@
     <AssemblyName>Lumio</AssemblyName>
     <RootNamespace>Lumio.App.Avalonia</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <SelfContained>true</SelfContained>
+    <PublishSelfContained>true</PublishSelfContained>
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
