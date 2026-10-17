@@ -47,6 +47,8 @@ public partial class AdminDashboardDialog : Window
     private readonly SelphyPrintService _printService;
     private readonly CameraManager? _cameraManager;
     private TextBox? _currentFocusedTextBox;
+    private System.Windows.Threading.DispatcherTimer? _hardwareScanTimer;
+    private int _isScanningHardware;
 
     public bool ExitRequested { get; private set; }
 
@@ -71,6 +73,7 @@ public partial class AdminDashboardDialog : Window
         PopulateBrandingOptions();
 
         Loaded += OnLoaded;
+        Closed += OnClosed;
     }
 
     private void PopulateInitialDropdowns()
@@ -101,10 +104,48 @@ public partial class AdminDashboardDialog : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _ = PopulateCameraOptionsAsync();
-        _ = PopulatePrinterOptionsAsync();
-        _ = PopulateUsbDrivesAsync();
-        _ = CheckDigiCamStatusAsync();
+        _ = ScanHardwareAsync();
+
+        // Auto-refresh USB, Camera, Printer and DSLR every 3 seconds while Admin menu is open
+        _hardwareScanTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(3)
+        };
+        _hardwareScanTimer.Tick += async (_, _) => await ScanHardwareAsync();
+        _hardwareScanTimer.Start();
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        _hardwareScanTimer?.Stop();
+        _hardwareScanTimer = null;
+    }
+
+    private async void OnRefreshHardwareClick(object sender, RoutedEventArgs e)
+    {
+        await ScanHardwareAsync();
+    }
+
+    private async Task ScanHardwareAsync()
+    {
+        if (Interlocked.CompareExchange(ref _isScanningHardware, 1, 0) != 0)
+            return;
+
+        try
+        {
+            await PopulateUsbDrivesAsync();
+            await PopulateCameraOptionsAsync();
+            await PopulatePrinterOptionsAsync();
+            await CheckDigiCamStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Hardware scan error: {ex.Message}");
+        }
+        finally
+        {
+            Volatile.Write(ref _isScanningHardware, 0);
+        }
     }
 
     private void LoadCurrentSettings()
@@ -127,23 +168,49 @@ public partial class AdminDashboardDialog : Window
     {
         try
         {
+            var webcams = await WebcamCamera.FindDevicesAsync();
             var options = new List<CameraOptionItem>
             {
                 new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null),
                 new("📷 DSLR / Systemkamera (Nikon D5600, Z 50 II, Canon via USB)", CameraBackend.Dslr, null),
             };
 
-            var webcams = await WebcamCamera.FindDevicesAsync();
             foreach (var cam in webcams)
             {
                 options.Add(new($"🎥 {cam.Name}", CameraBackend.Webcam, cam.Id));
             }
 
+            var currentOptions = CameraSelectionComboBox.ItemsSource as IReadOnlyList<CameraOptionItem>
+                                 ?? (CameraSelectionComboBox.ItemsSource as List<CameraOptionItem>);
+
+            bool changed = currentOptions is null || currentOptions.Count != options.Count;
+            if (!changed && currentOptions is not null)
+            {
+                for (var i = 0; i < options.Count; i++)
+                {
+                    if (currentOptions[i].Backend != options[i].Backend || currentOptions[i].DeviceId != options[i].DeviceId)
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed && CameraSelectionComboBox.SelectedItem is CameraOptionItem)
+            {
+                return;
+            }
+
+            var selectedItem = CameraSelectionComboBox.SelectedItem as CameraOptionItem;
             CameraSelectionComboBox.ItemsSource = options;
 
             var current = _settingsService.Current;
             CameraOptionItem? matching = null;
-            if (current.CameraBackend == CameraBackend.Webcam && current.WebcamDeviceId is not null)
+            if (selectedItem is not null)
+            {
+                matching = options.FirstOrDefault(o => o.Backend == selectedItem.Backend && o.DeviceId == selectedItem.DeviceId);
+            }
+            if (matching is null && current.CameraBackend == CameraBackend.Webcam && current.WebcamDeviceId is not null)
             {
                 matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Webcam && o.DeviceId == current.WebcamDeviceId);
             }
@@ -155,7 +222,7 @@ public partial class AdminDashboardDialog : Window
             matching ??= options.FirstOrDefault();
 
             CameraSelectionComboBox.SelectedItem = matching;
-            CameraDetectionStatusText.Text = $"{options.Count - 1} Kamera-Quelle(n) verfügbar";
+            CameraDetectionStatusText.Text = $"{options.Count - 1} Kamera-Quelle(n) verfügbar (Auto-Scan aktiv)";
         }
         catch (Exception ex)
         {
@@ -199,10 +266,33 @@ public partial class AdminDashboardDialog : Window
                 options.Add(new PrinterOptionItem("⚠️ Kein Drucker in Windows installiert", string.Empty));
             }
 
+            var currentOptions = PrinterSelectionComboBox.ItemsSource as IReadOnlyList<PrinterOptionItem>
+                                 ?? (PrinterSelectionComboBox.ItemsSource as List<PrinterOptionItem>);
+
+            bool changed = currentOptions is null || currentOptions.Count != options.Count;
+            if (!changed && currentOptions is not null)
+            {
+                for (var i = 0; i < options.Count; i++)
+                {
+                    if (currentOptions[i].Name != options[i].Name)
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed && PrinterSelectionComboBox.SelectedItem is PrinterOptionItem)
+            {
+                return;
+            }
+
+            var selectedItem = PrinterSelectionComboBox.SelectedItem as PrinterOptionItem;
             PrinterSelectionComboBox.ItemsSource = options;
 
             var current = _settingsService.Current;
-            var selected = options.FirstOrDefault(o => o.Name == current.SelectedPrinter)
+            var selected = (selectedItem is not null ? options.FirstOrDefault(o => o.Name == selectedItem.Name) : null)
+                           ?? options.FirstOrDefault(o => o.Name == current.SelectedPrinter)
                            ?? options.FirstOrDefault(o => o.DisplayName.Contains("Selphy", StringComparison.OrdinalIgnoreCase))
                            ?? options.FirstOrDefault();
 
@@ -269,21 +359,47 @@ public partial class AdminDashboardDialog : Window
         try
         {
             var drives = await Task.Run(() => UsbDriveDetector.DetectDrives());
+
+            var existingDrives = UsbDrivesComboBox.ItemsSource as IReadOnlyList<UsbDriveInfo>
+                                 ?? (UsbDrivesComboBox.ItemsSource as List<UsbDriveInfo>);
+
+            bool changed = existingDrives is null || existingDrives.Count != drives.Count;
+            if (!changed && existingDrives is not null)
+            {
+                for (var i = 0; i < drives.Count; i++)
+                {
+                    if (existingDrives[i].RootPath != drives[i].RootPath)
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed && UsbDrivesComboBox.SelectedItem is UsbDriveInfo)
+            {
+                return;
+            }
+
             if (drives.Count > 0)
             {
+                var previousRoot = (UsbDrivesComboBox.SelectedItem as UsbDriveInfo)?.RootPath;
                 UsbDrivesComboBox.ItemsSource = drives;
                 var currentRoot = _settingsService.Current.OutputRoot;
-                var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
+                var matched = (previousRoot is not null ? drives.FirstOrDefault(d => string.Equals(d.RootPath, previousRoot, StringComparison.OrdinalIgnoreCase)) : null)
+                              ?? drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase))
+                              ?? drives[0];
+
                 UsbDrivesComboBox.SelectedItem = matched;
                 SelectUsbButton.IsEnabled = true;
-                UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+                UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden (Auto-Scan aktiv).";
             }
             else
             {
                 UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
                 UsbDrivesComboBox.SelectedIndex = 0;
                 SelectUsbButton.IsEnabled = false;
-                UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+                UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern (Auto-Scan aktiv).";
             }
         }
         catch (Exception ex)
@@ -448,7 +564,7 @@ public partial class AdminDashboardDialog : Window
             };
 
             var renderer = new CollageRenderer();
-            var testJpeg = renderer.Render(template, samplePhotos, metadata);
+            var testJpeg = renderer.Render(template, samplePhotos, metadata, jpegQuality: 98, renderScale: 2.0f);
 
             await _printService.PrintPhotoAsync(testJpeg, printerOption.Name, copies: 1);
 

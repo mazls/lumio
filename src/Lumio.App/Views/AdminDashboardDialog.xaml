@@ -107,15 +107,18 @@
 
                                     <!-- USB Detection -->
                                     <StackPanel x:Name="UsbDrivesPanel">
-                                        <TextBlock Text="Erkannte USB-Laufwerke / Wechseldatenträger:" Style="{StaticResource FieldLabel}" />
+                                        <TextBlock Text="Erkannte USB-Laufwerke / Wechseldatenträger (Auto-Scan aktiv):" Style="{StaticResource FieldLabel}" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="10" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="8" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <ComboBox x:Name="UsbDrivesComboBox" Grid.Column="0" Style="{StaticResource TouchComboBox}" />
-                                            <Button x:Name="SelectUsbButton" Grid.Column="2" Content="Als Speicherort wählen" Style="{StaticResource TouchGlassButton}" Padding="14,8" Click="OnSelectUsbDriveClick" />
+                                            <Button x:Name="RefreshUsbButton" Grid.Column="2" Content="🔄" Style="{StaticResource TouchGlassButton}" Padding="12,8" ToolTip="USB &amp; Hardware jetzt neu suchen" Click="OnRefreshHardwareClick" />
+                                            <Button x:Name="SelectUsbButton" Grid.Column="4" Content="Als Speicherort wählen" Style="{StaticResource TouchGlassButton}" Padding="14,8" Click="OnSelectUsbDriveClick" />
                                         </Grid>
                                         <TextBlock x:Name="UsbStatusText" Text="" Style="{StaticResource Caption}" Foreground="{StaticResource AccentOrangeBrush}" Margin="2,4,0,0" />
                                     </StackPanel>
@@ -154,8 +157,16 @@
                                 <StackPanel>
                                     <TextBlock Text="KAMERA-AUSWAHL" Style="{StaticResource Eyebrow}" Margin="0,0,0,10" />
 
-                                    <TextBlock Text="Aktive Kamera für die Booth" Style="{StaticResource FieldLabel}" />
-                                    <ComboBox x:Name="CameraSelectionComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,8" />
+                                    <TextBlock Text="Aktive Kamera für die Booth (Auto-Scan aktiv):" Style="{StaticResource FieldLabel}" />
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="CameraSelectionComboBox" Grid.Column="0" Style="{StaticResource TouchComboBox}" />
+                                        <Button x:Name="RefreshCamerasButton" Grid.Column="2" Content="🔄" Style="{StaticResource TouchGlassButton}" Padding="12,8" ToolTip="Kameras neu suchen" Click="OnRefreshHardwareClick" />
+                                    </Grid>
 
                                     <TextBlock x:Name="CameraDetectionStatusText"
                                                Text="Kameras werden erkannt..."
@@ -366,8 +377,16 @@
                                 <StackPanel>
                                     <TextBlock Text="DRUCKER &amp; CANON SELPHY" Style="{StaticResource Eyebrow}" Margin="0,0,0,10" />
 
-                                    <TextBlock Text="Fotodrucker auswählen (Selphy CP1300 / CP1500 wird erkannt):" Style="{StaticResource FieldLabel}" />
-                                    <ComboBox x:Name="PrinterSelectionComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,14" />
+                                    <TextBlock Text="Fotodrucker auswählen (Selphy CP1300 / CP1500, Auto-Scan aktiv):" Style="{StaticResource FieldLabel}" />
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="PrinterSelectionComboBox" Grid.Column="0" Style="{StaticResource TouchComboBox}" />
+                                        <Button x:Name="RefreshPrintersButton" Grid.Column="2" Content="🔄" Style="{StaticResource TouchGlassButton}" Padding="12,8" ToolTip="Drucker neu suchen" Click="OnRefreshHardwareClick" />
+                                    </Grid>
 
                                     <Grid Margin="0,0,0,14">
                                         <Grid.ColumnDefinitions>

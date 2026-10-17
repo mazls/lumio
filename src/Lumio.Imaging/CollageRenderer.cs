@@ -34,17 +34,27 @@ public sealed class CollageRenderer
         BoothTemplate template,
         IReadOnlyList<byte[]> photoJpegs,
         Dictionary<string, string>? textVariables = null,
-        int jpegQuality = 95,
+        int jpegQuality = 98,
         bool embedLogo = true,
         string logoPosition = "BottomRight",
-        bool embedEventText = true)
+        bool embedEventText = true,
+        float renderScale = 1.0f)
     {
         ArgumentNullException.ThrowIfNull(template);
         ArgumentNullException.ThrowIfNull(photoJpegs);
 
-        var info = new SKImageInfo(template.Width, template.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        var scale = renderScale > 0.01f ? renderScale : 1.0f;
+        var targetWidth = (int)MathF.Round(template.Width * scale);
+        var targetHeight = (int)MathF.Round(template.Height * scale);
+
+        var info = new SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var surface = SKSurface.Create(info);
         var canvas = surface.Canvas;
+
+        if (Math.Abs(scale - 1.0f) > 0.001f)
+        {
+            canvas.Scale(scale, scale);
+        }
 
         // 1. Draw Background
         if (!string.IsNullOrWhiteSpace(template.BackgroundImagePath) && File.Exists(template.BackgroundImagePath))
@@ -207,7 +217,12 @@ public sealed class CollageRenderer
         }
 
         using var photoImage = SKImage.FromBitmap(photo);
-        canvas.DrawImage(photoImage, sourceRect, slotRect, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), null);
+        using var photoPaint = new SKPaint
+        {
+            IsAntialias = true,
+            IsDither = true,
+        };
+        canvas.DrawImage(photoImage, sourceRect, slotRect, new SKSamplingOptions(SKCubicResampler.Mitchell), photoPaint);
 
         // Optional Border
         if (slot.BorderWidth > 0)

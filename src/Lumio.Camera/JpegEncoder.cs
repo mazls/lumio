@@ -1,11 +1,11 @@
-﻿using Lumio.Core.Camera;
+using Lumio.Core.Camera;
 using SkiaSharp;
 
 namespace Lumio.Camera;
 
 internal static class JpegEncoder
 {
-    public static byte[] EncodeBgra(LiveViewFrame frame, int quality = 92)
+    public static byte[] EncodeBgra(LiveViewFrame frame, int quality = 98)
     {
         if (frame.Format != FrameFormat.Bgra32)
             throw new ArgumentException("Frame must be BGRA32.", nameof(frame));
@@ -16,7 +16,7 @@ internal static class JpegEncoder
         return Encode(image, quality);
     }
 
-    public static byte[] Encode(SKImage image, int quality = 92)
+    public static byte[] Encode(SKImage image, int quality = 98)
     {
         using var data = image.Encode(SKEncodedImageFormat.Jpeg, quality);
         return data.ToArray();

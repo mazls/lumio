@@ -49,7 +49,7 @@
                            FontWeight="Bold"
                            Foreground="White"
                            HorizontalAlignment="Center" />
-                <TextBlock Text="Version 1.2.0 • Raspberry Pi / Linux Edition"
+                <TextBlock Text="Version 1.2.1 • Raspberry Pi / Linux Edition"
                            FontSize="13"
                            Foreground="{StaticResource AccentOrangeBrush}"
                            FontWeight="SemiBold"

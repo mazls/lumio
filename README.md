@@ -23,7 +23,7 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
-## Neue Features in Version 1.2.0 ✨
+## Neue Features in Version 1.2.1 ✨
 
 - 📷 **Natives DSLR & DSLM Tethering (wie dslrBooth)**:
   - Läuft direkt im Lumio-Prozess per USB PTP – **ohne externe Zusatzsoftware** und ohne Nikon Webcam Utility.

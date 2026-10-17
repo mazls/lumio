@@ -10,8 +10,8 @@ namespace Lumio.Camera;
 /// </summary>
 public sealed class SimulatedCamera : ICameraService
 {
-    private const int PreviewWidth = 1200;
-    private const int PreviewHeight = 800;
+    private const int PreviewWidth = 1920;
+    private const int PreviewHeight = 1280;
     private const int PhotoWidth = 3600;
     private const int PhotoHeight = 2400;
 
@@ -78,7 +78,7 @@ public sealed class SimulatedCamera : ICameraService
             using var surface = SKSurface.Create(new SKImageInfo(PhotoWidth, PhotoHeight));
             TestPattern.Draw(surface.Canvas, PhotoWidth, PhotoHeight, elapsed);
             using var image = surface.Snapshot();
-            return JpegEncoder.Encode(image);
+            return JpegEncoder.Encode(image, 98);
         }, cancellationToken).ConfigureAwait(false);
 
         return new CapturedPhoto(jpeg, DateTimeOffset.Now);
@@ -118,19 +118,30 @@ internal static class TestPattern
     public static void Draw(SKCanvas canvas, int width, int height, TimeSpan time)
     {
         var t = (float)time.TotalSeconds;
-        var hue = t * 18f % 360f;
+        var hue = t * 16f % 360f;
 
-        using (var background = new SKPaint())
+        // Smooth studio lighting backdrop: multi-stop radial gradient with dithering eliminates 8-bit banding completely
+        using (var background = new SKPaint
         {
-            background.Shader = SKShader.CreateLinearGradient(
-                new SKPoint(0, 0),
-                new SKPoint(width, height),
-                [SKColor.FromHsl(hue, 70, 22), SKColor.FromHsl((hue + 70) % 360, 75, 38)],
+            IsAntialias = true,
+            IsDither = true,
+        })
+        {
+            var cInner = SKColor.FromHsl(hue, 68, 38);
+            var cMid = SKColor.FromHsl((hue + 35) % 360, 70, 26);
+            var cOuter = SKColor.FromHsl((hue + 70) % 360, 72, 16);
+
+            background.Shader = SKShader.CreateRadialGradient(
+                new SKPoint(width * 0.5f, height * 0.42f),
+                MathF.Max(width, height) * 0.85f,
+                [cInner, cMid, cOuter],
+                [0.0f, 0.55f, 1.0f],
                 SKShaderTileMode.Clamp);
             canvas.DrawRect(0, 0, width, height, background);
         }
 
-        using (var bubble = new SKPaint { IsAntialias = true, Color = new SKColor(255, 255, 255, 34) })
+        // Soft, anti-aliased floating orbs / bokeh circles
+        using (var bubble = new SKPaint { IsAntialias = true, IsDither = true, Color = new SKColor(255, 255, 255, 28) })
         {
             for (var i = 0; i < 7; i++)
             {
@@ -142,16 +153,38 @@ internal static class TestPattern
 
         DrawSmiley(canvas, width / 2f, height * 0.42f, height * 0.16f, t);
 
-        using var textPaint = new SKPaint { IsAntialias = true, Color = SKColors.White };
-        using var titleFont = new SKFont(SKTypeface.Default, height * 0.06f) { Embolden = true };
-        using var clockFont = new SKFont(SKTypeface.Default, height * 0.045f);
-        canvas.DrawText("Lumio · Testkamera", width / 2f, height * 0.74f, SKTextAlign.Center, titleFont, textPaint);
-        canvas.DrawText(DateTime.Now.ToString("HH:mm:ss.f"), width / 2f, height * 0.82f, SKTextAlign.Center, clockFont, textPaint);
+        // Subpixel anti-aliased text with soft drop shadow for crisp readability
+        using var textPaint = new SKPaint
+        {
+            IsAntialias = true,
+            IsDither = true,
+            Color = SKColors.White,
+        };
+        using var shadowPaint = new SKPaint
+        {
+            IsAntialias = true,
+            Color = new SKColor(0, 0, 0, 150),
+        };
+
+        using var titleFont = new SKFont(SKTypeface.Default, height * 0.06f) { Embolden = true, Subpixel = true };
+        using var clockFont = new SKFont(SKTypeface.Default, height * 0.045f) { Subpixel = true };
+
+        var titleY = height * 0.74f;
+        var clockY = height * 0.82f;
+        var shadowOff = height * 0.003f;
+
+        canvas.DrawText("Lumio · Testkamera", width / 2f + shadowOff, titleY + shadowOff, SKTextAlign.Center, titleFont, shadowPaint);
+        canvas.DrawText("Lumio · Testkamera", width / 2f, titleY, SKTextAlign.Center, titleFont, textPaint);
+
+        var timeString = DateTime.Now.ToString("HH:mm:ss.f");
+        canvas.DrawText(timeString, width / 2f + shadowOff, clockY + shadowOff, SKTextAlign.Center, clockFont, shadowPaint);
+        canvas.DrawText(timeString, width / 2f, clockY, SKTextAlign.Center, clockFont, textPaint);
     }
 
     private static void DrawSmiley(SKCanvas canvas, float cx, float cy, float r, float t)
     {
-        using var face = new SKPaint { IsAntialias = true, Color = new SKColor(255, 214, 90) };
+        using var face = new SKPaint { IsAntialias = true, IsDither = true, Color = new SKColor(255, 214, 90) };
+        using var shadow = new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, 60) };
         using var ink = new SKPaint { IsAntialias = true, Color = new SKColor(40, 30, 20) };
         using var mouth = new SKPaint
         {
@@ -163,6 +196,10 @@ internal static class TestPattern
         };
 
         var bob = MathF.Sin(t * 2f) * r * 0.05f;
+
+        // Subtle drop shadow under face
+        canvas.DrawCircle(cx, cy + bob + r * 0.04f, r, shadow);
+
         canvas.DrawCircle(cx, cy + bob, r, face);
         canvas.DrawCircle(cx - r * 0.35f, cy - r * 0.2f + bob, r * 0.11f, ink);
         canvas.DrawCircle(cx + r * 0.35f, cy - r * 0.2f + bob, r * 0.11f, ink);

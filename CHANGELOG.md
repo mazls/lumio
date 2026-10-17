@@ -4,6 +4,29 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.2.1] – 2026-10-17 – *Live-Hardware-Erkennung & Ultra-HD Grafik-Update* ✨
+
+### 🔄 Kontinuierlicher Live-Scan im Admin-Menü (USB, Kamera & Drucker)
+- **Automatischer 3-Sekunden-Hintergrundscan**:
+  - USB-Sticks, Kameras (Webcams & DSLRs) und Drucker werden im geöffneten Admin-Menü alle 3 Sekunden im Hintergrund automatisch neu gesucht.
+  - Das Schließen und erneute Öffnen des Admin-Menüs beim Einstecken eines USB-Sticks oder Anschließen einer Kamera/eines Druckers ist nicht mehr notwendig.
+  - **Smarte Selektions-Erhaltung**: Bereits ausgewählte Geräte oder Pfade bleiben unverändert selektiert; neue USB-Sticks werden sofort erkannt und zur 1-Klick-Auswahl bereitgestellt.
+- **Manueller 🔄 Schnell-Aktualisieren-Button**:
+  - Jeweils neben der USB-Auswahl, Kamera-Auswahl und Drucker-Auswahl für sofortige Neu-Erkennung per Fingertipp.
+
+### 🖼️ Ultra-HD 600 DPI & Entgrieselte Grafik
+- **Anti-Banding Studio-Hintergrund in der Testkamera**:
+  - 8-Bit-Farbbanding durch harmonischen Studio-Radialgradienten mit Dithering und Antialiasing vollständig eliminiert.
+  - Testkamera-Vorschau von 1200×800 px auf native **1920×1280 px** (DSLR 3:2) hochgesetzt.
+- **Ultra-HD Fotodruck & Collagen**:
+  - Collagen und 10×15 cm Drucke werden jetzt in doppelter Pixeldichte mit **3600×2400 Pixeln** (600 DPI) und Mitchell-Netravali Bicubic-Sampling gerendert.
+  - JPEG-Kompression auf nahezu verlustfreie **98 %** Qualitätsstufe angehoben (kein Rauschen/Mosquito Noise mehr in Farbverläufen).
+- **Kristallklares UI-Rendering**:
+  - WPF Hardware Layout-Rounding (`UseLayoutRounding="True"`) und Pixel-Snapping (`SnapsToDevicePixels="True"`) gegen unscharfe Kanten auf Windows-Skalierungen (125%/150%/200%).
+  - Pixelscharfes Text-Rendering mit `TextFormattingMode="Display"` und `BitmapScalingMode="HighQuality"` für alle Bildansichten (LiveView, Review, Galerie).
+
+---
+
 ## [1.2.0] – 2026-10-17 – *Das große Hardware- & Stabilitäts-Update* 🚀
 
 ### 📷 In-Process DSLR / DSLM Tethering (dslrBooth-Engine)

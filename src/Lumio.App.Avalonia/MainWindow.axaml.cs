@@ -503,10 +503,11 @@ public partial class MainWindow : Window
             _activeTemplate,
             capturedPhotos,
             metadata,
-            jpegQuality: 95,
+            jpegQuality: 98,
             embedLogo: settings.EmbedLogoOnPhotos,
             logoPosition: settings.LogoPosition,
-            embedEventText: settings.EmbedEventTextOnPhotos));
+            embedEventText: settings.EmbedEventTextOnPhotos,
+            renderScale: 2.0f));
         await _storage.SaveCollageAsync(finalJpeg, DateTimeOffset.Now);
 
         ShowReview(finalJpeg);

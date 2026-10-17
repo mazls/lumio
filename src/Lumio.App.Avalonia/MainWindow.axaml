@@ -15,6 +15,7 @@
                Stretch="UniformToFill"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"
+               RenderOptions.BitmapInterpolationMode="HighQuality"
                RenderTransformOrigin="50%,50%">
             <Image.RenderTransform>
                 <ScaleTransform ScaleX="-1" ScaleY="1" />
@@ -29,6 +30,7 @@
         <Grid x:Name="ReviewGrid" IsVisible="False" Background="{StaticResource BackgroundBrush}">
             <Image x:Name="ReviewImageControl"
                    Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="HighQuality"
                    Margin="40,50,40,130"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center" />

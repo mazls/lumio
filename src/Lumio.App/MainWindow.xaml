@@ -7,7 +7,13 @@
         WindowState="Maximized"
         Background="{StaticResource BackgroundBrush}"
         Focusable="True"
-        KeyDown="OnWindowKeyDown">
+        KeyDown="OnWindowKeyDown"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        RenderOptions.BitmapScalingMode="HighQuality"
+        RenderOptions.ClearTypeHint="Enabled"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
 
     <Grid x:Name="RootGrid">
 
@@ -16,6 +22,7 @@
                Stretch="UniformToFill"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"
+               RenderOptions.BitmapScalingMode="HighQuality"
                RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
                 <ScaleTransform x:Name="LiveViewScaleTransform" ScaleX="-1" ScaleY="1" />
@@ -30,6 +37,7 @@
         <Grid x:Name="ReviewGrid" Visibility="Collapsed" Background="{StaticResource BackgroundBrush}">
             <Image x:Name="ReviewImageControl"
                    Stretch="Uniform"
+                   RenderOptions.BitmapScalingMode="HighQuality"
                    Margin="40,60,40,140"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center" />
@@ -204,7 +212,9 @@
                         <Border.Effect>
                             <DropShadowEffect Color="#FF3D9A" BlurRadius="40" ShadowDepth="0" Opacity="0.8" />
                         </Border.Effect>
-                        <Image x:Name="SeriesPreviewImage" Stretch="UniformToFill" />
+                        <Image x:Name="SeriesPreviewImage"
+                               Stretch="UniformToFill"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
                     </Border>
 
                     <!-- Big Glowing Countdown Number -->
@@ -337,7 +347,9 @@
             </Border.Effect>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Border Width="76" Height="76" CornerRadius="12" ClipToBounds="True" Background="#222">
-                    <Image x:Name="CornerThumbnailImage" Stretch="UniformToFill" />
+                    <Image x:Name="CornerThumbnailImage"
+                           Stretch="UniformToFill"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
                 </Border>
                 <StackPanel VerticalAlignment="Center" Margin="14,0,16,0">
                     <TextBlock Text="GALERIE" Style="{StaticResource Eyebrow}" FontSize="12" Foreground="{StaticResource AccentOrangeBrush}" />
@@ -376,6 +388,7 @@
             <Grid Grid.Row="1" Margin="20,0">
                 <Image x:Name="GalleryMainImage"
                        Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="HighQuality"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Margin="100,10" />

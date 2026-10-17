@@ -48,6 +48,8 @@ public partial class AdminDashboardDialog : Window
     private readonly SelphyPrintService _printService;
     private readonly TemplateStore _templateStore;
     private TextBox? _currentFocusedTextBox;
+    private global::Avalonia.Threading.DispatcherTimer? _hardwareScanTimer;
+    private int _isScanningHardware;
 
     public bool ExitRequested { get; private set; }
 
@@ -78,6 +80,40 @@ public partial class AdminDashboardDialog : Window
         PopulateTemplateOptions();
         PopulateBrandingOptions();
         PopulateUsbDrives();
+
+        Closed += (_, _) =>
+        {
+            _hardwareScanTimer?.Stop();
+            _hardwareScanTimer = null;
+        };
+
+        _hardwareScanTimer = new global::Avalonia.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(3)
+        };
+        _hardwareScanTimer.Tick += async (_, _) => await ScanHardwareAsync();
+        _hardwareScanTimer.Start();
+    }
+
+    private async Task ScanHardwareAsync()
+    {
+        if (Interlocked.CompareExchange(ref _isScanningHardware, 1, 0) != 0)
+            return;
+
+        try
+        {
+            PopulateUsbDrives();
+            await PopulateCameraOptionsAsync();
+            PopulatePrinterOptions();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Hardware scan error: {ex.Message}");
+        }
+        finally
+        {
+            Volatile.Write(ref _isScanningHardware, 0);
+        }
     }
 
     private void LoadSettings()
@@ -396,21 +432,46 @@ public partial class AdminDashboardDialog : Window
     private void PopulateUsbDrives()
     {
         var drives = UsbDriveDetector.DetectDrives();
+        var existingDrives = UsbDrivesComboBox.ItemsSource as IReadOnlyList<UsbDriveInfo>
+                             ?? (UsbDrivesComboBox.ItemsSource as List<UsbDriveInfo>);
+
+        bool changed = existingDrives is null || existingDrives.Count != drives.Count;
+        if (!changed && existingDrives is not null)
+        {
+            for (var i = 0; i < drives.Count; i++)
+            {
+                if (existingDrives[i].RootPath != drives[i].RootPath)
+                {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!changed && UsbDrivesComboBox.SelectedItem is UsbDriveInfo)
+        {
+            return;
+        }
+
         if (drives.Count > 0)
         {
+            var previousRoot = (UsbDrivesComboBox.SelectedItem as UsbDriveInfo)?.RootPath;
             UsbDrivesComboBox.ItemsSource = drives;
             var currentRoot = _settingsService.Current.OutputRoot;
-            var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
+            var matched = (previousRoot is not null ? drives.FirstOrDefault(d => string.Equals(d.RootPath, previousRoot, StringComparison.OrdinalIgnoreCase)) : null)
+                          ?? drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase))
+                          ?? drives[0];
+
             UsbDrivesComboBox.SelectedItem = matched;
             SelectUsbButton.IsEnabled = true;
-            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden (Auto-Scan aktiv).";
         }
         else
         {
             UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
             UsbDrivesComboBox.SelectedIndex = 0;
             SelectUsbButton.IsEnabled = false;
-            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern (Auto-Scan aktiv).";
         }
     }
 
