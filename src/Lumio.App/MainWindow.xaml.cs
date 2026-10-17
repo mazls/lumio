@@ -110,19 +110,6 @@ public partial class MainWindow : Window
             CameraStatusIndicator.Fill = (Brush)FindResource("WarningBrush");
             CameraStatusText.Text = isReconnect ? "Kamera neu verbinden..." : "Kamera verbindet...";
 
-            if (_settingsService.Current.CameraBackend == CameraBackend.Dslr && _settingsService.Current.AutoStartDigiCamControl)
-            {
-                var status = await DigiCamControlManager.GetStatusAsync(_settingsService.Current.DigiCamControlUrl);
-                if (!status.IsReachable)
-                {
-                    CameraStatusText.Text = "digiCamControl startet...";
-                    await DigiCamControlManager.StartAsync(
-                        _settingsService.Current.DigiCamControlExePath,
-                        _settingsService.Current.DigiCamControlUrl,
-                        minimized: true);
-                }
-            }
-
             _activeCamera = await _cameraManager.GetCameraAsync(_settingsService.Current);
             _activeCamera.FrameReady += OnCameraFrameReady;
             _activeCamera.StatusChanged += OnCameraStatusChanged;
@@ -159,17 +146,17 @@ public partial class MainWindow : Window
     private void StartFrameWatchdog()
     {
         _frameWatchdogTimer?.Stop();
-        _frameWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _frameWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _frameWatchdogTimer.Tick += (s, e) =>
         {
             if (_isCapturing || ReviewGrid.Visibility == Visibility.Visible || GalleryOverlayGrid.Visibility == Visibility.Visible)
                 return;
 
-            if (_activeCamera is not null && _activeCamera.Status == CameraStatus.Connected && !_isReconnecting)
+            if (_activeCamera is not null && _activeCamera is not SimulatedCamera && _activeCamera.Status == CameraStatus.Connected && !_isReconnecting)
             {
-                if (_lastFrameReceivedTime != DateTime.MinValue && (DateTime.UtcNow - _lastFrameReceivedTime) > TimeSpan.FromSeconds(5))
+                if (_lastFrameReceivedTime != DateTime.MinValue && (DateTime.UtcNow - _lastFrameReceivedTime) > TimeSpan.FromSeconds(12))
                 {
-                    TriggerAutoReconnect("Keine Kamerabilder empfangen (USB-Signal getrennt)");
+                    TriggerAutoReconnect("Keine Kamerabilder empfangen");
                 }
             }
         };
@@ -194,17 +181,17 @@ public partial class MainWindow : Window
         {
             CameraStatusIndicator.Fill = (Brush)FindResource("AccentOrangeBrush");
             CameraStatusText.Text = "Kamera neu verbinden...";
-            CameraStatusText.ToolTip = $"Verbindung wird automatisch wiederhergestellt: {reason}";
+            CameraStatusText.ToolTip = $"Verbindung wird wiederhergestellt: {reason}";
         });
 
         _ = Task.Run(async () =>
         {
             try
             {
-                // Brief pause so Windows USB stack and camera can finish handshaking
-                await Task.Delay(1200, token);
+                await Task.Delay(1500, token);
 
-                while (!token.IsCancellationRequested)
+                // Try reconnecting up to 2 times, never infinite loop
+                for (int attempt = 0; attempt < 2 && !token.IsCancellationRequested; attempt++)
                 {
                     bool reconnected = false;
                     await Dispatcher.InvokeAsync(async () =>
@@ -228,8 +215,7 @@ public partial class MainWindow : Window
                         break;
                     }
 
-                    // Retry every 2.5 seconds
-                    await Task.Delay(2500, token);
+                    await Task.Delay(3000, token);
                 }
             }
             catch (OperationCanceledException) { }
@@ -1162,14 +1148,5 @@ public partial class MainWindow : Window
             _activeCamera.StatusChanged -= OnCameraStatusChanged;
         }
         await _cameraManager.DisposeAsync();
-
-        if (_settingsService.Current.AutoStartDigiCamControl)
-        {
-            try
-            {
-                await DigiCamControlManager.StopAsync(_settingsService.Current.DigiCamControlUrl);
-            }
-            catch { }
-        }
     }
 }

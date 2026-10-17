@@ -62,7 +62,14 @@ public sealed class WebcamCamera : ICameraService
 
             return new CameraDeviceInfo(d.Id, name);
         })
-        .OrderByDescending(d => d.Name.Contains("Anker", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("USB", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("Webcam", StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(d => d.Name.Contains("Nikon", StringComparison.OrdinalIgnoreCase) ||
+                                d.Name.Contains("Z 50", StringComparison.OrdinalIgnoreCase) ||
+                                d.Name.Contains("Z50", StringComparison.OrdinalIgnoreCase) ||
+                                d.Name.Contains("Canon", StringComparison.OrdinalIgnoreCase) ||
+                                d.Name.Contains("EOS", StringComparison.OrdinalIgnoreCase) ||
+                                d.Name.Contains("Sony", StringComparison.OrdinalIgnoreCase) ||
+                                d.Name.Contains("Webcam Utility", StringComparison.OrdinalIgnoreCase))
+        .ThenByDescending(d => d.Name.Contains("Anker", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("USB", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("Webcam", StringComparison.OrdinalIgnoreCase))
         .ThenByDescending(d => d.Name.Contains("Front", StringComparison.OrdinalIgnoreCase))
         .ThenBy(d => d.Name.Contains("Rear", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("Rück", StringComparison.OrdinalIgnoreCase))
         .ToList();

@@ -93,14 +93,27 @@ public partial class AdminDashboardDialog : Window
             var options = new List<CameraOptionItem>
             {
                 new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null),
-                new("📷 DSLR / Systemkamera (Nikon, Canon, Sony, Fuji via USB)", CameraBackend.Dslr, null),
             };
 
             var webcams = await WebcamCamera.FindDevicesAsync();
             foreach (var cam in webcams)
             {
-                options.Add(new($"🎥 {cam.Name}", CameraBackend.Webcam, cam.Id));
+                var isSystemCamera = cam.Name.Contains("Nikon", StringComparison.OrdinalIgnoreCase) ||
+                                     cam.Name.Contains("Z 50", StringComparison.OrdinalIgnoreCase) ||
+                                     cam.Name.Contains("Z50", StringComparison.OrdinalIgnoreCase) ||
+                                     cam.Name.Contains("Canon", StringComparison.OrdinalIgnoreCase) ||
+                                     cam.Name.Contains("EOS", StringComparison.OrdinalIgnoreCase) ||
+                                     cam.Name.Contains("Sony", StringComparison.OrdinalIgnoreCase) ||
+                                     cam.Name.Contains("Webcam Utility", StringComparison.OrdinalIgnoreCase);
+
+                string label = isSystemCamera
+                    ? $"📷 {cam.Name} (Nativ USB / 60 FPS)"
+                    : $"🎥 {cam.Name}";
+
+                options.Add(new(label, CameraBackend.Webcam, cam.Id));
             }
+
+            options.Add(new("🔌 Externe DSLR via PTP (digiCamControl / gphoto2)", CameraBackend.Dslr, null));
 
             CameraSelectionComboBox.ItemsSource = options;
 
@@ -111,9 +124,10 @@ public partial class AdminDashboardDialog : Window
                 matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Webcam && o.DeviceId == current.WebcamDeviceId);
             }
             matching ??= options.FirstOrDefault(o => o.Backend == current.CameraBackend);
-            if (matching is null && current.CameraBackend == CameraBackend.Nikon)
+            if (matching is null && (current.CameraBackend == CameraBackend.Nikon || current.CameraBackend == CameraBackend.Dslr))
             {
-                matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Dslr);
+                matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Webcam && (o.DisplayName.Contains("Nikon") || o.DisplayName.Contains("Z 50") || o.DisplayName.Contains("Z50")))
+                           ?? options.FirstOrDefault(o => o.Backend == CameraBackend.Dslr);
             }
             matching ??= options.FirstOrDefault();
 
@@ -285,7 +299,7 @@ public partial class AdminDashboardDialog : Window
 
         var mutedBrush = GetThemeBrush("TextMutedBrush", System.Windows.Media.Brushes.Gray);
         DigiCamStatusIndicator.Fill = mutedBrush;
-        DigiCamStatusText.Text = "ℹ️ DSLR-Treiber startet automatisch bei Auswahl von 'DSLR / Systemkamera'.";
+        DigiCamStatusText.Text = "ℹ️ Für Nikon Z 50 II: Direkt per USB (UVC) ohne Zusatzsoftware plug & play nutzbar.";
         DigiCamStatusText.Foreground = mutedBrush;
     }
 

@@ -194,40 +194,37 @@ public class DslrCamera : ICameraService
 
         if (OperatingSystem.IsWindows())
         {
-            // If background camera engine is not responding yet, start it silently
+            // Only probe the tethering web service if an instance is already running (never auto-start external GUI apps)
             var status = await DigiCamControlManager.GetStatusAsync(_digiCamUrl);
-            if (!status.IsReachable)
+            if (status.IsReachable)
             {
-                await DigiCamControlManager.StartAsync(_settings?.DigiCamControlExePath, _digiCamUrl, minimized: true);
-            }
-
-            // Check if camera is connected through the driver
-            try
-            {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(TimeSpan.FromSeconds(3));
-                var test = await HttpClient.GetStringAsync($"{_digiCamUrl.TrimEnd('/')}/?slc=get&param1=camera", cts.Token);
-                var camName = test?.Trim();
-                if (!string.IsNullOrWhiteSpace(camName) && !camName.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase) && camName != "null")
+                // Check if camera is connected through the driver
+                try
                 {
-                    _useDigiCamControl = true;
-                    DisplayName = $"DSLR ({camName})";
-                    Status = CameraStatus.Connected;
-                    return;
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(TimeSpan.FromSeconds(3));
+                    var test = await HttpClient.GetStringAsync($"{_digiCamUrl.TrimEnd('/')}/?slc=get&param1=camera", cts.Token);
+                    var camName = test?.Trim();
+                    if (!string.IsNullOrWhiteSpace(camName) && !camName.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase) && camName != "null")
+                    {
+                        _useDigiCamControl = true;
+                        DisplayName = $"DSLR ({camName})";
+                        Status = CameraStatus.Connected;
+                        return;
+                    }
                 }
-            }
-            catch
-            {
-                _useDigiCamControl = false;
+                catch
+                {
+                    _useDigiCamControl = false;
+                }
             }
 
             Status = CameraStatus.Error;
             throw new CameraException(
-                "Keine DSLR/Systemkamera erkannt.\n\n" +
-                "Bitte prüfe:\n" +
-                "1. Ist die Kamera (Nikon, Canon, Sony) per USB verbunden und eingeschaltet?\n" +
-                "2. Ist der Flugmodus an der Kamera AN? (Wichtig bei Nikon D5600/SnapBridge, damit Bluetooth den USB-Port nicht sperrt)\n" +
-                "3. Für Nikon Z 50 II: Kann alternativ direkt auf 'USB-Streaming (UVC)' gestellt und als 'Webcam' gewählt werden.");
+                "Keine DSLR/Systemkamera über Tethering-Dienst verbunden.\n\n" +
+                "Empfohlene Lösung (ohne externe Zusatzprogramme):\n" +
+                "• Nikon Z 50 II: An der Kamera Setup-Menü 🔧 -> 'USB-Verbindung' -> 'USB-Streaming (UVC/UAC)' aktivieren. In Lumio oben direkt '📷 Nikon Z 50 II' auswählen (Plug & Play mit 60 FPS!).\n" +
+                "• Nikon D5600: 'Nikon Webcam Utility' installieren (kostenlos von Nikon) und Kamera-Flugmodus einschalten.");
         }
         else
         {
