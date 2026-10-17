@@ -33,6 +33,9 @@ public class DslrCamera : ICameraService
     private Task? _liveViewTask;
     private CameraStatus _status = CameraStatus.Disconnected;
     private bool _useDigiCamControl;
+#if WINDOWS || NET10_0_WINDOWS10_0_19041_0
+    private volatile bool _isCapturing;
+#endif
 
     public string DisplayName { get; private set; } = "DSLR / Systemkamera";
 
@@ -437,9 +440,40 @@ public class DslrCamera : ICameraService
             }
 
             _cameraDevice.PhotoCaptured += OnPhotoCaptured;
+            _isCapturing = true;
+
             try
             {
-                _cameraDevice.CapturePhoto();
+                // Give in-flight live view frame 100ms to clear the USB bus
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+
+                // Stop live view so the DSLR mirror can flip down and shutter can actuate cleanly
+                bool hadLiveView = _liveViewTask != null;
+                if (hadLiveView)
+                {
+                    try { _cameraDevice.StopLiveView(); } catch { }
+                    await Task.Delay(150, cancellationToken).ConfigureAwait(false);
+                }
+
+                // Trigger shutter: try normal capture, fallback to CapturePhotoNoAf if AF lock fails
+                try
+                {
+                    _cameraDevice.CapturePhoto();
+                }
+                catch (Exception ex1)
+                {
+                    Debug.WriteLine($"CapturePhoto failed ({ex1.Message}), falling back to CapturePhotoNoAf()...");
+                    try
+                    {
+                        _cameraDevice.CapturePhotoNoAf();
+                    }
+                    catch (Exception ex2)
+                    {
+                        Debug.WriteLine($"CapturePhotoNoAf also failed: {ex2.Message}");
+                        throw new CameraException($"DSLR-Auslösung fehlgeschlagen: {ex1.Message}", ex1);
+                    }
+                }
+
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
@@ -449,6 +483,13 @@ public class DslrCamera : ICameraService
             finally
             {
                 _cameraDevice.PhotoCaptured -= OnPhotoCaptured;
+                _isCapturing = false;
+
+                // Resume Live View if it was active
+                if (_liveViewTask != null && Status == CameraStatus.Connected)
+                {
+                    try { _cameraDevice.StartLiveView(); } catch { }
+                }
             }
         }
 #endif
@@ -607,6 +648,12 @@ public class DslrCamera : ICameraService
         int errorCount = 0;
         while (!token.IsCancellationRequested && Status == CameraStatus.Connected && _cameraDevice != null)
         {
+            if (_isCapturing)
+            {
+                await Task.Delay(50, token).ConfigureAwait(false);
+                continue;
+            }
+
             try
             {
                 var liveView = _cameraDevice.GetLiveViewImage();
