@@ -49,7 +49,7 @@
                            FontWeight="Bold"
                            Foreground="White"
                            HorizontalAlignment="Center" />
-                <TextBlock Text="Version 1.1.0 • Raspberry Pi / Linux Edition"
+                <TextBlock Text="Version 1.2.0 • Raspberry Pi / Linux Edition"
                            FontSize="13"
                            Foreground="{StaticResource AccentOrangeBrush}"
                            FontWeight="SemiBold"
@@ -66,7 +66,7 @@
                     Margin="0,0,0,14">
                 <StackPanel Spacing="6">
                     <TextBlock Text="ÜBER DIESES PROJEKT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                    <TextBlock Text="Moderne, hardwarenahe Fotobox-Software für Raspberry Pi &amp; Linux mit nativer Unterstützung für Nikon Kameras (D5600, Z 50 II) via gphoto2 und Canon Selphy CP1300 via CUPS."
+                    <TextBlock Text="Moderne, hardwarenahe Fotobox-Software für Raspberry Pi &amp; Linux mit nativer Unterstützung für DSLR/DSLM-Kameras (Nikon, Canon, Sony, Fuji via gphoto2) und Canon Selphy CP1300 via CUPS."
                                FontSize="13"
                                TextWrapping="Wrap"
                                Foreground="{StaticResource TextPrimaryBrush}" />

@@ -57,7 +57,7 @@
                            Style="{StaticResource H1}"
                            FontSize="28"
                            HorizontalAlignment="Center" />
-                <TextBlock Text="Version 1.1.0 • Standalone Edition"
+                <TextBlock Text="Version 1.2.0 • Standalone Edition"
                            Style="{StaticResource Caption}"
                            Foreground="{StaticResource AccentOrangeBrush}"
                            FontWeight="SemiBold"
@@ -75,7 +75,7 @@
                     Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="ÜBER DIESES PROJEKT" Style="{StaticResource Eyebrow}" Margin="0,0,0,6" />
-                    <TextBlock Text="Moderne, hardwarenahe Fotobox-Software für Windows &amp; Microsoft Surface mit nativer Unterstützung für Nikon Kameras (D5600, Z 50 II) und Canon Selphy CP1300 Fotodrucker."
+                    <TextBlock Text="Moderne, hardwarenahe Fotobox-Software für Windows &amp; Microsoft Surface mit nativer Unterstützung für DSLR/DSLM-Kameras (Nikon, Canon, Sony, Fuji) und Canon Selphy CP1300 Fotodrucker."
                                Style="{StaticResource Caption}"
                                TextWrapping="Wrap"
                                LineHeight="20"

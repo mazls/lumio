@@ -2,8 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Lumio.App.Avalonia.Views.AdminDashboardDialog"
         Title="Lumio – Admin Dashboard"
-        Width="660"
-        Height="780"
+        Width="740"
+        Height="820"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="None"
         Background="Transparent"
@@ -14,20 +14,21 @@
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="2"
             CornerRadius="24"
-            Padding="28,24">
+            Padding="24,20">
 
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid Grid.Row="0" Margin="0,0,0,14">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Lumio Admin-Menü" FontSize="24" FontWeight="Bold" Foreground="White" />
-                    <TextBlock Text="Einstellungen anpassen oder Software verwalten" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock Text="Lumio Admin-Menü" FontSize="22" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Einstellungen anpassen, Hardware konfigurieren oder Kiosk verwalten" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" />
                 </StackPanel>
                 <Button HorizontalAlignment="Right" VerticalAlignment="Top"
                         Width="36" Height="36" CornerRadius="18"
@@ -37,231 +38,377 @@
                 </Button>
             </Grid>
 
-            <!-- Settings Content -->
-            <ScrollViewer Grid.Row="1" Margin="0,0,-6,0" Padding="0,0,6,0">
-                <StackPanel Spacing="16">
+            <!-- Main Tab Control -->
+            <TabControl Grid.Row="1">
 
-                    <!-- Quick Actions -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="SCHNELLAKTIONEN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                <!-- TAB 1: ALLGEMEIN -->
+                <TabItem Header="⚙️ Allgemein">
+                    <ScrollViewer Margin="0,10,-6,0" Padding="0,0,6,0">
+                        <StackPanel Spacing="14">
 
-                                <Button Grid.Column="0" CornerRadius="12" Padding="10" Click="OnOpenFolderClick">
-                                    <TextBlock Text="📁 Fotos" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                </Button>
-                                <Button Grid.Column="2" CornerRadius="12" Padding="10" Click="OnAboutClick">
-                                    <TextBlock Text="ℹ️ Info" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                </Button>
-                                <Button Grid.Column="4" CornerRadius="12" Padding="10" Background="{StaticResource DangerBrush}" Foreground="White" Click="OnExitAppClick">
-                                    <TextBlock Text="🚪 Beenden" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                </Button>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
+                            <!-- Quick Actions -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="SCHNELLAKTIONEN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                    <!-- Event & Storage -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="EVENT &amp; SPEICHERORT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Event-Name" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <TextBox x:Name="EventNameTextBox" CornerRadius="10" FontSize="14" Padding="10,8" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Speicherordner für Fotos &amp; Videos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="8" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="OutputFolderTextBox" Grid.Column="0" CornerRadius="10" FontSize="14" Padding="10,8" />
-                                    <Button Grid.Column="2" Content="📁 Durchsuchen..." CornerRadius="10" Padding="12,8" Click="OnBrowseOutputFolderClick" />
-                                </Grid>
-                            </StackPanel>
-
-                            <StackPanel x:Name="UsbDrivesPanel" Spacing="4" Margin="0,4,0,0">
-                                <TextBlock Text="Erkannte USB-Laufwerke / Wechseldatenträger:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="8" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ComboBox x:Name="UsbDrivesComboBox" Grid.Column="0" HorizontalAlignment="Stretch" CornerRadius="10" />
-                                    <Button x:Name="SelectUsbButton" Grid.Column="2" Content="Als Speicherort wählen" CornerRadius="10" Padding="12,8" Click="OnSelectUsbDriveClick" />
-                                </Grid>
-                                <TextBlock x:Name="UsbStatusText" Text="" FontSize="11" Foreground="{StaticResource AccentOrangeBrush}" Margin="2,2,0,0" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Photo Branding & Event Text -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="FOTO-BRANDING &amp; EVENT-TEXT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-
-                            <CheckBox x:Name="ShowLogoCheckBox" Content="Lumio-Logo in Foto-Ecke einblenden" />
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Logo-Position" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <ComboBox x:Name="LogoPositionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
-                            </StackPanel>
-
-                            <CheckBox x:Name="ShowEventTextCheckBox" Content="Event-Text auf Fotos drucken / einblenden" Margin="0,4,0,0" />
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Format des Event-Textes" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <ComboBox x:Name="EventTextFormatComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
-                                <TextBlock Text="💡 Vorschau auf dem Foto: Mein Event – 2026" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,2,0,0" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Camera Selection -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="KAMERA-AUSWAHL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Aktive Kamera für die Booth" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <ComboBox x:Name="CameraSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
-                                <TextBlock x:Name="CameraDetectionStatusText" Text="Kameras werden erkannt..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,2,0,0" />
-                            </StackPanel>
-
-                            <CheckBox x:Name="MirrorLiveViewCheckBox" Content="Live-View horizontal spiegeln (Spiegeleffekt)" Margin="0,4,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- DSLR & Camera Settings -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="DSLR-KAMERASTEUERUNG (NIKON &amp; USB)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- ISO -->
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Text="ISO-Empfindlichkeit" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    <ComboBox x:Name="CameraIsoComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        <Button Grid.Column="0" CornerRadius="12" Padding="10" Click="OnOpenFolderClick">
+                                            <TextBlock Text="📁 Fotos" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Button>
+                                        <Button Grid.Column="2" CornerRadius="12" Padding="10" Click="OnAboutClick">
+                                            <TextBlock Text="ℹ️ Info" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Button>
+                                        <Button Grid.Column="4" CornerRadius="12" Padding="10" Background="{StaticResource DangerBrush}" Foreground="White" Click="OnExitAppClick">
+                                            <TextBlock Text="🚪 Beenden" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Button>
+                                    </Grid>
                                 </StackPanel>
+                            </Border>
 
-                                <!-- Shutter Speed -->
-                                <StackPanel Grid.Column="2" Spacing="4">
-                                    <TextBlock Text="Verschlusszeit" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    <ComboBox x:Name="CameraShutterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                            <!-- Event & Storage -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="EVENT &amp; SPEICHERORT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Event-Name" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox x:Name="EventNameTextBox" CornerRadius="10" FontSize="14" Padding="10,8" GotFocus="OnInputGotFocus" />
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Speicherordner für Fotos &amp; Videos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="OutputFolderTextBox" Grid.Column="0" CornerRadius="10" FontSize="14" Padding="10,8" GotFocus="OnInputGotFocus" />
+                                            <Button Grid.Column="2" Content="📁 Durchsuchen..." CornerRadius="10" Padding="12,8" Click="OnBrowseOutputFolderClick" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="UsbDrivesPanel" Spacing="4" Margin="0,4,0,0">
+                                        <TextBlock Text="Erkannte USB-Laufwerke / Wechseldatenträger:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="UsbDrivesComboBox" Grid.Column="0" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                            <Button x:Name="SelectUsbButton" Grid.Column="2" Content="Als Speicherort wählen" CornerRadius="10" Padding="12,8" Click="OnSelectUsbDriveClick" />
+                                        </Grid>
+                                        <TextBlock x:Name="UsbStatusText" Text="" FontSize="11" Foreground="{StaticResource AccentOrangeBrush}" Margin="2,2,0,0" />
+                                    </StackPanel>
                                 </StackPanel>
-                            </Grid>
+                            </Border>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                            <!-- Touch Keyboard & PIN -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="TOUCH-BEDIENUNG &amp; SICHERHEIT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
 
-                                <!-- Aperture -->
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Text="Blende (f-Zahl)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    <ComboBox x:Name="CameraApertureComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                    <CheckBox x:Name="OnScreenKeyboardCheckBox"
+                                              Content="Bildschirmtastatur für Touch-Bedienung aktivieren"
+                                              IsCheckedChanged="OnKeyboardToggleChanged" />
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Admin-PIN ändern (4–8 Ziffern)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox x:Name="AdminPinTextBox" CornerRadius="10" FontSize="15" MaxLength="8" PasswordChar="•" Padding="10,8" GotFocus="OnInputGotFocus" />
+                                    </StackPanel>
                                 </StackPanel>
+                            </Border>
 
-                                <!-- White Balance -->
-                                <StackPanel Grid.Column="2" Spacing="4">
-                                    <TextBlock Text="Weißabgleich" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    <ComboBox x:Name="CameraWhiteBalanceComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- TAB 2: KAMERA -->
+                <TabItem Header="📷 Kamera">
+                    <ScrollViewer Margin="0,10,-6,0" Padding="0,0,6,0">
+                        <StackPanel Spacing="14">
+
+                            <!-- Camera Selection -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="KAMERA-AUSWAHL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Aktive Kamera für die Booth" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="CameraSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        <TextBlock x:Name="CameraDetectionStatusText" Text="Kameras werden erkannt..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,2,0,0" />
+                                    </StackPanel>
+
+                                    <CheckBox x:Name="MirrorLiveViewCheckBox" Content="Live-View horizontal spiegeln (Spiegeleffekt)" Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Grid>
+                            </Border>
 
-                            <!-- Exposure Compensation -->
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Belichtungskorrektur (Helligkeit)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <ComboBox x:Name="CameraExposureCompComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
-                            </StackPanel>
-
-                            <TextBlock Text="💡 Tipp für Blitz &amp; Partylicht: ISO 200–400, 1/125s und Blende f/5.6." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,0,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Template / Collage Selection -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="FOTO-LAYOUT &amp; VORLAGE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <ComboBox x:Name="TemplateSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Timing -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="TIMER &amp; ZEITEN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Text="Countdown (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    <NumericUpDown x:Name="CountdownUpDown" Minimum="1" Maximum="15" Value="3" CornerRadius="10" />
+                            <!-- DSLR / Multi-Vendor Info -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="HERSTELLER-UNTERSTÜTZUNG (NIKON, CANON, SONY, FUJI ETC.)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                                    <TextBlock Text="Auf Linux &amp; Raspberry Pi steuert Lumio Kameras aller gängigen Marken nativ über gphoto2." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="4">
-                                    <TextBlock Text="Vorschau (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    <NumericUpDown x:Name="ReviewUpDown" Minimum="3" Maximum="60" Value="12" CornerRadius="10" />
+                            </Border>
+
+                            <!-- DSLR Manual Controls -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="DSLR-KAMERASTEUERUNG (USB / PTP)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- ISO -->
+                                        <StackPanel Grid.Column="0" Spacing="4">
+                                            <TextBlock Text="ISO-Empfindlichkeit" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="CameraIsoComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        </StackPanel>
+
+                                        <!-- Shutter Speed -->
+                                        <StackPanel Grid.Column="2" Spacing="4">
+                                            <TextBlock Text="Verschlusszeit" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="CameraShutterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Aperture -->
+                                        <StackPanel Grid.Column="0" Spacing="4">
+                                            <TextBlock Text="Blende (f-Zahl)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="CameraApertureComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        </StackPanel>
+
+                                        <!-- White Balance -->
+                                        <StackPanel Grid.Column="2" Spacing="4">
+                                            <TextBlock Text="Weißabgleich" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="CameraWhiteBalanceComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Exposure Compensation -->
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Belichtungskorrektur (Helligkeit)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="CameraExposureCompComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="💡 Tipp für Blitz &amp; Partylicht: ISO 200–400, 1/125s und Blende f/5.6." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,0,0,0" />
                                 </StackPanel>
-                            </Grid>
+                            </Border>
 
-                            <CheckBox x:Name="EnableVideoMessagesCheckBox" Content="Videobotschaften auf dem Startbildschirm aktivieren" Margin="0,8,0,0" />
-                            <StackPanel Spacing="4" Margin="0,4,0,0">
-                                <TextBlock Text="Max. Videobotschaft-Dauer (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <NumericUpDown x:Name="VideoDurationUpDown" Minimum="5" Maximum="120" Value="20" CornerRadius="10" />
-                            </StackPanel>
                         </StackPanel>
-                    </Border>
+                    </ScrollViewer>
+                </TabItem>
 
-                    <!-- Printer & Selphy -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="DRUCKER (CANON SELPHY / CUPS)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <ComboBox x:Name="PrinterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
-                            <CheckBox x:Name="AutoPrintCheckBox" Content="Automatischer Sofortdruck nach der Aufnahme" Margin="0,4,0,0" />
+                <!-- TAB 3: AUFNAHME & VORLAGE -->
+                <TabItem Header="🎬 Aufnahme">
+                    <ScrollViewer Margin="0,10,-6,0" Padding="0,0,6,0">
+                        <StackPanel Spacing="14">
+
+                            <!-- Template Selection -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="FOTO-LAYOUT &amp; VORLAGE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                                    <ComboBox x:Name="TemplateSelectionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Photo Branding & Event Text -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="FOTO-BRANDING &amp; EVENT-TEXT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+
+                                    <CheckBox x:Name="ShowLogoCheckBox" Content="Lumio-Logo in Foto-Ecke einblenden" />
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Logo-Position" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="LogoPositionComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                    </StackPanel>
+
+                                    <CheckBox x:Name="ShowEventTextCheckBox" Content="Event-Text auf Fotos drucken / einblenden" Margin="0,4,0,0" />
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Format des Event-Textes" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="EventTextFormatComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                        <TextBlock Text="💡 Vorschau auf dem Foto: Mein Event – 2026" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="2,2,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Timing & Video -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="TIMER &amp; ZEITEN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Spacing="4">
+                                            <TextBlock Text="Countdown (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <NumericUpDown x:Name="CountdownUpDown" Minimum="1" Maximum="15" Value="3" CornerRadius="10" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="4">
+                                            <TextBlock Text="Vorschau (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <NumericUpDown x:Name="ReviewUpDown" Minimum="3" Maximum="60" Value="12" CornerRadius="10" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <CheckBox x:Name="EnableVideoMessagesCheckBox" Content="Videobotschaften auf dem Startbildschirm aktivieren" Margin="0,8,0,0" />
+                                    <StackPanel Spacing="4" Margin="0,4,0,0">
+                                        <TextBlock Text="Max. Videobotschaft-Dauer (Sekunden)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <NumericUpDown x:Name="VideoDurationUpDown" Minimum="5" Maximum="120" Value="20" CornerRadius="10" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                         </StackPanel>
-                    </Border>
+                    </ScrollViewer>
+                </TabItem>
 
-                    <!-- Admin PIN -->
-                    <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="ADMIN-PIN ÄNDERN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                            <TextBox x:Name="AdminPinTextBox" CornerRadius="10" FontSize="15" MaxLength="8" PasswordChar="•" Padding="10,8" />
+                <!-- TAB 4: DRUCKER -->
+                <TabItem Header="🖨️ Drucker">
+                    <ScrollViewer Margin="0,10,-6,0" Padding="0,0,6,0">
+                        <StackPanel Spacing="14">
+
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="DRUCKER (CANON SELPHY / CUPS)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                                    <ComboBox x:Name="PrinterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                    <CheckBox x:Name="AutoPrintCheckBox" Content="Automatischer Sofortdruck nach der Aufnahme" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
                         </StackPanel>
-                    </Border>
+                    </ScrollViewer>
+                </TabItem>
 
+            </TabControl>
+
+            <!-- Touch On-Screen Keyboard Panel -->
+            <Border x:Name="OnScreenKeyboardBorder"
+                    Grid.Row="2"
+                    IsVisible="False"
+                    Background="{StaticResource SurfaceElevatedBrush}"
+                    BorderBrush="{StaticResource AccentOrangeBrush}"
+                    BorderThickness="1.5"
+                    CornerRadius="14"
+                    Padding="10,6"
+                    Margin="0,8,0,0">
+                <StackPanel Spacing="4">
+                    <Grid>
+                        <TextBlock Text="⌨️ Bildschirmtastatur" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" VerticalAlignment="Center" />
+                        <Button HorizontalAlignment="Right" Content="Schließen ▼" FontSize="11" Padding="8,4" CornerRadius="6" Click="OnCloseKeyboardClick" />
+                    </Grid>
+
+                    <!-- Numbers Row -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="1.2*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="1" Margin="1" Click="OnKeyClick" Tag="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="1" Content="2" Margin="1" Click="OnKeyClick" Tag="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2" Content="3" Margin="1" Click="OnKeyClick" Tag="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="3" Content="4" Margin="1" Click="OnKeyClick" Tag="4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="4" Content="5" Margin="1" Click="OnKeyClick" Tag="5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="5" Content="6" Margin="1" Click="OnKeyClick" Tag="6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="6" Content="7" Margin="1" Click="OnKeyClick" Tag="7" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="7" Content="8" Margin="1" Click="OnKeyClick" Tag="8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="8" Content="9" Margin="1" Click="OnKeyClick" Tag="9" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="9" Content="0" Margin="1" Click="OnKeyClick" Tag="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="10" Content="⌫" Margin="1" Background="{StaticResource DangerBrush}" Foreground="White" Click="OnBackspaceClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    </Grid>
+
+                    <!-- Letters Row 1 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Q" Margin="1" Click="OnKeyClick" Tag="Q" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="1" Content="W" Margin="1" Click="OnKeyClick" Tag="W" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2" Content="E" Margin="1" Click="OnKeyClick" Tag="E" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="3" Content="R" Margin="1" Click="OnKeyClick" Tag="R" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="4" Content="T" Margin="1" Click="OnKeyClick" Tag="T" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="5" Content="Z" Margin="1" Click="OnKeyClick" Tag="Z" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="6" Content="U" Margin="1" Click="OnKeyClick" Tag="U" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="7" Content="I" Margin="1" Click="OnKeyClick" Tag="I" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="8" Content="O" Margin="1" Click="OnKeyClick" Tag="O" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="9" Content="P" Margin="1" Click="OnKeyClick" Tag="P" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="10" Content="Ü" Margin="1" Click="OnKeyClick" Tag="Ü" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    </Grid>
+
+                    <!-- Letters Row 2 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="A" Margin="1" Click="OnKeyClick" Tag="A" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="1" Content="S" Margin="1" Click="OnKeyClick" Tag="S" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2" Content="D" Margin="1" Click="OnKeyClick" Tag="D" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="3" Content="F" Margin="1" Click="OnKeyClick" Tag="F" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="4" Content="G" Margin="1" Click="OnKeyClick" Tag="G" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="5" Content="H" Margin="1" Click="OnKeyClick" Tag="H" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="6" Content="J" Margin="1" Click="OnKeyClick" Tag="J" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="7" Content="K" Margin="1" Click="OnKeyClick" Tag="K" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="8" Content="L" Margin="1" Click="OnKeyClick" Tag="L" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="9" Content="Ö" Margin="1" Click="OnKeyClick" Tag="Ö" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="10" Content="Ä" Margin="1" Click="OnKeyClick" Tag="Ä" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    </Grid>
+
+                    <!-- Letters Row 3 & Space -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="2.5*" />
+                            <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Y" Margin="1" Click="OnKeyClick" Tag="Y" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="1" Content="X" Margin="1" Click="OnKeyClick" Tag="X" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2" Content="C" Margin="1" Click="OnKeyClick" Tag="C" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="3" Content="V" Margin="1" Click="OnKeyClick" Tag="V" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="4" Content="B" Margin="1" Click="OnKeyClick" Tag="B" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="5" Content="N" Margin="1" Click="OnKeyClick" Tag="N" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="6" Content="M" Margin="1" Click="OnKeyClick" Tag="M" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="7" Content="LEERZEICHEN" Margin="1" Click="OnKeyClick" Tag=" " HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="8" Content="-" Margin="1" Click="OnKeyClick" Tag="-" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="9" Content="." Margin="1" Click="OnKeyClick" Tag="." HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    </Grid>
                 </StackPanel>
-            </ScrollViewer>
+            </Border>
 
             <!-- Bottom Save / Close Buttons -->
-            <Grid Grid.Row="2" Margin="0,18,0,0">
+            <Grid Grid.Row="3" Margin="0,14,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="1.5*" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Content="Abbrechen" CornerRadius="14" Height="46" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnCloseClick" />
-                <Button Grid.Column="2" Content="Speichern &amp; Übernehmen" Background="{StaticResource AccentGradientBrush}" Foreground="White" FontWeight="Bold" CornerRadius="14" Height="46" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnSaveClick" />
+                <Button Grid.Column="0" Content="Abbrechen" CornerRadius="14" Height="44" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnCloseClick" />
+                <Button Grid.Column="2" Content="Speichern &amp; Übernehmen" Background="{StaticResource AccentGradientBrush}" Foreground="White" FontWeight="Bold" CornerRadius="14" Height="44" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnSaveClick" />
             </Grid>
         </Grid>
     </Border>

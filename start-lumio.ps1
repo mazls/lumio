@@ -15,10 +15,12 @@ if (-not $needsPublish -and (Test-Path $exe)) {
 }
 
 if ($needsPublish) {
-    Write-Host "Lumio wird gebaut und aktualisiert (Release win-arm64)..." -ForegroundColor Cyan
+    # Dynamically detect system architecture (Surface ARM64 vs normal Intel/AMD x64)
+    $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "win-arm64" } else { "win-x64" }
+    Write-Host "Lumio wird gebaut und aktualisiert (Release $arch)..." -ForegroundColor Cyan
     $dotnet = "$env:LOCALAPPDATA\Microsoft\dotnet\dotnet.exe"
     if (-not (Test-Path $dotnet)) { $dotnet = "dotnet" }
-    & $dotnet publish "$PSScriptRoot\src\Lumio.App\Lumio.App.csproj" -c Release -r win-arm64 --self-contained true -o "$PSScriptRoot\publish" -nologo
+    & $dotnet publish "$PSScriptRoot\src\Lumio.App\Lumio.App.csproj" -c Release -r $arch --self-contained true -o "$PSScriptRoot\publish" -nologo
     $exe = "$PSScriptRoot\publish\Lumio.exe"
 }
 

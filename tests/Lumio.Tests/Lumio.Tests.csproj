@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lumio.Core\Lumio.Core.csproj" />
     <ProjectReference Include="..\..\src\Lumio.Imaging\Lumio.Imaging.csproj" />
+    <ProjectReference Include="..\..\src\Lumio.Camera\Lumio.Camera.csproj" />
   </ItemGroup>
 
 </Project>

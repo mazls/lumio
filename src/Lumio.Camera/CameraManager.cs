@@ -1,4 +1,4 @@
-﻿using Lumio.Core.Camera;
+using Lumio.Core.Camera;
 using Lumio.Core.Settings;
 
 namespace Lumio.Camera;
@@ -75,7 +75,7 @@ public sealed class CameraManager : IAsyncDisposable
     private static ICameraService Create(BoothSettings settings) => settings.CameraBackend switch
     {
         CameraBackend.Webcam => new WebcamCamera(settings.WebcamDeviceId),
-        CameraBackend.Nikon => new NikonCamera(),
+        CameraBackend.Dslr or CameraBackend.Nikon => new DslrCamera(settings),
         _ => new SimulatedCamera(),
     };
 

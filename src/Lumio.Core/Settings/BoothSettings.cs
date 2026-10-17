@@ -1,3 +1,5 @@
+using Lumio.Core.Camera;
+
 namespace Lumio.Core.Settings;
 
 /// <summary>Which camera implementation the booth uses.</summary>
@@ -6,11 +8,19 @@ public enum CameraBackend
     /// <summary>Any USB/built-in webcam via Windows Media Foundation.</summary>
     Webcam,
 
-    /// <summary>Nikon DSLR / Z-Mirrorless via USB (D5600, Z 50 II, etc.).</summary>
+    /// <summary>
+    /// Legacy value (Lumio ≤ 1.1.8). Is migrated to <see cref="Dslr"/> when settings are loaded.
+    /// </summary>
     Nikon,
 
     /// <summary>Generated test image – useful without any hardware.</summary>
     Simulated,
+
+    /// <summary>
+    /// DSLR / mirrorless camera of any vendor (Nikon, Canon, Sony, Fujifilm, Panasonic, Olympus, ...).
+    /// Windows: via digiCamControl. Linux / Raspberry Pi: via gphoto2.
+    /// </summary>
+    Dslr,
 }
 
 /// <summary>All user-configurable booth settings. Persisted as JSON.</summary>
@@ -45,6 +55,14 @@ public sealed class BoothSettings
 
     /// <summary>Mirror the live view like a mirror (the saved photo is never mirrored).</summary>
     public bool MirrorLiveView { get; set; } = true;
+
+    /// <summary>Base URL of the digiCamControl web server (Windows DSLR bridge).</summary>
+    public string DigiCamControlUrl { get; set; } = DefaultDigiCamControlUrl;
+
+    public const string DefaultDigiCamControlUrl = "http://localhost:5513";
+
+    /// <summary>Shows Lumio's own touch keyboard for text fields in the admin menu.</summary>
+    public bool OnScreenKeyboardEnabled { get; set; } = false;
 
     public string AdminPin { get; set; } = "1234";
     public string SelectedTemplateId { get; set; } = "single-10x15";
@@ -100,16 +118,44 @@ public sealed class BoothSettings
 
         if (!Enum.IsDefined(CameraBackend))
             CameraBackend = CameraBackend.Webcam;
+
+        // Lumio <= 1.1.8 only knew "Nikon" – it is now the generic DSLR backend.
+        if (CameraBackend == CameraBackend.Nikon)
+            CameraBackend = CameraBackend.Dslr;
+
+        if (string.IsNullOrWhiteSpace(DigiCamControlUrl)
+            || !Uri.TryCreate(DigiCamControlUrl.Trim(), UriKind.Absolute, out _))
+            DigiCamControlUrl = DefaultDigiCamControlUrl;
+        else
+            DigiCamControlUrl = DigiCamControlUrl.Trim().TrimEnd('/');
+
+        MaxPrintCopiesPerSession = Math.Clamp(MaxPrintCopiesPerSession, 1, 10);
+        CameraControl.Normalize();
     }
 }
 
+/// <summary>
+/// Exposure settings for DSLR / mirrorless cameras. Values are stored vendor-neutral
+/// (e.g. ISO "200", shutter "1/125", aperture "5.6", white balance "Daylight", EV "+1");
+/// the camera drivers translate them into the vocabulary of the respective camera.
+/// </summary>
 public sealed class DslrCameraSettings
 {
     public string Iso { get; set; } = "Auto";
     public string ShutterSpeed { get; set; } = "1/125";
-    public string Aperture { get; set; } = "f/5.6";
+    public string Aperture { get; set; } = "5.6";
     public string WhiteBalance { get; set; } = "Auto";
     public string ExposureCompensation { get; set; } = "0";
 
     public DslrCameraSettings Clone() => (DslrCameraSettings)MemberwiseClone();
+
+    /// <summary>Strips UI labels from older settings files (e.g. "f/5.6 (Empfohlen)" → "5.6").</summary>
+    public void Normalize()
+    {
+        Iso = DslrOptions.NormalizeIso(Iso);
+        ShutterSpeed = DslrOptions.NormalizeShutterSpeed(ShutterSpeed);
+        Aperture = DslrOptions.NormalizeAperture(Aperture);
+        WhiteBalance = DslrOptions.NormalizeWhiteBalance(WhiteBalance);
+        ExposureCompensation = DslrOptions.NormalizeExposureCompensation(ExposureCompensation);
+    }
 }

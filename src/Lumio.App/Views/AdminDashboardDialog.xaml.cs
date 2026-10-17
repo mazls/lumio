@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
+using System.Windows.Controls;
 using Lumio.Camera;
+using Lumio.Core.Camera;
 using Lumio.Core.Settings;
 using Lumio.Core.Storage;
 using Lumio.Imaging;
@@ -41,6 +44,7 @@ public partial class AdminDashboardDialog : Window
     private readonly EventStorage _storage;
     private readonly TemplateStore _templateStore;
     private readonly SelphyPrintService _printService;
+    private TextBox? _currentFocusedTextBox;
 
     public bool ExitRequested { get; private set; }
 
@@ -63,6 +67,7 @@ public partial class AdminDashboardDialog : Window
         PopulateTemplateOptions();
         PopulateBrandingOptions();
         PopulateUsbDrives();
+        _ = CheckDigiCamStatusAsync();
     }
 
     private void LoadCurrentSettings()
@@ -78,6 +83,8 @@ public partial class AdminDashboardDialog : Window
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         AdminPinTextBox.Text = current.AdminPin;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
+        OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
+        DigiCamUrlTextBox.Text = current.DigiCamControlUrl;
     }
 
     private async Task PopulateCameraOptionsAsync()
@@ -87,7 +94,7 @@ public partial class AdminDashboardDialog : Window
             var options = new List<CameraOptionItem>
             {
                 new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null),
-                new("📷 Nikon DSLR / DSLM (D5600, Z 50 II über USB)", CameraBackend.Nikon, null),
+                new("📷 DSLR / Systemkamera (Nikon, Canon, Sony, Fuji via USB)", CameraBackend.Dslr, null),
             };
 
             var webcams = await WebcamCamera.FindDevicesAsync();
@@ -105,10 +112,14 @@ public partial class AdminDashboardDialog : Window
                 matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Webcam && o.DeviceId == current.WebcamDeviceId);
             }
             matching ??= options.FirstOrDefault(o => o.Backend == current.CameraBackend);
+            if (matching is null && current.CameraBackend == CameraBackend.Nikon)
+            {
+                matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Dslr);
+            }
             matching ??= options.FirstOrDefault();
 
             CameraSelectionComboBox.SelectedItem = matching;
-            CameraDetectionStatusText.Text = $"{webcams.Count} Kamera(s) auf dem Surface erkannt";
+            CameraDetectionStatusText.Text = $"{webcams.Count} Kamera(s) auf dem System erkannt";
         }
         catch (Exception ex)
         {
@@ -118,25 +129,19 @@ public partial class AdminDashboardDialog : Window
 
     private void PopulateDslrOptions()
     {
-        var isoOptions = new[] { "Auto", "100", "200", "400", "800", "1600", "3200", "6400" };
-        var shutterOptions = new[] { "Auto", "1/60s", "1/100s", "1/125s (Blitz-Standard)", "1/160s", "1/200s", "1/250s" };
-        var apertureOptions = new[] { "Auto", "f/2.8", "f/3.5", "f/4.0", "f/5.6 (Empfohlen)", "f/8.0", "f/11" };
-        var wbOptions = new[] { "Auto", "Tageslicht (5400K)", "Blitz (5600K)", "Kunstlicht (3200K)", "Leuchtstoff (4000K)", "Bewölkt (6500K)", "Schatten (7500K)" };
-        var evOptions = new[] { "-2.0 EV (Viel dunkler)", "-1.0 EV (Dunkler)", "0 EV (Standard)", "+1.0 EV (Heller)", "+2.0 EV (Viel heller)" };
-
-        CameraIsoComboBox.ItemsSource = isoOptions;
-        CameraShutterComboBox.ItemsSource = shutterOptions;
-        CameraApertureComboBox.ItemsSource = apertureOptions;
-        CameraWhiteBalanceComboBox.ItemsSource = wbOptions;
-        CameraExposureCompComboBox.ItemsSource = evOptions;
+        CameraIsoComboBox.ItemsSource = DslrOptions.Iso;
+        CameraShutterComboBox.ItemsSource = DslrOptions.ShutterSpeeds;
+        CameraApertureComboBox.ItemsSource = DslrOptions.Apertures;
+        CameraWhiteBalanceComboBox.ItemsSource = DslrOptions.WhiteBalances;
+        CameraExposureCompComboBox.ItemsSource = DslrOptions.ExposureCompensations;
 
         var dslr = _settingsService.Current.CameraControl;
 
-        CameraIsoComboBox.SelectedItem = isoOptions.FirstOrDefault(i => i.StartsWith(dslr.Iso, StringComparison.OrdinalIgnoreCase)) ?? "Auto";
-        CameraShutterComboBox.SelectedItem = shutterOptions.FirstOrDefault(s => s.StartsWith(dslr.ShutterSpeed, StringComparison.OrdinalIgnoreCase)) ?? "1/125s (Blitz-Standard)";
-        CameraApertureComboBox.SelectedItem = apertureOptions.FirstOrDefault(a => a.StartsWith(dslr.Aperture, StringComparison.OrdinalIgnoreCase)) ?? "f/5.6 (Empfohlen)";
-        CameraWhiteBalanceComboBox.SelectedItem = wbOptions.FirstOrDefault(w => w.StartsWith(dslr.WhiteBalance, StringComparison.OrdinalIgnoreCase)) ?? "Auto";
-        CameraExposureCompComboBox.SelectedItem = evOptions.FirstOrDefault(e => e.StartsWith(dslr.ExposureCompensation, StringComparison.OrdinalIgnoreCase)) ?? "0 EV (Standard)";
+        CameraIsoComboBox.SelectedItem = DslrOptions.Find(DslrOptions.Iso, dslr.Iso);
+        CameraShutterComboBox.SelectedItem = DslrOptions.Find(DslrOptions.ShutterSpeeds, dslr.ShutterSpeed);
+        CameraApertureComboBox.SelectedItem = DslrOptions.Find(DslrOptions.Apertures, dslr.Aperture);
+        CameraWhiteBalanceComboBox.SelectedItem = DslrOptions.Find(DslrOptions.WhiteBalances, dslr.WhiteBalance);
+        CameraExposureCompComboBox.SelectedItem = DslrOptions.Find(DslrOptions.ExposureCompensations, dslr.ExposureCompensation);
     }
 
     private void PopulatePrinterOptions()
@@ -223,6 +228,144 @@ public partial class AdminDashboardDialog : Window
         EventTextFormatComboBox.SelectedItem = textFormats.FirstOrDefault(o => o.Id.Equals(current.EventTextFormat, StringComparison.OrdinalIgnoreCase)) ?? textFormats[0];
     }
 
+    private void PopulateUsbDrives()
+    {
+        var drives = UsbDriveDetector.DetectDrives();
+        if (drives.Count > 0)
+        {
+            UsbDrivesComboBox.ItemsSource = drives;
+            var currentRoot = _settingsService.Current.OutputRoot;
+            var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
+            UsbDrivesComboBox.SelectedItem = matched;
+            SelectUsbButton.IsEnabled = true;
+            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+        }
+        else
+        {
+            UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
+            UsbDrivesComboBox.SelectedIndex = 0;
+            SelectUsbButton.IsEnabled = false;
+            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+        }
+    }
+
+    private async Task CheckDigiCamStatusAsync()
+    {
+        try
+        {
+            var url = DigiCamUrlTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(url)) url = BoothSettings.DefaultDigiCamControlUrl;
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            var res = await http.GetStringAsync($"{url.TrimEnd('/')}/?slc=get&param1=camera");
+            if (!string.IsNullOrWhiteSpace(res))
+            {
+                DigiCamStatusText.Text = $"✅ digiCamControl ist aktiv! Verbunden mit: {res.Trim()}";
+                DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessBrush");
+                return;
+            }
+        }
+        catch { }
+
+        DigiCamStatusText.Text = "ℹ️ digiCamControl ist derzeit nicht aktiv (wird für Canon/Sony unter Windows empfohlen).";
+        DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+    }
+
+    private async void OnCheckDigiCamStatusClick(object sender, RoutedEventArgs e)
+    {
+        await CheckDigiCamStatusAsync();
+    }
+
+    private void OnSelectUsbDriveClick(object sender, RoutedEventArgs e)
+    {
+        if (UsbDrivesComboBox.SelectedItem is UsbDriveInfo drive)
+        {
+            OutputFolderTextBox.Text = drive.RootPath;
+            UsbStatusText.Text = $"✅ Speicherort auf USB-Laufwerk '{drive.Name}' gesetzt!";
+        }
+    }
+
+    private void OnBrowseOutputFolderClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Speicherordner für Fotos & Videos wählen",
+            InitialDirectory = Directory.Exists(OutputFolderTextBox.Text) ? OutputFolderTextBox.Text : null,
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            OutputFolderTextBox.Text = dialog.FolderName;
+        }
+    }
+
+    #region On-Screen Keyboard Handling
+
+    private void OnInputGotFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox tb)
+        {
+            _currentFocusedTextBox = tb;
+            if (OnScreenKeyboardCheckBox.IsChecked == true)
+            {
+                OnScreenKeyboardBorder.Visibility = Visibility.Visible;
+            }
+        }
+    }
+
+    private void OnKeyboardToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (OnScreenKeyboardCheckBox.IsChecked == true)
+        {
+            OnScreenKeyboardBorder.Visibility = Visibility.Visible;
+            if (_currentFocusedTextBox is null)
+                _currentFocusedTextBox = EventNameTextBox;
+        }
+        else
+        {
+            OnScreenKeyboardBorder.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void OnCloseKeyboardClick(object sender, RoutedEventArgs e)
+    {
+        OnScreenKeyboardBorder.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnKeyClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string key && _currentFocusedTextBox is not null)
+        {
+            var tb = _currentFocusedTextBox;
+            var caret = tb.SelectionStart;
+            tb.Text = tb.Text.Insert(caret, key);
+            tb.SelectionStart = caret + key.Length;
+            tb.Focus();
+        }
+    }
+
+    private void OnBackspaceClick(object sender, RoutedEventArgs e)
+    {
+        if (_currentFocusedTextBox is not null)
+        {
+            var tb = _currentFocusedTextBox;
+            var caret = tb.SelectionStart;
+            if (tb.SelectionLength > 0)
+            {
+                tb.Text = tb.Text.Remove(caret, tb.SelectionLength);
+                tb.SelectionStart = caret;
+            }
+            else if (caret > 0)
+            {
+                tb.Text = tb.Text.Remove(caret - 1, 1);
+                tb.SelectionStart = caret - 1;
+            }
+            tb.Focus();
+        }
+    }
+
+    #endregion
+
     private async void OnTestPrintClick(object sender, RoutedEventArgs e)
     {
         if (PrinterSelectionComboBox.SelectedItem is not PrinterOptionItem printerOption || string.IsNullOrEmpty(printerOption.Name))
@@ -236,7 +379,6 @@ public partial class AdminDashboardDialog : Window
             var templateId = (TemplateSelectionComboBox.SelectedItem as TemplateOptionItem)?.Id ?? "single-10x15";
             var template = _templateStore.GetById(templateId) ?? BuiltInTemplates.CreateSinglePhotoPostcard();
 
-            // Render a test sample collage using generated test photos
             var samplePhotos = new List<byte[]>();
             for (var i = 0; i < template.RequiredPhotosCount; i++)
             {
@@ -263,7 +405,7 @@ public partial class AdminDashboardDialog : Window
             await _printService.PrintPhotoAsync(testJpeg, printerOption.Name, copies: 1);
 
             MessageBox.Show(this,
-                $"Testdruck erfolgreich an '{printerOption.Name}' gesendet!\n\nPrüfe deinen Canon Selphy.",
+                $"Testdruck erfolgreich an '{printerOption.Name}' gesendet!\n\nPrüfe deinen Drucker.",
                 "Druckauftrag gesendet",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -295,6 +437,10 @@ public partial class AdminDashboardDialog : Window
 
         updated.EventName = EventNameTextBox.Text.Trim();
         updated.OutputRoot = OutputFolderTextBox.Text.Trim();
+        updated.OnScreenKeyboardEnabled = OnScreenKeyboardCheckBox.IsChecked ?? false;
+
+        if (!string.IsNullOrWhiteSpace(DigiCamUrlTextBox.Text))
+            updated.DigiCamControlUrl = DigiCamUrlTextBox.Text.Trim();
 
         if (int.TryParse(CountdownTextBox.Text, out var countdown))
             updated.CountdownSeconds = countdown;
@@ -344,11 +490,11 @@ public partial class AdminDashboardDialog : Window
             updated.EventTextFormat = selectedTextFmt.Id;
         }
 
-        updated.CameraControl.Iso = CameraIsoComboBox.SelectedItem?.ToString() ?? "Auto";
-        updated.CameraControl.ShutterSpeed = CameraShutterComboBox.SelectedItem?.ToString() ?? "1/125s (Blitz-Standard)";
-        updated.CameraControl.Aperture = CameraApertureComboBox.SelectedItem?.ToString() ?? "f/5.6 (Empfohlen)";
-        updated.CameraControl.WhiteBalance = CameraWhiteBalanceComboBox.SelectedItem?.ToString() ?? "Auto";
-        updated.CameraControl.ExposureCompensation = CameraExposureCompComboBox.SelectedItem?.ToString() ?? "0 EV (Standard)";
+        if (CameraIsoComboBox.SelectedItem is DslrOption iso) updated.CameraControl.Iso = iso.Value;
+        if (CameraShutterComboBox.SelectedItem is DslrOption shutter) updated.CameraControl.ShutterSpeed = shutter.Value;
+        if (CameraApertureComboBox.SelectedItem is DslrOption aperture) updated.CameraControl.Aperture = aperture.Value;
+        if (CameraWhiteBalanceComboBox.SelectedItem is DslrOption wb) updated.CameraControl.WhiteBalance = wb.Value;
+        if (CameraExposureCompComboBox.SelectedItem is DslrOption ev) updated.CameraControl.ExposureCompensation = ev.Value;
 
         _settingsService.Update(updated);
 
@@ -369,10 +515,7 @@ public partial class AdminDashboardDialog : Window
 
     private void OnAboutClick(object sender, RoutedEventArgs e)
     {
-        var aboutDialog = new AboutDialog
-        {
-            Owner = this
-        };
+        var aboutDialog = new AboutDialog { Owner = this };
         aboutDialog.ShowDialog();
     }
 
@@ -388,50 +531,6 @@ public partial class AdminDashboardDialog : Window
         {
             ExitRequested = true;
             Close();
-        }
-    }
-
-    private void PopulateUsbDrives()
-    {
-        var drives = UsbDriveDetector.DetectDrives();
-        if (drives.Count > 0)
-        {
-            UsbDrivesComboBox.ItemsSource = drives;
-            var currentRoot = _settingsService.Current.OutputRoot;
-            var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
-            UsbDrivesComboBox.SelectedItem = matched;
-            SelectUsbButton.IsEnabled = true;
-            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
-        }
-        else
-        {
-            UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
-            UsbDrivesComboBox.SelectedIndex = 0;
-            SelectUsbButton.IsEnabled = false;
-            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
-        }
-    }
-
-    private void OnSelectUsbDriveClick(object sender, RoutedEventArgs e)
-    {
-        if (UsbDrivesComboBox.SelectedItem is UsbDriveInfo drive)
-        {
-            OutputFolderTextBox.Text = drive.RootPath;
-            UsbStatusText.Text = $"✅ Speicherort auf USB-Laufwerk '{drive.Name}' gesetzt!";
-        }
-    }
-
-    private void OnBrowseOutputFolderClick(object sender, RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Speicherordner für Fotos & Videos wählen",
-            InitialDirectory = Directory.Exists(OutputFolderTextBox.Text) ? OutputFolderTextBox.Text : null,
-        };
-
-        if (dialog.ShowDialog(this) == true)
-        {
-            OutputFolderTextBox.Text = dialog.FolderName;
         }
     }
 
