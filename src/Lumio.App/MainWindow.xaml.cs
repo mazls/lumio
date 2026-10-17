@@ -104,13 +104,18 @@ public partial class MainWindow : Window
 
             await _activeCamera.StartLiveViewAsync();
 
-            CameraStatusIndicator.Fill = (Brush)FindResource("SuccessBrush");
-            CameraStatusText.Text = _cameraManager.FallbackReason is not null
-                ? $"Test-Modus ({_activeCamera.DisplayName})"
-                : _activeCamera.DisplayName;
-            CameraStatusText.ToolTip = _cameraManager.FallbackReason is not null
-                ? $"Fallback-Grund: {_cameraManager.FallbackReason}"
-                : _activeCamera.DisplayName;
+            if (_cameraManager.FallbackReason is not null)
+            {
+                CameraStatusIndicator.Fill = (Brush)FindResource("AccentOrangeBrush");
+                CameraStatusText.Text = "Kamera-Hinweis (Klick)";
+                CameraStatusText.ToolTip = _cameraManager.FallbackReason;
+            }
+            else
+            {
+                CameraStatusIndicator.Fill = (Brush)FindResource("SuccessBrush");
+                CameraStatusText.Text = _activeCamera.DisplayName;
+                CameraStatusText.ToolTip = _activeCamera.DisplayName;
+            }
         }
         catch (Exception ex)
         {
@@ -935,6 +940,18 @@ public partial class MainWindow : Window
             GalleryPrintStatusText.Text = $"Druckfehler: {ex.Message}";
             GalleryPrintButtonLabel.Text = "Foto drucken (Selphy)";
             GalleryPrintButton.IsEnabled = true;
+        }
+    }
+
+    private void OnCameraStatusClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_cameraManager.FallbackReason is not null)
+        {
+            MessageBox.Show(this, _cameraManager.FallbackReason, "Kamera-Information", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else if (_activeCamera is not null)
+        {
+            MessageBox.Show(this, $"Aktive Kamera: {_activeCamera.DisplayName}\nStatus: {_activeCamera.Status}", "Kamera-Information", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 

@@ -92,16 +92,40 @@ public class DslrCamera : ICameraService
             await Task.Run(() =>
             {
                 using var searcher = new ManagementObjectSearcher(
-                    "SELECT DeviceID, Name, Description FROM Win32_PnPEntity WHERE " +
-                    "DeviceID LIKE '%VID_04B0%' OR Name LIKE '%Nikon%' OR " + // Nikon
-                    "DeviceID LIKE '%VID_04A9%' OR Name LIKE '%Canon%' OR " + // Canon
-                    "DeviceID LIKE '%VID_054C%' OR Name LIKE '%Sony%' OR " +  // Sony
-                    "DeviceID LIKE '%VID_04CB%' OR Name LIKE '%Fujifilm%'");  // Fuji
+                    "SELECT DeviceID, Name, Description, PNPClass FROM Win32_PnPEntity WHERE " +
+                    "DeviceID LIKE '%VID_04B0%' OR " + // Nikon
+                    "DeviceID LIKE '%VID_04A9%' OR " + // Canon
+                    "DeviceID LIKE '%VID_054C%' OR " + // Sony
+                    "DeviceID LIKE '%VID_04CB%' OR " + // Fuji
+                    "Name LIKE '%Nikon%' OR Name LIKE '%Z50%'");
 
                 foreach (var device in searcher.Get())
                 {
+                    var pnpClass = device["PNPClass"]?.ToString() ?? "";
                     var name = device["Name"]?.ToString() ?? device["Description"]?.ToString() ?? "DSLR Kamera";
                     var id = device["DeviceID"]?.ToString() ?? Guid.NewGuid().ToString();
+
+                    // Strictly filter out printers, print queues, network endpoints
+                    if (pnpClass.Equals("Printer", StringComparison.OrdinalIgnoreCase) ||
+                        pnpClass.Equals("PrintQueue", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Printer", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Drucker", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Inkjet", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Class Driver", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    // Format Nikon Z50II and other known cameras nicely
+                    if (name.Contains("Z50", StringComparison.OrdinalIgnoreCase) || id.Contains("VID_04B0&PID_0455", StringComparison.OrdinalIgnoreCase))
+                    {
+                        name = "Nikon Z 50 II (USB)";
+                    }
+                    else if (!name.StartsWith("Nikon", StringComparison.OrdinalIgnoreCase) && id.Contains("VID_04B0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        name = $"Nikon Kamera ({name})";
+                    }
+
                     results.Add(new CameraDeviceInfo(id, name));
                 }
             });
@@ -179,7 +203,7 @@ public class DslrCamera : ICameraService
                 if (!string.IsNullOrWhiteSpace(test))
                 {
                     _useDigiCamControl = true;
-                    DisplayName = $"DSLR (digiCamControl: {test.Trim()})";
+                    DisplayName = $"DSLR ({test.Trim()})";
                     Status = CameraStatus.Connected;
                     return;
                 }
@@ -191,20 +215,28 @@ public class DslrCamera : ICameraService
 
             // Fallback: check USB hardware directly
             var devices = await FindConnectedDevicesAsync(_digiCamUrl);
+            Status = CameraStatus.Error;
+
             if (devices.Count > 0)
             {
-                DisplayName = devices[0].Name;
-                Status = CameraStatus.Connected;
-                return;
+                var detectedCam = devices[0].Name;
+                throw new CameraException(
+                    $"Kamera '{detectedCam}' per USB erkannt, aber digiCamControl ist unter Windows nicht aktiv.\n\n" +
+                    "So bringst du das Bild in die Software:\n\n" +
+                    "Empfohlen für Nikon Z 50 II (plug & play ohne Zusatzprogramme):\n" +
+                    "1. An der Kamera: Menü (🔧 Setup) ➔ 'USB-Verbindung' ➔ auf 'USB-Streaming (UVC/UAC)' stellen.\n" +
+                    "2. In Lumio: Admin-Menü (Zahnrad) ➔ Kamera ➔ 'Webcam' wählen (erscheint sofort mit 60fps Live-View!).\n\n" +
+                    "Alternative für MTP-Tethering:\n" +
+                    "1. digiCamControl starten (Webserver auf Port 5513 aktivieren).\n" +
+                    "2. Kamera-Modus auf DSLR lassen.");
             }
 
-            Status = CameraStatus.Error;
             throw new CameraException(
                 "Keine DSLR/Systemkamera gefunden.\n\n" +
                 "Tipps für Windows:\n" +
-                "1. Starte digiCamControl für Canon, Sony, Nikon, Fuji oder Panasonic.\n" +
-                "2. Ist die Kamera per USB verbunden und eingeschaltet?\n" +
-                "3. Steht der USB-Modus der Kamera auf PC-Steuerung / MTP / PTP?");
+                "1. Ist die Kamera per USB verbunden und eingeschaltet?\n" +
+                "2. Für Nikon Z 50 II: Im Kamera-Menü (🔧 Setup) auf 'USB-Streaming (UVC/UAC)' stellen und als Webcam wählen.\n" +
+                "3. Für MTP-Steuerung: digiCamControl im Hintergrund starten.");
         }
         else
         {

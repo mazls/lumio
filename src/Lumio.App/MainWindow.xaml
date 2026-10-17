@@ -286,7 +286,9 @@
                     BorderBrush="{StaticResource GlassBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="20"
-                    Padding="12,6,18,6">
+                    Padding="12,6,18,6"
+                    Cursor="Hand"
+                    MouseLeftButtonUp="OnCameraStatusClick">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True" Margin="0,0,10,0"
                             BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
