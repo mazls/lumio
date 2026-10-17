@@ -1,50 +1,50 @@
 # Lumio Fair-Use & Event License (LFEL)
 Version 1.0 — 2026
 
-Copyright (c) 2026 Marcel / Lumio Photobooth Projekt. Alle Rechte vorbehalten.
+Copyright (c) 2026 Marcel / Lumio Photobooth Project. All rights reserved.
 
 ---
 
-## 1. Präambel & Philosophie
+## 1. Preamble & Philosophy
 
-Lumio wurde aus Frust über überteuerte Abo-Modelle und künstliche Lizenzsperren bestehender Photobooth-Lösungen geschaffen. Das Ziel dieses Projekts ist es, eine moderne, stabile, hardwarenahe und freie Fotobox-Software bereitzustellen. 
+Lumio was created out of frustration with overpriced subscription models and artificial licensing restrictions found in existing photobooth software. The goal of this project is to provide a modern, rock-solid, hardware-integrated, and freely accessible photobooth solution.
 
-Diese Lizenz regelt die faire Nutzung: Sie erlaubt die uneingeschränkte Nutzung der Software auf Events (auch gewerblich), schützt jedoch den Quellcode davor, von Drittanbietern als kommerzielles Bezahlprodukt zweckentfremdet oder weiterverkauft zu werden.
-
----
-
-## 2. Nutzung der Software / Binaries (Gewerbliche Event-Nutzung ERLAUBT)
-
-Hiermit wird jeder Person unentgeltlich die Erlaubnis erteilt, die kompilierte Software (ausführbare Dateien, `.exe`, Release-Archive) herunterzuladen, auszuführen und für **sowohl private als auch gewerbliche Zwecke** zu nutzen:
-
-- ✅ **Privater Einsatz:** Nutzung auf privaten Feiern, Geburtstagen, Hochzeiten und Vereinsfesten.
-- ✅ **Gewerblicher Event-Einsatz:** Betrieb der Software auf gewerblichen Veranstaltungen, Firmenfeiern, Messen sowie die Vermietung von Fotoboxen mit vorinstalliertem Lumio.
-- ✅ **Kommerzielle Einnahmen:** Das Generieren von Einnahmen durch den Verleih der Box, den Verkauf von Fotoausdrucken oder den digitalen Download ist uneingeschränkt gestattet.
-- ✅ **Keine Abos oder Gebühren:** Es fallen keine laufenden Kosten, Lizenzgebühren oder Zwangsabos an.
+This license governs fair use: it grants unrestricted permission to use the software at events (including commercial use), while protecting the source code from being appropriated or resold by third parties as a proprietary paid product.
 
 ---
 
-## 3. Quellcode-Bedingungen (Nicht-kommerzielle Nutzung des Quellcodes)
+## 2. Software & Binaries Usage (Commercial Event Use ALLOWED)
 
-Der Quellcode dieses Repositories wird unter einer **Source-Available**-Lizenz bereitgestellt:
+Permission is hereby granted, free of charge, to any person obtaining a copy of the compiled software (executables, binaries, `.exe`, release archives) to download, run, and use it for **both private and commercial purposes**:
 
-- ✅ **Erlaubt:** 
-  - Einsehen, Lernen, Analysieren und Kompilieren des Quellcodes für eigene private Zwecke.
-  - Fehlerbehebungen (Bugfixes), Anpassungen für eigene private Hardware-Setups.
-  - Einreichen von Verbesserungen und Beiträgen (Pull Requests) an das offizielle Lumio-Repository.
-- ❌ **Untersagt (Nicht-kommerziell):**
-  - Der Weiterverkauf des Quellcodes oder abgeleiteter Versionen gegen Entgelt.
-  - Die Einbindung des Quellcodes in proprietäre, kommerziell vertriebene Softwareprodukte oder Bezahl-Apps Dritter.
-  - Das Erstellen und gewerbliche Anbieten von "White-Label"-Klonen der Software ohne ausdrückliche schriftliche Genehmigung des Urhebers.
+- ✅ **Private Events:** Use at personal parties, birthdays, weddings, family celebrations, and community events.
+- ✅ **Commercial Event Use:** Operation of the software at commercial events, corporate functions, exhibitions, trade fairs, and the rental of photo booths with Lumio pre-installed.
+- ✅ **Revenue Generation:** Generating income through photo booth rental, print sales, or digital downloads is fully permitted.
+- ✅ **No Subscriptions or Fees:** No recurring charges, license fees, royalties, or mandatory subscriptions.
 
 ---
 
-## 4. Urheberrechtshinweis
+## 3. Source Code Terms (Non-Commercial Source Code Use)
 
-Bei jeder Weitergabe des Quellcodes oder wesentlicher Teile davon müssen der obige Urheberrechtshinweis und dieser Lizenztext beibehalten werden.
+The source code in this repository is made available under a **Source-Available** model:
+
+- ✅ **Permitted:**
+  - Viewing, learning, analyzing, and building/compiling the source code for personal and private use.
+  - Applying bug fixes and modifications tailored to your personal hardware setup.
+  - Submitting improvements and contributions (Pull Requests) to the official Lumio repository.
+- ❌ **Prohibited (Non-Commercial Restriction):**
+  - Reselling the source code or derivative works for commercial gain.
+  - Incorporating the source code into proprietary, commercially distributed software products or third-party paid applications.
+  - Creating and offering commercial "white-label" clones of the software without explicit prior written authorization from the author.
 
 ---
 
-## 5. Haftungsausschluss
+## 4. Copyright Notice
 
-DIE SOFTWARE WIRD "WIE BESEHEN" (AS IS) ZUR VERFÜGUNG GESTELLT, OHNE JEGLICHE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG. IN KEINEM FALL HAFTEN DIE AUTOREN ODER URHEBERRECHTSINHABER FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE VERPFLICHTUNGEN (EINSCHLIESSLICH EVENTUELLER AUSFÄLLE WÄHREND EINER VERANSTALTUNG), DIE AUS DER VERWENDUNG DER SOFTWARE RESULTIEREN.
+The above copyright notice and this permission notice must be included in all copies or substantial portions of the source code.
+
+---
+
+## 5. Disclaimer of Warranty & Limitation of Liability
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY (INCLUDING ANY HARDWARE MALFUNCTION OR DOWNTIME DURING AN EVENT), WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
