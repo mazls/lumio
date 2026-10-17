@@ -95,12 +95,14 @@ public class DslrCamera : ICameraService
             await Task.Run(() =>
             {
                 var mgr = GetOrCreateDeviceManager();
-                mgr.ConnectToCamera();
 
+                // If a camera is already connected, use it immediately without re-probing USB
+                bool hasConnected = false;
                 foreach (ICameraDevice dev in mgr.ConnectedDevices)
                 {
                     if (dev.IsConnected)
                     {
+                        hasConnected = true;
                         var name = !string.IsNullOrWhiteSpace(dev.DisplayName)
                             ? dev.DisplayName
                             : (!string.IsNullOrWhiteSpace(dev.DeviceName) ? dev.DeviceName : "DSLR Kamera");
@@ -110,6 +112,27 @@ public class DslrCamera : ICameraService
                             : (!string.IsNullOrWhiteSpace(dev.PortName) ? dev.PortName : Guid.NewGuid().ToString());
 
                         results.Add(new CameraDeviceInfo(id, $"📷 {name}"));
+                    }
+                }
+
+                if (!hasConnected)
+                {
+                    mgr.ConnectToCamera();
+
+                    foreach (ICameraDevice dev in mgr.ConnectedDevices)
+                    {
+                        if (dev.IsConnected)
+                        {
+                            var name = !string.IsNullOrWhiteSpace(dev.DisplayName)
+                                ? dev.DisplayName
+                                : (!string.IsNullOrWhiteSpace(dev.DeviceName) ? dev.DeviceName : "DSLR Kamera");
+
+                            var id = !string.IsNullOrWhiteSpace(dev.SerialNumber)
+                                ? dev.SerialNumber
+                                : (!string.IsNullOrWhiteSpace(dev.PortName) ? dev.PortName : Guid.NewGuid().ToString());
+
+                            results.Add(new CameraDeviceInfo(id, $"📷 {name}"));
+                        }
                     }
                 }
             });

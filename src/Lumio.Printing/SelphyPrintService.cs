@@ -15,8 +15,24 @@ public sealed class SelphyPrintService
 {
     private static readonly string[] SelphyKeywords = ["SELPHY", "CP1300", "CP1500", "CP1200", "CP1000", "CP910", "CP800", "CANON CP"];
 
-    public static IReadOnlyList<PrinterDeviceInfo> GetInstalledPrinters()
+    private static IReadOnlyList<PrinterDeviceInfo>? _cachedPrinters;
+    private static DateTime _lastPrinterCacheTime = DateTime.MinValue;
+    private static readonly TimeSpan PrinterCacheTtl = TimeSpan.FromSeconds(60);
+    private static readonly object _printerCacheLock = new();
+
+    public static IReadOnlyList<PrinterDeviceInfo> GetInstalledPrinters(bool forceRefresh = false)
     {
+        if (!forceRefresh)
+        {
+            lock (_printerCacheLock)
+            {
+                if (_cachedPrinters != null && DateTime.UtcNow - _lastPrinterCacheTime < PrinterCacheTtl)
+                {
+                    return _cachedPrinters;
+                }
+            }
+        }
+
         if (OperatingSystem.IsWindows())
         {
 #if WINDOWS || NET10_0_WINDOWS10_0_19041_0
@@ -32,11 +48,19 @@ public sealed class SelphyPrintService
                     list.Add(new PrinterDeviceInfo(printer, isSelphy, isDefault));
                 }
 
-                return list
+                var sorted = list
                     .OrderByDescending(p => p.IsSelphy)
                     .ThenByDescending(p => p.IsDefault)
                     .ThenBy(p => p.Name)
                     .ToList();
+
+                lock (_printerCacheLock)
+                {
+                    _cachedPrinters = sorted;
+                    _lastPrinterCacheTime = DateTime.UtcNow;
+                }
+
+                return sorted;
             }
             catch
             {
@@ -48,7 +72,13 @@ public sealed class SelphyPrintService
         }
 
         // Linux / Raspberry Pi CUPS print discovery
-        return GetLinuxInstalledPrinters();
+        var linuxPrinters = GetLinuxInstalledPrinters();
+        lock (_printerCacheLock)
+        {
+            _cachedPrinters = linuxPrinters;
+            _lastPrinterCacheTime = DateTime.UtcNow;
+        }
+        return linuxPrinters;
     }
 
     private static IReadOnlyList<PrinterDeviceInfo> GetLinuxInstalledPrinters()

@@ -65,12 +65,45 @@ public partial class AdminDashboardDialog : Window
         _cameraManager = cameraManager;
 
         LoadCurrentSettings();
-        _ = PopulateCameraOptionsAsync();
+        PopulateInitialDropdowns();
         PopulateDslrOptions();
-        PopulatePrinterOptions();
         PopulateTemplateOptions();
         PopulateBrandingOptions();
-        PopulateUsbDrives();
+
+        Loaded += OnLoaded;
+    }
+
+    private void PopulateInitialDropdowns()
+    {
+        // 1. Instant camera options
+        var initialCams = new List<CameraOptionItem>
+        {
+            new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null),
+            new("📷 DSLR / Systemkamera (Nikon D5600, Z 50 II, Canon via USB)", CameraBackend.Dslr, null),
+        };
+        CameraSelectionComboBox.ItemsSource = initialCams;
+        CameraSelectionComboBox.SelectedItem = _settingsService.Current.CameraBackend == CameraBackend.Simulated
+            ? initialCams[0]
+            : initialCams[1];
+
+        // 2. Instant printer placeholder
+        var currentPrinter = _settingsService.Current.SelectedPrinter;
+        var initialPrinterText = !string.IsNullOrWhiteSpace(currentPrinter)
+            ? $"🖨️ {currentPrinter}"
+            : "🖨️ Drucker werden gesucht...";
+        PrinterSelectionComboBox.ItemsSource = new List<PrinterOptionItem> { new(initialPrinterText, currentPrinter ?? string.Empty) };
+        PrinterSelectionComboBox.SelectedIndex = 0;
+
+        // 3. Instant USB placeholder
+        UsbDrivesComboBox.ItemsSource = new List<string> { "💾 USB-Laufwerke werden gesucht..." };
+        UsbDrivesComboBox.SelectedIndex = 0;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = PopulateCameraOptionsAsync();
+        _ = PopulatePrinterOptionsAsync();
+        _ = PopulateUsbDrivesAsync();
         _ = CheckDigiCamStatusAsync();
     }
 
@@ -147,11 +180,11 @@ public partial class AdminDashboardDialog : Window
         CameraExposureCompComboBox.SelectedItem = DslrOptions.Find(DslrOptions.ExposureCompensations, dslr.ExposureCompensation);
     }
 
-    private void PopulatePrinterOptions()
+    private async Task PopulatePrinterOptionsAsync()
     {
         try
         {
-            var installed = SelphyPrintService.GetInstalledPrinters();
+            var installed = await Task.Run(() => SelphyPrintService.GetInstalledPrinters());
             var options = new List<PrinterOptionItem>();
 
             foreach (var p in installed)
@@ -231,24 +264,31 @@ public partial class AdminDashboardDialog : Window
         EventTextFormatComboBox.SelectedItem = textFormats.FirstOrDefault(o => o.Id.Equals(current.EventTextFormat, StringComparison.OrdinalIgnoreCase)) ?? textFormats[0];
     }
 
-    private void PopulateUsbDrives()
+    private async Task PopulateUsbDrivesAsync()
     {
-        var drives = UsbDriveDetector.DetectDrives();
-        if (drives.Count > 0)
+        try
         {
-            UsbDrivesComboBox.ItemsSource = drives;
-            var currentRoot = _settingsService.Current.OutputRoot;
-            var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
-            UsbDrivesComboBox.SelectedItem = matched;
-            SelectUsbButton.IsEnabled = true;
-            UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+            var drives = await Task.Run(() => UsbDriveDetector.DetectDrives());
+            if (drives.Count > 0)
+            {
+                UsbDrivesComboBox.ItemsSource = drives;
+                var currentRoot = _settingsService.Current.OutputRoot;
+                var matched = drives.FirstOrDefault(d => currentRoot.StartsWith(d.RootPath, StringComparison.OrdinalIgnoreCase)) ?? drives[0];
+                UsbDrivesComboBox.SelectedItem = matched;
+                SelectUsbButton.IsEnabled = true;
+                UsbStatusText.Text = $"✅ {drives.Count} USB-Laufwerk(e) gefunden.";
+            }
+            else
+            {
+                UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
+                UsbDrivesComboBox.SelectedIndex = 0;
+                SelectUsbButton.IsEnabled = false;
+                UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            UsbDrivesComboBox.ItemsSource = new List<string> { "Kein USB-Laufwerk erkannt" };
-            UsbDrivesComboBox.SelectedIndex = 0;
-            SelectUsbButton.IsEnabled = false;
-            UsbStatusText.Text = "💡 Schließe einen USB-Stick an, um Fotos & Videos direkt extern zu sichern.";
+            Debug.WriteLine($"USB enumeration error: {ex.Message}");
         }
     }
 

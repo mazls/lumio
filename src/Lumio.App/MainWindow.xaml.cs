@@ -90,6 +90,13 @@ public partial class MainWindow : Window
         UpdateCornerGalleryThumbnail();
         await InitializeCameraAsync();
         StartFrameWatchdog();
+
+        // Warm up printer spooler RPC and storage/USB cache in background without blocking UI
+        _ = Task.Run(() =>
+        {
+            try { SelphyPrintService.GetInstalledPrinters(); } catch { }
+            try { UsbDriveDetector.DetectDrives(); } catch { }
+        });
     }
 
     private async Task InitializeCameraAsync(bool isReconnect = false)
