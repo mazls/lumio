@@ -73,6 +73,7 @@ public sealed class WebcamCamera : ICameraService
         if (Status == CameraStatus.Connected)
             return;
 
+        await CleanupAsync();
         Status = CameraStatus.Connecting;
 
         try
@@ -427,9 +428,15 @@ public sealed class WebcamCamera : ICameraService
         }
     }
 
-    private void OnCaptureFailed(MediaCapture sender, MediaCaptureFailedEventArgs errorEventArgs)
+    private async void OnCaptureFailed(MediaCapture sender, MediaCaptureFailedEventArgs errorEventArgs)
     {
         Status = CameraStatus.Error;
+        _liveViewRunning = false;
+        try
+        {
+            await CleanupAsync();
+        }
+        catch { }
         StatusChanged?.Invoke(this, CameraStatus.Error);
     }
 

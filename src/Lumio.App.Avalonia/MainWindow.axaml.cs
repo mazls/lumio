@@ -41,6 +41,13 @@ public partial class MainWindow : Window
     private int _galleryCurrentIndex;
     private List<string> _galleryFiles = [];
 
+    // Resilient Auto-Reconnect
+    private readonly object _reconnectLock = new();
+    private CancellationTokenSource? _reconnectCts;
+    private bool _isReconnecting;
+    private DateTime _lastFrameTime = DateTime.MinValue;
+    private DispatcherTimer? _watchdogTimer;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -66,33 +73,136 @@ public partial class MainWindow : Window
         EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
         UpdateModeButtons();
         await StartCameraAsync();
+        StartWatchdog();
         RefreshGalleryCorner();
     }
 
-    private async Task StartCameraAsync()
+    private async Task StartCameraAsync(bool isReconnect = false)
     {
         try
         {
             if (_activeCamera is not null)
             {
                 _activeCamera.FrameReady -= OnCameraFrameReady;
-                await _activeCamera.StopLiveViewAsync();
+                _activeCamera.StatusChanged -= OnCameraStatusChanged;
+                try
+                {
+                    await _activeCamera.StopLiveViewAsync();
+                }
+                catch { }
             }
 
-            CameraStatusText.Text = "Kamera wird initialisiert...";
+            CameraStatusText.Text = isReconnect ? "Kamera neu verbinden..." : "Kamera wird initialisiert...";
             _activeCamera = await _cameraManager.GetCameraAsync(_settingsService.Current);
             _activeCamera.FrameReady += OnCameraFrameReady;
+            _activeCamera.StatusChanged += OnCameraStatusChanged;
+
             await _activeCamera.StartLiveViewAsync();
+            _lastFrameTime = DateTime.UtcNow;
             CameraStatusText.Text = $"{_activeCamera.DisplayName} bereit";
         }
         catch (Exception ex)
         {
-            CameraStatusText.Text = $"Kamerafehler: {ex.Message}";
+            CameraStatusText.Text = isReconnect ? "Kamera getrennt..." : $"Kamerafehler: {ex.Message}";
         }
+    }
+
+    private void StartWatchdog()
+    {
+        _watchdogTimer?.Stop();
+        _watchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _watchdogTimer.Tick += (s, e) =>
+        {
+            if (_activeCamera is not null && _activeCamera.Status == CameraStatus.Connected && !_isReconnecting)
+            {
+                if (_lastFrameTime != DateTime.MinValue && (DateTime.UtcNow - _lastFrameTime) > TimeSpan.FromSeconds(5))
+                {
+                    TriggerAutoReconnect("Keine Bilder empfangen");
+                }
+            }
+        };
+        _watchdogTimer.Start();
+    }
+
+    private void TriggerAutoReconnect(string reason)
+    {
+        lock (_reconnectLock)
+        {
+            if (_isReconnecting)
+                return;
+
+            _isReconnecting = true;
+            _reconnectCts?.Cancel();
+            _reconnectCts = new CancellationTokenSource();
+        }
+
+        var token = _reconnectCts.Token;
+        Dispatcher.UIThread.Post(() =>
+        {
+            CameraStatusText.Text = "Kamera neu verbinden...";
+        });
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1200, token);
+                while (!token.IsCancellationRequested)
+                {
+                    bool reconnected = false;
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        try
+                        {
+                            await StartCameraAsync(isReconnect: true);
+                            if (_activeCamera?.Status == CameraStatus.Connected && _cameraManager.FallbackReason is null)
+                            {
+                                reconnected = true;
+                            }
+                        }
+                        catch { }
+                    });
+
+                    if (reconnected) break;
+                    await Task.Delay(2500, token);
+                }
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                lock (_reconnectLock) { _isReconnecting = false; }
+            }
+        }, token);
+    }
+
+    private void OnCameraStatusChanged(object? sender, CameraStatus status)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (status == CameraStatus.Error || status == CameraStatus.Disconnected)
+            {
+                CameraStatusText.Text = "Kamera getrennt (Verbinde neu...)";
+                TriggerAutoReconnect("Status geändert auf " + status);
+            }
+            else if (status == CameraStatus.Connected)
+            {
+                CameraStatusText.Text = $"{_activeCamera?.DisplayName ?? "Kamera"} bereit";
+            }
+        });
     }
 
     private void OnCameraFrameReady(object? sender, LiveViewFrame frame)
     {
+        _lastFrameTime = DateTime.UtcNow;
+        if (_isReconnecting)
+        {
+            lock (_reconnectLock)
+            {
+                _isReconnecting = false;
+                _reconnectCts?.Cancel();
+            }
+        }
+
         Dispatcher.UIThread.Post(() =>
         {
             try
@@ -703,9 +813,13 @@ public partial class MainWindow : Window
 
     private async Task TeardownBoothAsync()
     {
+        _watchdogTimer?.Stop();
+        _reconnectCts?.Cancel();
+
         if (_activeCamera is not null)
         {
             _activeCamera.FrameReady -= OnCameraFrameReady;
+            _activeCamera.StatusChanged -= OnCameraStatusChanged;
             await _activeCamera.DisposeAsync();
         }
     }
