@@ -41,7 +41,7 @@ public sealed record EventTextFormatOption(string DisplayName, string Id)
     public override string ToString() => DisplayName;
 }
 
-public partial class AdminDashboardDialog : Window
+public partial class AdminDashboardDialog : UserControl
 {
     private readonly SettingsService _settingsService;
     private readonly EventStorage _storage;
@@ -52,6 +52,8 @@ public partial class AdminDashboardDialog : Window
     private int _isScanningHardware;
 
     public bool ExitRequested { get; private set; }
+    public event EventHandler? Closed;
+    public event Action? AboutRequested;
 
     public AdminDashboardDialog() : this(
         new SettingsService(new SettingsStore()),
@@ -135,25 +137,39 @@ public partial class AdminDashboardDialog : Window
     {
         try
         {
-            var options = new List<CameraOptionItem>
-            {
-                new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null),
-                new("📷 DSLR / Systemkamera (Nikon, Canon, Sony, Fuji via USB)", CameraBackend.Dslr, null),
-            };
+            var options = new List<CameraOptionItem>();
 
-            var webcams = await WebcamCamera.FindDevicesAsync();
-            foreach (var cam in webcams)
+            if (CameraManager.CustomCameraDiscovery != null)
             {
-                options.Add(new($"🎥 {cam.Name}", CameraBackend.Webcam, cam.Id));
+                var customCameras = await CameraManager.CustomCameraDiscovery();
+                foreach (var cam in customCameras)
+                {
+                    var backend = cam.Id.StartsWith("ptp:", StringComparison.OrdinalIgnoreCase)
+                        ? CameraBackend.Dslr
+                        : CameraBackend.Webcam;
+                    options.Add(new(cam.Name, backend, cam.Id));
+                }
+                options.Add(new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null));
+            }
+            else
+            {
+                options.Add(new("📸 Integrierte Testkamera (Simulation)", CameraBackend.Simulated, null));
+                options.Add(new("📷 DSLR / Systemkamera (Nikon, Canon, Sony, Fuji via USB)", CameraBackend.Dslr, null));
+
+                var webcams = await WebcamCamera.FindDevicesAsync();
+                foreach (var cam in webcams)
+                {
+                    options.Add(new($"🎥 {cam.Name}", CameraBackend.Webcam, cam.Id));
+                }
             }
 
             CameraSelectionComboBox.ItemsSource = options;
 
             var current = _settingsService.Current;
             CameraOptionItem? matching = null;
-            if (current.CameraBackend == CameraBackend.Webcam && current.WebcamDeviceId is not null)
+            if (!string.IsNullOrEmpty(current.WebcamDeviceId))
             {
-                matching = options.FirstOrDefault(o => o.Backend == CameraBackend.Webcam && o.DeviceId == current.WebcamDeviceId);
+                matching = options.FirstOrDefault(o => o.DeviceId == current.WebcamDeviceId);
             }
             matching ??= options.FirstOrDefault(o => o.Backend == current.CameraBackend);
             if (matching is null && current.CameraBackend == CameraBackend.Nikon)
@@ -163,7 +179,7 @@ public partial class AdminDashboardDialog : Window
             matching ??= options.FirstOrDefault();
 
             CameraSelectionComboBox.SelectedItem = matching;
-            CameraDetectionStatusText.Text = $"{webcams.Count} USB/V4L2-Kamera(s) erkannt";
+            CameraDetectionStatusText.Text = $"{options.Count} Kamera-Option(en) verfügbar";
         }
         catch (Exception ex)
         {
@@ -399,7 +415,7 @@ public partial class AdminDashboardDialog : Window
         if (CameraExposureCompComboBox.SelectedItem is DslrOption ev) copy.CameraControl.ExposureCompensation = ev.Value;
 
         _settingsService.Update(copy);
-        Close();
+        Closed?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnOpenFolderClick(object? sender, RoutedEventArgs e)
@@ -419,14 +435,13 @@ public partial class AdminDashboardDialog : Window
 
     private void OnAboutClick(object? sender, RoutedEventArgs e)
     {
-        var about = new AboutDialog();
-        about.ShowDialog(this);
+        AboutRequested?.Invoke();
     }
 
     private void OnExitAppClick(object? sender, RoutedEventArgs e)
     {
         ExitRequested = true;
-        Close();
+        Closed?.Invoke(this, EventArgs.Empty);
     }
 
     private void PopulateUsbDrives()
@@ -503,6 +518,6 @@ public partial class AdminDashboardDialog : Window
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        Close();
+        Closed?.Invoke(this, EventArgs.Empty);
     }
 }

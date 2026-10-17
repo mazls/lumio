@@ -72,12 +72,34 @@ public sealed class CameraManager : IAsyncDisposable
         }
     }
 
-    private static ICameraService Create(BoothSettings settings) => settings.CameraBackend switch
+    public static Func<BoothSettings, ICameraService?>? CustomCameraFactory { get; set; }
+
+    /// <summary>Optional platform-specific camera discovery hook (e.g. for Android tablet &amp; USB-OTG cameras).</summary>
+    public static Func<Task<IReadOnlyList<CameraDeviceInfo>>>? CustomCameraDiscovery { get; set; }
+
+    /// <summary>
+    /// Fired when camera hardware changes. The argument is true when devices were plugged in or unplugged,
+    /// so a different (preferred) camera may now be available.
+    /// </summary>
+    public static event Action<bool>? OnHardwareChanged;
+
+    public static void NotifyHardwareChanged(bool devicesChanged = false) => OnHardwareChanged?.Invoke(devicesChanged);
+
+    /// <summary>Forces the next <see cref="GetCameraAsync"/> to recreate the camera even if the settings did not change.</summary>
+    public void Invalidate() => _activeKey = null;
+
+    private static ICameraService Create(BoothSettings settings)
     {
-        CameraBackend.Webcam => new WebcamCamera(settings.WebcamDeviceId),
-        CameraBackend.Dslr or CameraBackend.Nikon => new DslrCamera(settings),
-        _ => new SimulatedCamera(),
-    };
+        if (CustomCameraFactory?.Invoke(settings) is { } custom)
+            return custom;
+
+        return settings.CameraBackend switch
+        {
+            CameraBackend.Webcam => new WebcamCamera(settings.WebcamDeviceId),
+            CameraBackend.Dslr or CameraBackend.Nikon => new DslrCamera(settings),
+            _ => new SimulatedCamera(),
+        };
+    }
 
     private static string BuildKey(BoothSettings settings) =>
         settings.CameraBackend == CameraBackend.Webcam

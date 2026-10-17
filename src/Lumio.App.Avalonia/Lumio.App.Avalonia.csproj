@@ -15,19 +15,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.2.4" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.4" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.4" />
-    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Lumio.Core\Lumio.Core.csproj" />
-    <ProjectReference Include="..\Lumio.Imaging\Lumio.Imaging.csproj" />
-    <ProjectReference Include="..\Lumio.Camera\Lumio.Camera.csproj" />
-    <ProjectReference Include="..\Lumio.Printing\Lumio.Printing.csproj" />
+    <ProjectReference Include="..\Lumio.App.Shared\Lumio.App.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

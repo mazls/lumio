@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nikon cameras (D5600 via PTP, Z 50 II via UVC/UAC) -->
+    <usb-device vendor-id="1200" />
+    <!-- Any USB webcam (UVC, video class) -->
+    <usb-device class="14" />
+    <!-- Any PTP still image camera -->
+    <usb-device class="6" subclass="1" protocol="1" />
+</resources>

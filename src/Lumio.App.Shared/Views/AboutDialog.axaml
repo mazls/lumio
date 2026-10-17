@@ -1,15 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Lumio.App.Avalonia.Views.AboutDialog"
-        Title="Über Lumio &amp; Lizenz"
-        Width="560"
-        SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
-        SystemDecorations="None"
-        Background="Transparent"
-        CanResize="False"
-        ShowInTaskbar="False"
-        KeyDown="OnWindowKeyDown">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lumio.App.Avalonia.Views.AboutDialog"
+             Width="560"
+             Background="Transparent"
+             Focusable="True"
+             KeyDown="OnControlKeyDown">
 
     <Border Background="{StaticResource SurfaceBrush}"
             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -41,7 +36,7 @@
                         BorderBrush="{StaticResource AccentBrush}"
                         BorderThickness="2"
                         HorizontalAlignment="Center">
-                    <Image Source="avares://Lumio/Assets/logo.png" Stretch="UniformToFill" />
+                    <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
                 </Border>
 
                 <TextBlock Text="Lumio Photobooth"
@@ -119,4 +114,4 @@
                     Click="OnCloseClick" />
         </Grid>
     </Border>
-</Window>
+</UserControl>

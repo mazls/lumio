@@ -120,4 +120,34 @@ public class DslrTests
         Assert.Equal("Nikon D5600", status.ConnectedCamera);
         Assert.True(status.IsProcessRunning);
     }
+
+    [Fact]
+    public async Task CustomCameraDiscovery_IsInvokedWhenSet()
+    {
+        var original = CameraManager.CustomCameraDiscovery;
+        try
+        {
+            var called = false;
+            CameraManager.CustomCameraDiscovery = () =>
+            {
+                called = true;
+                return Task.FromResult<IReadOnlyList<CameraDeviceInfo>>(new List<CameraDeviceInfo>
+                {
+                    new("ptp:nikon:1", "📷 Nikon D5600 (USB-OTG PTP)"),
+                    new("camera:external:0", "🎥 Nikon Z 50 II (UVC)")
+                });
+            };
+
+            Assert.NotNull(CameraManager.CustomCameraDiscovery);
+            var result = await CameraManager.CustomCameraDiscovery();
+            Assert.True(called);
+            Assert.Equal(2, result.Count);
+            Assert.Equal("ptp:nikon:1", result[0].Id);
+            Assert.Equal("camera:external:0", result[1].Id);
+        }
+        finally
+        {
+            CameraManager.CustomCameraDiscovery = original;
+        }
+    }
 }

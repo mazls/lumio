@@ -10,8 +10,8 @@ namespace Lumio.Camera;
 /// </summary>
 public sealed class SimulatedCamera : ICameraService
 {
-    private const int PreviewWidth = 1920;
-    private const int PreviewHeight = 1280;
+    private const int PreviewWidth = 960;
+    private const int PreviewHeight = 640;
     private const int PhotoWidth = 3600;
     private const int PhotoHeight = 2400;
 
@@ -92,18 +92,18 @@ public sealed class SimulatedCamera : ICameraService
 
     private async Task RunLoopAsync(CancellationToken token)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(33));
-        using var bitmap = new SKBitmap(new SKImageInfo(PreviewWidth, PreviewHeight, SKColorType.Bgra8888, SKAlphaType.Premul));
-        using var canvas = new SKCanvas(bitmap);
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        using var surface = SKSurface.Create(new SKImageInfo(PreviewWidth, PreviewHeight));
 
         try
         {
             while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
             {
-                TestPattern.Draw(canvas, PreviewWidth, PreviewHeight, _clock.Elapsed);
-                canvas.Flush();
-                FrameReady?.Invoke(this, new LiveViewFrame(
-                    bitmap.Bytes, FrameFormat.Bgra32, PreviewWidth, PreviewHeight, bitmap.RowBytes));
+                TestPattern.Draw(surface.Canvas, PreviewWidth, PreviewHeight, _clock.Elapsed);
+                surface.Canvas.Flush();
+                using var image = surface.Snapshot();
+                var jpeg = JpegEncoder.Encode(image, 70);
+                FrameReady?.Invoke(this, new LiveViewFrame(jpeg, FrameFormat.Jpeg, PreviewWidth, PreviewHeight, 0));
             }
         }
         catch (OperationCanceledException)

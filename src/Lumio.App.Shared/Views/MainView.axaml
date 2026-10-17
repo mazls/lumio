@@ -1,12 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Lumio.App.Avalonia.MainWindow"
-        Title="Lumio"
-        Icon="avares://Lumio/Assets/app.ico"
-        WindowState="FullScreen"
-        Background="{StaticResource BackgroundBrush}"
-        Focusable="True"
-        KeyDown="OnWindowKeyDown">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lumio.App.Avalonia.Views.MainView"
+             Background="{StaticResource BackgroundBrush}"
+             Focusable="True"
+             KeyDown="OnControlKeyDown">
 
     <Grid x:Name="RootGrid">
 
@@ -99,7 +96,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
                         <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
                                 BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
-                            <Image Source="avares://Lumio/Assets/logo.png" Stretch="UniformToFill" />
+                            <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
                         </Border>
                         <TextBlock x:Name="EventTitleText"
                                    Text="LUMIO"
@@ -241,7 +238,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <Border Width="24" Height="24" CornerRadius="12" ClipToBounds="True"
                             BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
-                        <Image Source="avares://Lumio/Assets/logo.png" Stretch="UniformToFill" />
+                        <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
                     </Border>
                     <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
                     <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
@@ -378,5 +375,14 @@
             </Border>
         </Grid>
 
+        <!-- ==================== 9. MODAL IN-APP DIALOG OVERLAY ==================== -->
+        <Grid x:Name="ModalOverlayGrid" IsVisible="False" Background="#CC000000">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    CornerRadius="24">
+                <ContentControl x:Name="ModalOverlayContent" />
+            </Border>
+        </Grid>
+
     </Grid>
-</Window>
+</UserControl>

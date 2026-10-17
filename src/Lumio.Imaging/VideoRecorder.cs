@@ -36,6 +36,20 @@ public sealed class VideoRecorder : IDisposable
     private byte[]? _firstFrameJpeg;
     private readonly List<(uint Offset, uint Length)> _frameIndex = new();
 
+    private IDisposable? _customAudioCapture;
+
+    /// <summary>
+    /// Optional platform audio recorder (e.g. Android AudioRecord). Receives the WAV path to write;
+    /// disposing the returned handle stops recording and finalizes the file.
+    /// </summary>
+    public static Func<string, IDisposable?>? CustomAudioCapture { get; set; }
+
+    /// <summary>
+    /// Optional platform MP4 encoder used instead of ffmpeg (e.g. Android MediaCodec).
+    /// Arguments: Motion-JPEG AVI path, WAV path (may be missing), target MP4 path. Returns true on success.
+    /// </summary>
+    public static Func<string, string?, string, CancellationToken, Task<bool>>? CustomMp4Encoder { get; set; }
+
     public VideoRecorder(ICameraService camera, int targetFps = 25, string? tempDirectory = null)
     {
         _camera = camera ?? throw new ArgumentNullException(nameof(camera));
@@ -191,7 +205,9 @@ public sealed class VideoRecorder : IDisposable
         var finalVideoPath = aviPath;
         var targetMp4Path = Path.ChangeExtension(aviPath, ".mp4");
 
-        var ffmpegConverted = await TryTranscodeToMp4Async(aviPath, wavPath, targetMp4Path, cancellationToken).ConfigureAwait(false);
+        var ffmpegConverted = CustomMp4Encoder is not null
+            ? await CustomMp4Encoder(aviPath, wavPath, targetMp4Path, cancellationToken).ConfigureAwait(false)
+            : await TryTranscodeToMp4Async(aviPath, wavPath, targetMp4Path, cancellationToken).ConfigureAwait(false);
         if (ffmpegConverted && File.Exists(targetMp4Path))
         {
             finalVideoPath = targetMp4Path;
@@ -355,7 +371,7 @@ public sealed class VideoRecorder : IDisposable
 
     #endregion
 
-    #region Audio Capture (Windows MCI & Linux ALSA)
+    #region Audio Capture (platform hook, Windows MCI & Linux ALSA)
 
     [DllImport("winmm.dll", EntryPoint = "mciSendStringA", CharSet = CharSet.Ansi)]
     private static extern int MciSendString(string command, System.Text.StringBuilder? returnBuffer, int bufferSize, IntPtr hwndCallback);
@@ -364,7 +380,11 @@ public sealed class VideoRecorder : IDisposable
     {
         try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (CustomAudioCapture is not null)
+            {
+                _customAudioCapture = CustomAudioCapture(wavPath);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 MciSendString("close lumio_rec", null, 0, IntPtr.Zero);
                 var err = MciSendString("open new type waveaudio alias lumio_rec", null, 0, IntPtr.Zero);
@@ -397,7 +417,12 @@ public sealed class VideoRecorder : IDisposable
     {
         try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && wavPath is not null)
+            if (_customAudioCapture is not null)
+            {
+                _customAudioCapture.Dispose();
+                _customAudioCapture = null;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && wavPath is not null)
             {
                 MciSendString("stop lumio_rec", null, 0, IntPtr.Zero);
                 MciSendString($"save lumio_rec \"{wavPath}\"", null, 0, IntPtr.Zero);

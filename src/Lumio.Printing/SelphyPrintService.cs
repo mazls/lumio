@@ -20,8 +20,14 @@ public sealed class SelphyPrintService
     private static readonly TimeSpan PrinterCacheTtl = TimeSpan.FromSeconds(60);
     private static readonly object _printerCacheLock = new();
 
+    public static Func<byte[], string?, int, CancellationToken, Task>? CustomPrintHandler { get; set; }
+    public static Func<IReadOnlyList<PrinterDeviceInfo>>? CustomPrinterDiscovery { get; set; }
+
     public static IReadOnlyList<PrinterDeviceInfo> GetInstalledPrinters(bool forceRefresh = false)
     {
+        if (CustomPrinterDiscovery?.Invoke() is { } customList)
+            return customList;
+
         if (!forceRefresh)
         {
             lock (_printerCacheLock)
@@ -170,6 +176,12 @@ public sealed class SelphyPrintService
         if (string.IsNullOrWhiteSpace(targetPrinter))
         {
             throw new InvalidOperationException("Kein Drucker gefunden oder ausgewählt.");
+        }
+
+        if (CustomPrintHandler is not null)
+        {
+            await CustomPrintHandler(jpegData, targetPrinter, copies, cancellationToken).ConfigureAwait(false);
+            return;
         }
 
         if (OperatingSystem.IsWindows())

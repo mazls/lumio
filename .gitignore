@@ -2,10 +2,12 @@
 bin/
 obj/
 publish/
+publish-android/
 publish-pi/
 publish-linux-x64/
 dist/
 *.zip
+*.apk
 [Dd]ebug/
 [Rr]elease/
 *.user

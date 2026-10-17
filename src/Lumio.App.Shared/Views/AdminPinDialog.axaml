@@ -1,15 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Lumio.App.Avalonia.Views.AdminPinDialog"
-        Title="Admin PIN"
-        Width="400"
-        SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
-        SystemDecorations="None"
-        Background="Transparent"
-        CanResize="False"
-        ShowInTaskbar="False"
-        KeyDown="OnWindowKeyDown">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lumio.App.Avalonia.Views.AdminPinDialog"
+             Width="400"
+             Background="Transparent"
+             Focusable="True"
+             KeyDown="OnControlKeyDown">
 
     <Border Background="{StaticResource SurfaceBrush}"
             BorderBrush="{StaticResource BorderBrush}"
@@ -97,4 +92,4 @@
                        HorizontalAlignment="Center" />
         </Grid>
     </Border>
-</Window>
+</UserControl>

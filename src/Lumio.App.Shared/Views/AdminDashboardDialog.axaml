@@ -1,14 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Lumio.App.Avalonia.Views.AdminDashboardDialog"
-        Title="Lumio – Admin Dashboard"
-        Width="780"
-        Height="820"
-        WindowStartupLocation="CenterOwner"
-        SystemDecorations="None"
-        Background="Transparent"
-        CanResize="False"
-        ShowInTaskbar="False">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lumio.App.Avalonia.Views.AdminDashboardDialog"
+             Width="820"
+             MaxHeight="860"
+             Background="Transparent"
+             Focusable="True">
 
     <Border Background="{StaticResource SurfaceBrush}"
             BorderBrush="{StaticResource BorderBrush}"
@@ -412,4 +408,4 @@
             </Grid>
         </Grid>
     </Border>
-</Window>
+</UserControl>

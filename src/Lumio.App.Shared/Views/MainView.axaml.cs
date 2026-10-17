@@ -1,4 +1,5 @@
 using System;
+using Avalonia;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using Lumio.App.Avalonia.Views;
 using Lumio.Camera;
 using Lumio.Core.Camera;
 using Lumio.Core.Session;
@@ -20,9 +20,9 @@ using Lumio.Imaging;
 using Lumio.Printing;
 using SkiaSharp;
 
-namespace Lumio.App.Avalonia;
+namespace Lumio.App.Avalonia.Views;
 
-public partial class MainWindow : Window
+public partial class MainView : UserControl
 {
     private readonly SettingsService _settingsService;
     private readonly EventStorage _storage;
@@ -47,8 +47,10 @@ public partial class MainWindow : Window
     private bool _isReconnecting;
     private DateTime _lastFrameTime = DateTime.MinValue;
     private DispatcherTimer? _watchdogTimer;
+    private int _isRenderingFrame = 0;
+    private long _lastFrameRenderTicks = 0;
 
-    public MainWindow()
+    public MainView()
     {
         InitializeComponent();
 
@@ -63,21 +65,65 @@ public partial class MainWindow : Window
         _activeTemplate = _templateStore.GetById(_settingsService.Current.SelectedTemplateId)
                           ?? BuiltInTemplates.CreateSinglePhotoPostcard();
 
-        Opened += async (s, e) => await InitializeBoothAsync();
-        Closing += async (s, e) => await TeardownBoothAsync();
     }
 
-    private async Task InitializeBoothAsync()
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Focus();
+        InitializeBooth();
+    }
+
+    protected override async void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        await TeardownBoothAsync();
+    }
+
+    public void ShowModal(Control content)
+    {
+        ModalOverlayContent.Content = content;
+        ModalOverlayGrid.IsVisible = true;
+    }
+
+    public void CloseModal()
+    {
+        ModalOverlayContent.Content = null;
+        ModalOverlayGrid.IsVisible = false;
+    }
+
+    private void InitializeBooth()
     {
         UpdateLiveViewMirror();
         EventTitleText.Text = _settingsService.Current.EventName.ToUpperInvariant();
         UpdateModeButtons();
-        await StartCameraAsync();
+        CameraManager.OnHardwareChanged += OnHardwareChanged;
+        _ = StartCameraAsync();
         StartWatchdog();
         RefreshGalleryCorner();
     }
 
-    private async Task StartCameraAsync(bool isReconnect = false)
+    private void OnHardwareChanged(bool devicesChanged)
+    {
+        // If already connected to a healthy real camera, ignore - unless a camera was plugged in or removed,
+        // because an external camera takes priority over the built-in ones
+        if (!devicesChanged && _activeCamera is not null && _activeCamera.Status == CameraStatus.Connected && _cameraManager.FallbackReason is null && _settingsService.Current.CameraBackend != CameraBackend.Simulated)
+        {
+            return;
+        }
+
+        if (devicesChanged)
+        {
+            _cameraManager.Invalidate();
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            TriggerAutoReconnect("Hardware geändert");
+        });
+    }
+
+    private async Task<bool> StartCameraAsync(bool isReconnect = false)
     {
         try
         {
@@ -92,32 +138,56 @@ public partial class MainWindow : Window
                 catch { }
             }
 
-            CameraStatusText.Text = isReconnect ? "Kamera neu verbinden..." : "Kamera wird initialisiert...";
-            _activeCamera = await _cameraManager.GetCameraAsync(_settingsService.Current);
+            Dispatcher.UIThread.Post(() =>
+            {
+                CameraStatusText.Text = isReconnect ? "Kamera verbinden..." : "Kamera wird initialisiert...";
+            });
+
+            // Perform camera discovery and connection in background thread so UI stays 100% fluid
+            var camera = await Task.Run(() => _cameraManager.GetCameraAsync(_settingsService.Current));
+            _activeCamera = camera;
             _activeCamera.FrameReady += OnCameraFrameReady;
             _activeCamera.StatusChanged += OnCameraStatusChanged;
 
-            await _activeCamera.StartLiveViewAsync();
+            await Task.Run(() => _activeCamera.StartLiveViewAsync());
             _lastFrameTime = DateTime.UtcNow;
-            CameraStatusText.Text = $"{_activeCamera.DisplayName} bereit";
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                CameraStatusText.Text = $"{_activeCamera.DisplayName} bereit";
+            });
+
+            return _activeCamera.Status == CameraStatus.Connected && _cameraManager.FallbackReason is null;
         }
         catch (Exception ex)
         {
-            CameraStatusText.Text = isReconnect ? "Kamera getrennt..." : $"Kamerafehler: {ex.Message}";
+            Dispatcher.UIThread.Post(() =>
+            {
+                CameraStatusText.Text = isReconnect ? "Kamera getrennt..." : $"Kamerafehler: {ex.Message}";
+            });
+            return false;
         }
     }
 
     private void StartWatchdog()
     {
         _watchdogTimer?.Stop();
-        _watchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _watchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _watchdogTimer.Tick += (s, e) =>
         {
-            if (_activeCamera is not null && _activeCamera.Status == CameraStatus.Connected && !_isReconnecting)
+            if (!_isReconnecting)
             {
-                if (_lastFrameTime != DateTime.MinValue && (DateTime.UtcNow - _lastFrameTime) > TimeSpan.FromSeconds(5))
+                // Only monitor if a REAL camera is currently connected and supposed to be sending frames
+                // Never poll or loop when in simulated fallback mode. Hardware change events handle reconnect!
+                if (_activeCamera is not null &&
+                    _activeCamera.Status == CameraStatus.Connected &&
+                    _cameraManager.FallbackReason is null &&
+                    _settingsService.Current.CameraBackend != CameraBackend.Simulated)
                 {
-                    TriggerAutoReconnect("Keine Bilder empfangen");
+                    if (_lastFrameTime != DateTime.MinValue && (DateTime.UtcNow - _lastFrameTime) > TimeSpan.FromSeconds(6))
+                    {
+                        TriggerAutoReconnect("Keine Bilder empfangen");
+                    }
                 }
             }
         };
@@ -139,32 +209,20 @@ public partial class MainWindow : Window
         var token = _reconnectCts.Token;
         Dispatcher.UIThread.Post(() =>
         {
-            CameraStatusText.Text = "Kamera neu verbinden...";
+            CameraStatusText.Text = "Kamera verbinden...";
         });
 
         _ = Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(1200, token);
-                while (!token.IsCancellationRequested)
+                await Task.Delay(1000, token);
+                int attempts = 0;
+                while (!token.IsCancellationRequested && attempts++ < 2)
                 {
-                    bool reconnected = false;
-                    await Dispatcher.UIThread.InvokeAsync(async () =>
-                    {
-                        try
-                        {
-                            await StartCameraAsync(isReconnect: true);
-                            if (_activeCamera?.Status == CameraStatus.Connected && _cameraManager.FallbackReason is null)
-                            {
-                                reconnected = true;
-                            }
-                        }
-                        catch { }
-                    });
-
+                    bool reconnected = await StartCameraAsync(isReconnect: true);
                     if (reconnected) break;
-                    await Task.Delay(2500, token);
+                    if (attempts < 2) await Task.Delay(2000, token);
                 }
             }
             catch (OperationCanceledException) { }
@@ -203,32 +261,87 @@ public partial class MainWindow : Window
             }
         }
 
-        Dispatcher.UIThread.Post(() =>
+        // Throttle live view rendering to max ~15 FPS (every 66ms) to keep touch input 100% responsive
+        var nowTicks = Environment.TickCount64;
+        if (nowTicks - Interlocked.Read(ref _lastFrameRenderTicks) < 66)
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _isRenderingFrame, 1, 0) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _lastFrameRenderTicks, nowTicks);
+
+        var frameData = frame.Data.ToArray();
+        var isJpeg = frame.Format == FrameFormat.Jpeg;
+        var width = frame.Width;
+        var height = frame.Height;
+        var stride = frame.Stride;
+
+        // Decode the image OFF the UI thread!
+        Task.Run(() =>
         {
             try
             {
-                if (frame.Format == FrameFormat.Bgra32)
+                Bitmap? bitmap = null;
+                if (isJpeg)
                 {
-                    var info = new SKImageInfo(frame.Width, frame.Height, SKColorType.Bgra8888, SKAlphaType.Opaque);
-                    using var skImage = SKImage.FromPixelCopy(info, frame.Data, frame.Stride);
-                    using var data = skImage.Encode(SKEncodedImageFormat.Jpeg, 80);
-                    using var ms = new MemoryStream(data.ToArray());
-                    LiveViewImageControl.Source = new Bitmap(ms);
+                    using var ms = new MemoryStream(frameData);
+                    bitmap = new Bitmap(ms);
                 }
                 else
                 {
-                    using var ms = new MemoryStream(frame.Data);
-                    LiveViewImageControl.Source = new Bitmap(ms);
+                    var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque);
+                    using var skImage = SKImage.FromPixelCopy(info, frameData, stride);
+                    using var data = skImage.Encode(SKEncodedImageFormat.Jpeg, 60);
+                    using var ms = new MemoryStream(data.ToArray());
+                    bitmap = new Bitmap(ms);
                 }
+
+                // Post ONLY the bitmap reference swap at Background priority (priority 4, below Input priority 5!)
+                Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        if (ReviewGrid.IsVisible || GalleryOverlayGrid.IsVisible)
+                        {
+                            bitmap.Dispose();
+                            return;
+                        }
+
+                        var old = LiveViewImageControl.Source as Bitmap;
+                        LiveViewImageControl.Source = bitmap;
+                        old?.Dispose();
+                    }
+                    catch { }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _isRenderingFrame, 0);
+                    }
+                }, DispatcherPriority.Background);
             }
-            catch { }
+            catch
+            {
+                Interlocked.Exchange(ref _isRenderingFrame, 0);
+            }
         });
     }
 
     private async void OnStartCaptureClick(object? sender, RoutedEventArgs e)
     {
         if (_activeCamera is null)
-            return;
+        {
+            CameraStatusText.Text = "Kamera wird initialisiert...";
+            await StartCameraAsync();
+            if (_activeCamera is null)
+            {
+                CameraStatusText.Text = "Keine Kamera bereit!";
+                return;
+            }
+        }
 
         IdleOverlayGrid.IsVisible = false;
         CornerGalleryBorder.IsVisible = false;
@@ -755,7 +868,8 @@ public partial class MainWindow : Window
     private void OnAboutClick(object? sender, RoutedEventArgs e)
     {
         var about = new AboutDialog();
-        about.ShowDialog(this);
+        about.Closed += CloseModal;
+        ShowModal(about);
     }
 
     private async void OnAdminLockClick(object? sender, RoutedEventArgs e)
@@ -765,17 +879,48 @@ public partial class MainWindow : Window
 
     private async Task OpenAdminMenuAsync()
     {
+        var pinTcs = new TaskCompletionSource<bool>();
         var pinDialog = new AdminPinDialog(_settingsService.Current.AdminPin);
-        await pinDialog.ShowDialog(this);
-
-        if (pinDialog.IsAuthenticated)
+        pinDialog.Completed += auth =>
         {
-            var dashboard = new AdminDashboardDialog(_settingsService, _storage, _printService, _templateStore);
-            await dashboard.ShowDialog(this);
+            CloseModal();
+            pinTcs.TrySetResult(auth);
+        };
 
-            if (dashboard.ExitRequested)
+        ShowModal(pinDialog);
+        var isAuthenticated = await pinTcs.Task;
+
+        if (isAuthenticated)
+        {
+            var dashTcs = new TaskCompletionSource<bool>();
+            var dashboard = new AdminDashboardDialog(_settingsService, _storage, _printService, _templateStore);
+
+            dashboard.AboutRequested += () =>
             {
-                Close();
+                var about = new AboutDialog();
+                about.Closed += () => ShowModal(dashboard);
+                ShowModal(about);
+            };
+
+            dashboard.Closed += (s, e) =>
+            {
+                CloseModal();
+                dashTcs.TrySetResult(dashboard.ExitRequested);
+            };
+
+            ShowModal(dashboard);
+            var exitRequested = await dashTcs.Task;
+
+            if (exitRequested)
+            {
+                if (VisualRoot is Window window)
+                {
+                    window.Close();
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
             }
             else
             {
@@ -798,7 +943,7 @@ public partial class MainWindow : Window
         LiveViewImageControl.RenderTransform = new ScaleTransform(_settingsService.Current.MirrorLiveView ? -1 : 1, 1);
     }
 
-    private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    private async void OnControlKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape || (e.Key == Key.A && (e.KeyModifiers & KeyModifiers.Control) == KeyModifiers.Control))
         {
@@ -814,6 +959,7 @@ public partial class MainWindow : Window
 
     private async Task TeardownBoothAsync()
     {
+        CameraManager.OnHardwareChanged -= OnHardwareChanged;
         _watchdogTimer?.Stop();
         _reconnectCts?.Cancel();
 

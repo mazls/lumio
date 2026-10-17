@@ -5,12 +5,13 @@ using Avalonia.Interactivity;
 
 namespace Lumio.App.Avalonia.Views;
 
-public partial class AdminPinDialog : Window
+public partial class AdminPinDialog : UserControl
 {
     private readonly string _expectedPin;
     private readonly StringBuilder _enteredPin = new();
 
     public bool IsAuthenticated { get; private set; }
+    public event Action<bool>? Completed;
 
     public AdminPinDialog() : this("1234")
     {
@@ -21,6 +22,7 @@ public partial class AdminPinDialog : Window
         InitializeComponent();
         _expectedPin = string.IsNullOrWhiteSpace(expectedPin) ? "1234" : expectedPin;
         UpdateDisplay();
+        Loaded += (s, e) => Focus();
     }
 
     private void OnDigitClick(object? sender, RoutedEventArgs e)
@@ -57,7 +59,7 @@ public partial class AdminPinDialog : Window
         if (_enteredPin.ToString() == _expectedPin)
         {
             IsAuthenticated = true;
-            Close();
+            Completed?.Invoke(true);
         }
         else
         {
@@ -74,14 +76,14 @@ public partial class AdminPinDialog : Window
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        Close();
+        Completed?.Invoke(false);
     }
 
-    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    private void OnControlKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
-            Close();
+            Completed?.Invoke(false);
             e.Handled = true;
         }
     }
