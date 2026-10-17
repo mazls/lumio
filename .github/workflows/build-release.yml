@@ -31,14 +31,23 @@ jobs:
       - name: Run Unit Tests
         run: dotnet test Lumio.slnx -c Release --no-restore --verbosity normal
 
+      - name: Bundle digiCamControl for Windows Offline DSLR Support
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/dukus/digiCamControl/releases/download/2.0.0/digiCamControlsetup_2.0.0.0.msi" -OutFile "$env:TEMP\dcc.msi"
+          msiexec.exe /a "$env:TEMP\dcc.msi" /qn TARGETDIR="$env:TEMP\dcc_extract"
+          New-Item -ItemType Directory -Path ./external/digiCamControl -Force | Out-Null
+          Copy-Item -Path "$env:TEMP\dcc_extract\ProgramFilesFolder\digiCamControl\*" -Destination ./external/digiCamControl -Recurse -Force
+
       - name: Publish Standalone (win-x64)
         run: |
           dotnet publish src/Lumio.App/Lumio.App.csproj -c Release -r win-x64 --self-contained true -o ./dist/win-x64 -p:PublishSingleFile=false -nologo
+          Copy-Item -Path ./external/digiCamControl -Destination ./dist/win-x64/external/digiCamControl -Recurse -Force
           Compress-Archive -Path ./dist/win-x64/* -DestinationPath ./dist/Lumio-win-x64.zip
 
       - name: Publish Standalone (win-arm64 for Surface)
         run: |
           dotnet publish src/Lumio.App/Lumio.App.csproj -c Release -r win-arm64 --self-contained true -o ./dist/win-arm64 -p:PublishSingleFile=false -nologo
+          Copy-Item -Path ./external/digiCamControl -Destination ./dist/win-arm64/external/digiCamControl -Recurse -Force
           Compress-Archive -Path ./dist/win-arm64/* -DestinationPath ./dist/Lumio-win-arm64.zip
 
       - name: Publish Standalone (linux-arm64 for Raspberry Pi)

@@ -19,16 +19,57 @@ public static class DigiCamControlManager
 
         var candidates = new List<string>
         {
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "external", "digiCamControl", "CameraControl.exe"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "digiCamControl", "CameraControl.exe"),
+            Path.Combine(Directory.GetCurrentDirectory(), "external", "digiCamControl", "CameraControl.exe"),
+            Path.Combine(Directory.GetCurrentDirectory(), "digiCamControl", "CameraControl.exe"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "external", "digiCamControl", "CameraControl.exe"),
+            @"D:\Projekte\MarcelsBooth\external\digiCamControl\CameraControl.exe",
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "digiCamControl", "CameraControl.exe"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "digiCamControl", "CameraControl.exe"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "digiCamControl", "CameraControl.exe"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "external", "digiCamControl", "CameraControl.exe"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "digiCamControl", "CameraControl.exe"),
             @"C:\Program Files (x86)\digiCamControl\CameraControl.exe",
             @"C:\Program Files\digiCamControl\CameraControl.exe",
         };
 
         return candidates.FirstOrDefault(File.Exists);
+    }
+
+    /// <summary>
+    /// Ensures that digiCamControl has its embedded webserver enabled on port 5513
+    /// in %ProgramData%\digiCamControl\settings.xml before launching.
+    /// </summary>
+    public static void EnsureWebserverEnabled()
+    {
+        try
+        {
+            var programData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "digiCamControl");
+            Directory.CreateDirectory(programData);
+            var settingsFile = Path.Combine(programData, "settings.xml");
+
+            if (File.Exists(settingsFile))
+            {
+                var content = File.ReadAllText(settingsFile);
+                if (content.Contains("<UseWebserver>false</UseWebserver>"))
+                {
+                    content = content.Replace("<UseWebserver>false</UseWebserver>", "<UseWebserver>true</UseWebserver>");
+                    File.WriteAllText(settingsFile, content);
+                }
+            }
+            else
+            {
+                var minimal = """
+                    <?xml version="1.0" encoding="utf-8"?>
+                    <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                      <UseWebserver>true</UseWebserver>
+                      <WebserverPort>5513</WebserverPort>
+                      <AllowWebserverActions>true</AllowWebserverActions>
+                    </Settings>
+                    """;
+                File.WriteAllText(settingsFile, minimal);
+            }
+        }
+        catch { }
     }
 
     public static async Task<DigiCamStatus> GetStatusAsync(string url)
@@ -64,6 +105,9 @@ public static class DigiCamControlManager
         {
             return false;
         }
+
+        // Make sure webserver is configured in digiCamControl settings
+        EnsureWebserverEnabled();
 
         // If already running and webserver responds, we are good
         var current = await GetStatusAsync(url);

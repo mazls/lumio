@@ -79,6 +79,13 @@ if ($needsPublish) {
     }
 
     & $dotnet publish "$PSScriptRoot\src\Lumio.App\Lumio.App.csproj" -c Release -r $arch --self-contained true -o "$PSScriptRoot\publish" -nologo
+
+    # Bundled offline external tools (digiCamControl)
+    if (Test-Path "$PSScriptRoot\external\digiCamControl") {
+        New-Item -ItemType Directory -Path "$PSScriptRoot\publish\external" -Force | Out-Null
+        Copy-Item -Path "$PSScriptRoot\external\digiCamControl" -Destination "$PSScriptRoot\publish\external\" -Recurse -Force
+    }
+
     $exe = "$PSScriptRoot\publish\Lumio.exe"
 }
 

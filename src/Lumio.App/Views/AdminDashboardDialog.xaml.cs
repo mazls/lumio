@@ -257,6 +257,11 @@ public partial class AdminDashboardDialog : Window
         }
     }
 
+    private System.Windows.Media.Brush GetThemeBrush(string key, System.Windows.Media.Brush fallback)
+    {
+        return TryFindResource(key) as System.Windows.Media.Brush ?? fallback;
+    }
+
     private async Task CheckDigiCamStatusAsync()
     {
         try
@@ -271,25 +276,28 @@ public partial class AdminDashboardDialog : Window
                     ? $"Verbunden mit: {status.ConnectedCamera}"
                     : "Webserver aktiv (Kamera per USB anschließen und einschalten)";
 
-                DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("SuccessBrush");
+                var successBrush = GetThemeBrush("SuccessBrush", System.Windows.Media.Brushes.LightGreen);
+                DigiCamStatusIndicator.Fill = successBrush;
                 DigiCamStatusText.Text = $"✅ digiCamControl ist aktiv! {camInfo}";
-                DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessBrush");
+                DigiCamStatusText.Foreground = successBrush;
                 return;
             }
 
             if (status.IsProcessRunning)
             {
-                DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+                var orangeBrush = GetThemeBrush("AccentOrangeBrush", System.Windows.Media.Brushes.Orange);
+                DigiCamStatusIndicator.Fill = orangeBrush;
                 DigiCamStatusText.Text = "⏳ digiCamControl Prozess läuft, Webserver bindet sich an Port 5513...";
-                DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+                DigiCamStatusText.Foreground = orangeBrush;
                 return;
             }
         }
         catch { }
 
-        DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("MutedBrush");
+        var mutedBrush = GetThemeBrush("TextMutedBrush", System.Windows.Media.Brushes.Gray);
+        DigiCamStatusIndicator.Fill = mutedBrush;
         DigiCamStatusText.Text = "ℹ️ digiCamControl ist derzeit nicht aktiv. Klicke auf '▶️ Controller starten'.";
-        DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush");
+        DigiCamStatusText.Foreground = mutedBrush;
     }
 
     private async void OnCheckDigiCamStatusClick(object sender, RoutedEventArgs e)
@@ -299,16 +307,17 @@ public partial class AdminDashboardDialog : Window
 
     private async void OnStartDigiCamClick(object sender, RoutedEventArgs e)
     {
-        var exePath = DigiCamExePathTextBox.Text.Trim();
-        var url = DigiCamUrlTextBox.Text.Trim();
-
-        StartDigiCamButton.IsEnabled = false;
-        DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
-        DigiCamStatusText.Text = "⏳ digiCamControl wird gestartet...";
-        DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
-
         try
         {
+            var exePath = DigiCamExePathTextBox.Text.Trim();
+            var url = DigiCamUrlTextBox.Text.Trim();
+
+            StartDigiCamButton.IsEnabled = false;
+            var orangeBrush = GetThemeBrush("AccentOrangeBrush", System.Windows.Media.Brushes.Orange);
+            DigiCamStatusIndicator.Fill = orangeBrush;
+            DigiCamStatusText.Text = "⏳ digiCamControl wird gestartet...";
+            DigiCamStatusText.Foreground = orangeBrush;
+
             var started = await DigiCamControlManager.StartAsync(exePath, url, minimized: true);
             if (started)
             {
@@ -319,26 +328,26 @@ public partial class AdminDashboardDialog : Window
                 var found = DigiCamControlManager.FindExecutable(exePath);
                 if (found is null)
                 {
-                    var ask = MessageBox.Show(this,
-                        "CameraControl.exe wurde nicht gefunden!\n\nMöchtest du digiCamControl jetzt von der offiziellen Website herunterladen?",
+                    MessageBox.Show(this,
+                        "CameraControl.exe konnte nicht gefunden werden!\n\nBitte prüfe den Pfad im Eingabefeld unten.",
                         "digiCamControl nicht gefunden",
-                        MessageBoxButton.YesNo,
+                        MessageBoxButton.OK,
                         MessageBoxImage.Warning);
-                    if (ask == MessageBoxResult.Yes)
-                    {
-                        OnDownloadDigiCamClick(sender, e);
-                    }
                 }
                 else
                 {
                     MessageBox.Show(this,
-                        "digiCamControl konnte gestartet werden, aber der integrierte Webserver antwortet noch nicht auf Port 5513.\n\nBitte in digiCamControl prüfen: Datei > Einstellungen > Webserver > [x] Aktiviert.",
+                        "digiCamControl wurde gestartet, aber der integrierte Webserver antwortet noch nicht auf Port 5513.\n\nBitte kurz warten oder in digiCamControl prüfen: Datei > Einstellungen > Webserver > [x] Aktiviert.",
                         "Webserver noch nicht bereit",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
                 await CheckDigiCamStatusAsync();
             }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Fehler beim Starten von digiCamControl:\n{ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
