@@ -4,76 +4,52 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
-## [1.2.0] – 2026-10-17
+## [1.2.0] – 2026-10-17 – *Das große Hardware- & Stabilitäts-Update* 🚀
 
-### 🚀 Neu & Highlights
-- **Multi-Vendor DSLR & DSLM Unterstützung**:
-  - Unterstützung für alle großen Kamerahersteller (**Nikon, Canon, Sony, Fujifilm, Panasonic Lumix, Olympus**) per USB.
-  - **Windows**: Anbindung an die bewährte Open-Source-Brücke **digiCamControl** (lokale HTTP-API) mit Live-View-Streaming, Fernauslösung und voller Belichtungssteuerung (ISO, Blende, Verschlusszeit, EV).
+### 📷 In-Process DSLR / DSLM Tethering (dslrBooth-Engine)
+- **Natives USB-Tethering ohne externe Software**:
+  - Direkte PTP/WPD-Anbindung in Lumio eingebettet (keine zweite Software wie digiCamControl nötig, kein Nikon Webcam Utility erforderlich).
+  - Volle Unterstützung für **Nikon (D5600, Z 50 II, D5xxx, D7xxx, Z-Serie)**, **Canon EOS**, **Sony Alpha**, **Fujifilm**, **Panasonic Lumix** und **Olympus**.
   - **Linux & Raspberry Pi**: Vollständige Multi-Vendor-Erkennung und Steuerung über **gphoto2** inklusive MJPEG-Live-View-Streaming mit ~25 FPS.
-  - Automatische Abwärtskompatibilität: Bisherige Einstellungen (`CameraBackend.Nikon`) werden nahtlos und verlustfrei auf das neue universelle `Dslr`-Backend migriert.
-- **Modernes, touch-optimiertes Admin-Menü mit 4 Tabs**:
-  - Übersichtliche Aufteilung in:
-    1. **⚙️ Allgemein**: Event-Name, Speicherort mit USB-Laufwerk-Erkennung & Dateibrowser, Bildschirmtastatur-Schalter, Admin-PIN und Schnellaktionen.
-    2. **📷 Kamera**: Kamera-Auswahl, Live-View-Spiegelung, digiCamControl-Statusprüfung und manuelle DSLR-Belichtungswerte.
-    3. **🎬 Aufnahme**: Template-Auswahl, Logo-Branding, Event-Text-Formatierung, Timer, Zwischenbild-Pausen und Videobotschaften.
-    4. **🖨️ Drucker**: Canon Selphy CP1300/CP1500 Erkennung, Auto-Sofortdruck und Testdruck-Funktion.
-  - Verfügbar in **beiden** Versionen: Windows (WPF) und Linux/Raspberry Pi (Avalonia).
-- **Integrierte Touch-Bildschirmtastatur**:
-  - In den allgemeinen Einstellungen per Checkbox ein- und ausschaltbar.
-  - Klappt beim Tippen in Textfelder (Event-Name, Pfad, PIN) automatisch am unteren Bildschirmrand auf.
-  - Ermöglicht vollwertige Kiosk-Bedienung auf Touchscreens ohne physische Tastatur (Windows Surface, Raspberry Pi Touch Display, All-in-One PCs).
+- **Zuverlässige Live-View & 24MP-Auslösung**:
+  - Korrekte PTP/JPEG-Offset-Erkennung (`ImageDataPosition`) für glasklares, ruckelfreies Live-View auf Nikon-Kameras.
+  - Nahtloser Spiegel- & Verschlusszyklus: Beim Auslösen pausiert der Live-View-Bus kurzzeitig, damit der mechanische Verschluss ungestört auslösen kann.
+  - **Autofokus-Sicherheitsnetz**: Bei schlechten Lichtverhältnissen greift automatisch `CapturePhotoNoAf`, sodass die Fotobox zuverlässig auslöst und niemals blockiert.
+- **📸 Nicht-speicherndes Testfoto**:
+  - Neue Schaltfläche im Admin-Menü unter Kamera-Auswahl: Löst ein Testbild aus und zeigt eine temporäre Vollbildvorschau mit Auflösung, Dateigröße und Zeitstempel.
+  - Das Bild wird **nicht** im Event-Ordner oder auf dem USB-Stick abgelegt und belastet nicht die Galerie.
 
-### 🛠️ Verbesserungen & Wartung
-- **Lizenzbereinigung**: Redundante `LICENSE.md` bereinigt, offizielle `LICENSE` (LFEL) beibehalten und Drittanbieter-Lizenzen (SkiaSharp, Avalonia, digiCamControl etc.) auf vollständige Lizenzkonformität geprüft.
-- **Skripte**:
-  - `start-lumio.ps1`: Automatische Erkennung der Host-Architektur (`win-arm64` für Surface Pro vs. `win-x64` für Intel/AMD-Laptops).
-  - `run-lumio.sh`: Syntaxfehler (`fi`) behoben und Hilfetexte für DSLRs erweitert.
-- **Unit Tests**: Testabdeckung für DSLR-Optionen, Kamera-Werte-Mapping, MJPEG-Stream-Splitter und Settings-Migration auf 28 Tests erweitert.
+### ⚙️ Modernes Touch-Admin-Menü & Performance
+- **Sofortiges Öffnen ohne UI-Hänger**:
+  - Windows Print Spooler RPC, USB-Laufwerksabfragen und WMI-Suchen wurden vollständig in den Hintergrund (`Task.Run`) verlagert und mit einem 60s-Cache abgesichert.
+  - Pre-Warming beim App-Start: Drucker und Laufwerke werden bereits im Hintergrund initialisiert, während der Startbildschirm aktiv ist.
+- **4 übersichtliche Tabs**:
+  1. **⚙️ Allgemein**: Event-Name, Speicherort mit 1-Klick USB-Stick-Erkennung, Bildschirmtastatur-Schalter, Admin-PIN (Standard `1234`) und Schnellaktionen.
+  2. **📷 Kamera**: Kamera-Auswahl, Live-View-Spiegelung, DSLR-Verbindungsstatus, Belichtungswerte (ISO, Blende, Verschlusszeit, EV) und Testfoto-Button.
+  3. **🎬 Aufnahme**: Template-Auswahl (Einzelfoto, 4er Collage, Selphy-Streifen, GIF, Boomerang, Videobotschaften), Foto-Branding (Logo & Event-Text), Timer & Pausen.
+  4. **🖨️ Drucker**: Canon Selphy CP1300/CP1500 Erkennung, Auto-Sofortdruck und Testdruck-Funktion.
+- **⌨️ Integrierte Touch-Bildschirmtastatur**:
+  - Klappt beim Tippen in Textfelder am unteren Bildschirmrand auf. Ideal für Microsoft Surface und Touch-Kioske ohne physische Tastatur.
+
+### 💾 Speicher & Medien
+- **USB-Stick Auto-Erkennung**: Angeschlossene USB-Sticks werden sofort erkannt und als Speicherziel vorgeschlagen.
+- **Sicherer Fallback-Speicher**: Bei nicht beschreibbaren Pfaden weicht Lumio automatisch in den Bilder-Ordner aus.
+- **Videobotschaften & Boomerang**: Gäste können persönliche Video-/Sprachnachrichten hinterlassen oder schnelle 1,3s Instagram-Boomerangs aufnehmen.
+- **Verzögerungsfreier Starter (`start-lumio.ps1`)**: Beendet verwaiste Hintergrundprozesse vor dem Start automatisch, um DLL-Dateisperren zu verhindern.
 
 ---
 
-## [1.1.8] – 2026-10-17
-- **USB-Stick Auto-Erkennung**: Erkennt angeschlossene USB-Sticks und externe Festplatten automatisch im Admin-Menü. Fotos & Videos können mit einem Klick direkt extern gesichert werden.
-- **Ordner-Durchsuchen Picker**: Eigener Ordner-Auswahldialog für den Speicherpfad.
-- **Sicherer Fallback-Speicher**: Bei nicht erreichbarem Pfad wird sicher in den Benutzer-Bilderordner ausgewichen.
+## [1.1.0] – 2026-10-17 – *Multi-Modi & Cross-Plattform*
 
-## [1.1.7] – 2026-10-17
-- **Videobotschaften-Modus**: Gäste können persönliche Videobotschaften für das Brautpaar oder den Gastgeber aufnehmen (inkl. Live-Audio und MP4/WebM-Speicherung).
-- Maximale Videodauer im Admin-Menü einstellbar (5–120 Sekunden).
-- Startbildschirm-Button für Videobotschaften optional deaktiverbar.
+- **Aufnahme-Modi**: Einzelfoto, 4er Collage, Selphy-Doppelstreifen, animierte GIFs und Boomerang.
+- **Linux PC Support**: Volle Lauffähigkeit auf CachyOS, Arch Linux, Ubuntu und Debian.
+- **Raspberry Pi 4 / 5**: Eigenständige Builds für `linux-arm64` via Avalonia UI.
+- **Canon Selphy Direktdruck**: Direktansteuerung des CP1300/CP1500 über Windows Spooler und CUPS.
 
-## [1.1.6] – 2026-10-17
-- **Foto-Logo Branding**: Lumio-Logo kann in den vier Ecken der Fotos ein- oder ausgeblendet werden.
-- **Event-Text Formatierung**: Flexible Darstellung (z. B. "Event – 2026", "Event • 17.10.2026" oder "Nur Event-Name").
-- High-Contrast Dropdowns für beste Lesbarkeit auf Touchscreens.
-- Auto-Rebuild in `start-lumio.ps1` bei geänderten Quelldateien.
+---
 
-## [1.1.5] – 2026-10-17
-- **Kamera-Fix Windows**: Problem mit schwarzem Live-View bei bestimmten Webcams und Surface-Kameras behoben (`WritePixels` Lock und `Direct3DSurface` Fallback).
+## [1.0.0] – 2026-10-16 – *Initial Release*
 
-## [1.1.4] – 2026-10-17
-- **Linux Admin Dashboard**: Vollständige Kamera- und Belichtungssteuerung in der Avalonia-Oberfläche für Linux & Raspberry Pi ergänzt.
-
-## [1.1.3] – 2026-10-16
-- Live-View Mirror Transform in Avalonia über `RenderTransform` optimiert.
-
-## [1.1.2] – 2026-10-16
-- Global Color Table im GIF-Header ergänzt und Wiedergabe über native Player abgesichert.
-
-## [1.1.1] – 2026-10-16
-- Surface Frontkamera Initialisierung gefixt (SharedMode und FrameReader Fallback).
-
-## [1.1.0] – 2026-10-16
-- Support für **Linux x64** (CachyOS, Arch Linux, Ubuntu PCs) inklusive CI-Release.
-- Logo in `.ico`, Taskleiste und Header integriert.
-- LZW-Komprimierung für animierte GIFs optimiert.
-
-## [1.0.0] – 2026-10-16
-- **Initial Release**: Lumio Photobooth
-- Kiosk-Vollbildmodus im Dark-Glass-Design.
-- 5 Modi: Einzelfoto, 4er Collage, Selphy Doppelstreifen, GIF und Boomerang.
-- Nikon DSLR-Steuerung per USB (D5600, Z 50 II).
-- Canon Selphy CP1300 Direktdruck via Windows Spooler und Linux CUPS.
-- 4-stellige PIN-Sperre für das Admin-Menü.
-- Raspberry Pi (linux-arm64) Unterstützung via Avalonia UI.
+- Erste Version der Lumio Photobooth-Software im Dark-Glass Touch-Design.
+- Kiosk-Vollbildmodus mit PIN-Schutz.
+- SkiaSharp 300-DPI Collagen-Renderer.

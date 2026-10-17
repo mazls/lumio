@@ -25,18 +25,20 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ## Neue Features in Version 1.2.0 ✨
 
+- 📷 **Natives DSLR & DSLM Tethering (wie dslrBooth)**:
+  - Läuft direkt im Lumio-Prozess per USB PTP – **ohne externe Zusatzsoftware** und ohne Nikon Webcam Utility.
+  - Volle Unterstützung für **Nikon (D5600, Z 50 II, D5xxx, Z-Serie)**, **Canon EOS**, **Sony Alpha**, **Fujifilm**, **Panasonic** und **Olympus**.
+  - Glasklare Live-Vorschau mit automatischer Spiegel-Freigabe und Autofokus-Sicherheitsnetz (`CapturePhotoNoAf`).
+  - **📸 Testfoto-Button**: Schnappschuss direkt im Admin-Menü zur Fokus- und Belichtungskontrolle (wird nicht gespeichert).
 - 🗂️ **Touch-Admin-Menü mit 4 Tabs**:
   - **Allgemein**: Event-Name, Speicherordner, automatische USB-Stick-Erkennung, PIN-Schutz.
-  - **Kamera**: Kamera-Auswahl, Live-View-Spiegelung, digiCamControl-Status und manuelle Belichtungswerte.
-  - **Aufnahme**: Templates, Foto-Branding (Logo & Event-Text), Timer, Serienbild-Pausen & Videobotschaften.
+  - **Kamera**: Kamera-Auswahl, Live-View-Spiegelung, Verbindungsstatus und manuelle DSLR-Belichtungswerte.
+  - **Aufnahme**: Templates, Foto-Branding (Logo & Event-Text), Timer, Zwischenbild-Pausen & Videobotschaften.
   - **Drucker**: Canon Selphy CP1300/CP1500 Anbindung, Auto-Sofortdruck und Testdruck-Button.
+  - Sofortiges Öffnen ohne UI-Ruckler dank asynchronem Hardware-Laden und Drucker-Spooler-Caching.
 - ⌨️ **Integrierte Bildschirmtastatur**:
   - Direkt im Admin-Menü für Touchscreens zuschaltbar.
   - Klappt beim Antippen von Textfeldern automatisch am unteren Bildschirmrand auf – kein physisches Keyboard erforderlich!
-- 📷 **Multi-Vendor DSLR & DSLM**:
-  - Unterstützung für **Nikon, Canon, Sony, Fujifilm, Panasonic** und **Olympus**.
-  - Unter Windows via **digiCamControl** HTTP-Schnittstelle mit Live-View und Belichtungssteuerung.
-  - Unter Linux & Raspberry Pi direkt über **gphoto2**.
 - 💾 **USB-Laufwerks-Erkennung**:
   - Erkennt eingesteckte USB-Sticks sofort im Admin-Menü. Ein Klick genügt, um alle Fotos & Videos des Abends direkt auf dem externen Stick zu sichern.
 

@@ -66,6 +66,26 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: "Lumio Release ${{ github.ref_name }}"
+          body: |
+            ## Lumio Release ${{ github.ref_name }} – Das große Fotobox-Update 📸
+
+            ### Highlights
+            - **Natives DSLR / DSLM Tethering (wie in dslrBooth)**: Läuft direkt im Lumio-Prozess per USB PTP – ohne externe Zusatzsoftware und ohne Nikon Webcam Utility. Unterstützt Nikon D5600, Z 50 II, Canon EOS, Sony, Fuji etc.
+            - **Live-View & 24MP-Auslösung**: Glasklare Live-Vorschau und verlässliche Auslösung mit automatischem Spiegel-Zyklus und Autofokus-Sicherheitsnetz (`CapturePhotoNoAf`).
+            - **📸 Testfoto-Vorschau**: Neuer Testfoto-Button in den Kamera-Einstellungen (temporäre Vorschau zur Belichtungs- & Fokusprüfung ohne Abspeichern).
+            - **Touch-Admin-Menü & Bildschirmtastatur**: 4 übersichtliche Tabs (Allgemein, Kamera, Aufnahme, Drucker) und integrierte On-Screen-Tastatur für Touchscreens.
+            - **Kein UI-Hänger**: Asynchrones Hardware-Laden und Drucker-Spooler-Caching für sofortiges Öffnen des Menüs.
+            - **USB-Stick Auto-Erkennung**: Erkennt angeschlossene USB-Sticks sofort im Admin-Menü zur 1-Klick-Sicherung.
+            - **Selphy Direktdruck**: Canon Selphy CP1300/CP1500 Auto-Sofortdruck und Testdruck.
+
+            ### Downloads & Plattformen
+            - **`Lumio-win-x64.zip`**: Für normale 64-Bit Windows PCs & Laptops
+            - **`Lumio-win-arm64.zip`**: Für Microsoft Surface Pro / Laptop mit ARM-Prozessor
+            - **`Lumio-linux-x64.zip`**: Für Linux PCs (CachyOS, Arch Linux, Ubuntu, Debian, Fedora etc.)
+            - **`Lumio-linux-arm64.zip`**: Für Raspberry Pi 4 / 5 (64-Bit Raspberry Pi OS)
+
+            *Alle Builds sind vollständig eigenständig gebündelt (self-contained) und benötigen keine vorinstallierte .NET Runtime.*
           files: |
             ./dist/Lumio-win-x64.zip
             ./dist/Lumio-win-arm64.zip
@@ -73,7 +93,7 @@ jobs:
             ./dist/Lumio-linux-arm64.zip
           draft: false
           prerelease: false
-          generate_release_notes: true
+          generate_release_notes: false
 
       - name: Update Latest Release (on Main Push)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
