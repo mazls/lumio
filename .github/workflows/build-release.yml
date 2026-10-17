@@ -25,11 +25,22 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Setup Java (for Android build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+
+      - name: Install .NET Android Workload & SDK Dependencies
+        run: |
+          dotnet workload install android
+          dotnet build src/Lumio.App.Android/Lumio.App.Android.csproj -t:InstallAndroidDependencies -f net10.0-android -p:AndroidSdkDirectory="$env:ANDROID_HOME" -p:JavaSdkDirectory="$env:JAVA_HOME" -p:AcceptAndroidSDKLicenses=True -nologo
+
       - name: Restore Dependencies
         run: dotnet restore Lumio.slnx
 
       - name: Run Unit Tests
-        run: dotnet test Lumio.slnx -c Release --no-restore --verbosity normal
+        run: dotnet test tests/Lumio.Tests/Lumio.Tests.csproj -c Release --no-restore --verbosity normal
 
       - name: Publish Standalone (win-x64)
         run: |
@@ -55,12 +66,41 @@ jobs:
           ((Get-Content ./dist/linux-x64/run-lumio.sh -Raw) -replace "`r`n", "`n") | Set-Content -NoNewline -Path ./dist/linux-x64/run-lumio.sh
           Compress-Archive -Path ./dist/linux-x64/* -DestinationPath ./dist/Lumio-linux-x64.zip
 
+      - name: Build Android APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          $signing = @()
+          if ($env:ANDROID_KEYSTORE_BASE64) {
+            # Stable release key: lets users update the app without uninstalling
+            $keystore = Join-Path $env:RUNNER_TEMP "lumio-release.keystore"
+            [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+            $signing = @(
+              "-p:AndroidKeyStore=true",
+              "-p:AndroidSigningKeyStore=$keystore",
+              "-p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD",
+              "-p:AndroidSigningKeyAlias=$env:ANDROID_KEY_ALIAS",
+              "-p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD"
+            )
+          } else {
+            Write-Host "::warning::No Android signing key configured (ANDROID_KEYSTORE_BASE64) - APK is signed with a temporary debug key."
+          }
+
+          dotnet publish src/Lumio.App.Android/Lumio.App.Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk -p:AndroidSdkDirectory="$env:ANDROID_HOME" -p:JavaSdkDirectory="$env:JAVA_HOME" -o ./dist/android -nologo @signing
+          $apk = Get-ChildItem ./dist/android -Filter "*-Signed.apk" | Select-Object -First 1
+          if (-not $apk) { throw "No signed APK was produced." }
+          Copy-Item $apk.FullName ./dist/Lumio-android.apk
+
       - name: Upload Artifacts (Action Run)
         uses: actions/upload-artifact@v4
         with:
           name: Lumio-Builds
           path: |
             ./dist/*.zip
+            ./dist/Lumio-android.apk
 
       - name: Create GitHub Release (on Tag)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -68,25 +108,30 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Das große Fotobox-Update 📸
+            ## Lumio Release ${{ github.ref_name }} – Die Android-App 📱
+
+            Meine Fotobox läuft jetzt auch auf einem Android-Tablet oder -Handy – Kamera per USB-C dran, fertig. Kein Laptop mehr nötig.
 
             ### Highlights
-            - **Natives DSLR / DSLM Tethering (wie in dslrBooth)**: Läuft direkt im Lumio-Prozess per USB PTP – ohne externe Zusatzsoftware und ohne Nikon Webcam Utility. Unterstützt Nikon D5600, Z 50 II, Canon EOS, Sony, Fuji etc.
-            - **Live-View & 24MP-Auslösung**: Glasklare Live-Vorschau und verlässliche Auslösung mit automatischem Spiegel-Zyklus und Autofokus-Sicherheitsnetz (`CapturePhotoNoAf`).
-            - **📸 Testfoto-Vorschau**: Neuer Testfoto-Button in den Kamera-Einstellungen (temporäre Vorschau zur Belichtungs- & Fokusprüfung ohne Abspeichern).
-            - **Touch-Admin-Menü & Bildschirmtastatur**: 4 übersichtliche Tabs (Allgemein, Kamera, Aufnahme, Drucker) und integrierte On-Screen-Tastatur für Touchscreens.
-            - **Kein UI-Hänger**: Asynchrones Hardware-Laden und Drucker-Spooler-Caching für sofortiges Öffnen des Menüs.
-            - **USB-Stick Auto-Erkennung**: Erkennt angeschlossene USB-Sticks sofort im Admin-Menü zur 1-Klick-Sicherung.
-            - **Selphy Direktdruck**: Canon Selphy CP1300/CP1500 Auto-Sofortdruck und Testdruck.
+            - **Lumio als Android-App**: Gleiche Oberfläche und alle Modi wie auf Windows & Linux (Einzelfoto, 4er Collage, Doppelstreifen, GIF, Boomerang, Videobotschaft).
+            - **Nikon Z 50 II per USB-C (UVC/UAC)**: Eigener UVC-Treiber – läuft auch auf Geräten, die USB-Kameras nicht selbst erkennen (z. B. Google Pixel). Live-Bild mit 30 FPS und Kamera-Mikro für Videobotschaften.
+            - **Nikon D5600 per USB-OTG (PTP)**: Live-View und echte Auslösung, USB-Berechtigung für Android 14+ repariert.
+            - **Anstecken & loslegen**: Angesteckte Kamera hat Vorrang vor den Handy-Kameras, automatisches Neuverbinden beim Ab- und Anstecken.
+            - **Videobotschaften mit Ton als MP4** (H.264 + AAC) – laufen auf jedem Handy.
+            - **Echter Kiosk-Vollbildmodus** und kein Einfrieren der Oberfläche mehr auf neuen Geräten.
 
             ### Downloads & Plattformen
+            - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)
             - **`Lumio-win-x64.zip`**: Für normale 64-Bit Windows PCs & Laptops
             - **`Lumio-win-arm64.zip`**: Für Microsoft Surface Pro / Laptop mit ARM-Prozessor
             - **`Lumio-linux-x64.zip`**: Für Linux PCs (CachyOS, Arch Linux, Ubuntu, Debian, Fedora etc.)
             - **`Lumio-linux-arm64.zip`**: Für Raspberry Pi 4 / 5 (64-Bit Raspberry Pi OS)
 
-            *Alle Builds sind vollständig eigenständig gebündelt (self-contained) und benötigen keine vorinstallierte .NET Runtime.*
+            *Alle Desktop-Builds sind vollständig eigenständig gebündelt (self-contained) und benötigen keine vorinstallierte .NET Runtime.*
+
+            Alle Änderungen im Detail: [CHANGELOG.md](https://github.com/mazls/lumio/blob/main/CHANGELOG.md)
           files: |
+            ./dist/Lumio-android.apk
             ./dist/Lumio-win-x64.zip
             ./dist/Lumio-win-arm64.zip
             ./dist/Lumio-linux-x64.zip
@@ -108,9 +153,11 @@ jobs:
             - **Lumio-win-arm64.zip**: Für Microsoft Surface Pro / Laptop mit ARM-Prozessor
             - **Lumio-linux-x64.zip**: Für x86_64 Linux PCs (CachyOS, Arch Linux, Ubuntu, Debian, Fedora etc.)
             - **Lumio-linux-arm64.zip**: Für Raspberry Pi (Pi 4 / Pi 5 mit 64-Bit Raspberry Pi OS)
+            - **Lumio-android.apk**: Für Android-Tablets & -Handys (Sideloading, Anleitung im README)
             
-            Einfach entpacken und starten (`Lumio.exe` auf Windows, `./run-lumio.sh` auf Linux).
+            Einfach entpacken und starten (`Lumio.exe` auf Windows, `./run-lumio.sh` auf Linux) bzw. die APK auf dem Android-Gerät installieren.
           files: |
+            ./dist/Lumio-android.apk
             ./dist/Lumio-win-x64.zip
             ./dist/Lumio-win-arm64.zip
             ./dist/Lumio-linux-x64.zip
