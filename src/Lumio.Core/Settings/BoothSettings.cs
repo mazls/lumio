@@ -61,6 +61,12 @@ public sealed class BoothSettings
 
     public const string DefaultDigiCamControlUrl = "http://localhost:5513";
 
+    /// <summary>Optional custom path to CameraControl.exe if not in standard installation folders.</summary>
+    public string? DigiCamControlExePath { get; set; }
+
+    /// <summary>Automatically launch digiCamControl in the background when Lumio starts.</summary>
+    public bool AutoStartDigiCamControl { get; set; } = false;
+
     /// <summary>Shows Lumio's own touch keyboard for text fields in the admin menu.</summary>
     public bool OnScreenKeyboardEnabled { get; set; } = false;
 

@@ -85,6 +85,14 @@ public partial class AdminDashboardDialog : Window
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
         OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
         DigiCamUrlTextBox.Text = current.DigiCamControlUrl;
+
+        var detectedExe = current.DigiCamControlExePath;
+        if (string.IsNullOrWhiteSpace(detectedExe))
+        {
+            detectedExe = DigiCamControlManager.FindExecutable();
+        }
+        DigiCamExePathTextBox.Text = detectedExe ?? string.Empty;
+        AutoStartDigiCamCheckBox.IsChecked = current.AutoStartDigiCamControl;
     }
 
     private async Task PopulateCameraOptionsAsync()
@@ -256,24 +264,131 @@ public partial class AdminDashboardDialog : Window
             var url = DigiCamUrlTextBox.Text.Trim();
             if (string.IsNullOrEmpty(url)) url = BoothSettings.DefaultDigiCamControlUrl;
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            var res = await http.GetStringAsync($"{url.TrimEnd('/')}/?slc=get&param1=camera");
-            if (!string.IsNullOrWhiteSpace(res))
+            var status = await DigiCamControlManager.GetStatusAsync(url);
+            if (status.IsReachable)
             {
-                DigiCamStatusText.Text = $"✅ digiCamControl ist aktiv! Verbunden mit: {res.Trim()}";
+                var camInfo = !string.IsNullOrWhiteSpace(status.ConnectedCamera) && status.ConnectedCamera != "null"
+                    ? $"Verbunden mit: {status.ConnectedCamera}"
+                    : "Webserver aktiv (Kamera per USB anschließen und einschalten)";
+
+                DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("SuccessBrush");
+                DigiCamStatusText.Text = $"✅ digiCamControl ist aktiv! {camInfo}";
                 DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessBrush");
+                return;
+            }
+
+            if (status.IsProcessRunning)
+            {
+                DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+                DigiCamStatusText.Text = "⏳ digiCamControl Prozess läuft, Webserver bindet sich an Port 5513...";
+                DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
                 return;
             }
         }
         catch { }
 
-        DigiCamStatusText.Text = "ℹ️ digiCamControl ist derzeit nicht aktiv (wird für Canon/Sony unter Windows empfohlen).";
-        DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+        DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("MutedBrush");
+        DigiCamStatusText.Text = "ℹ️ digiCamControl ist derzeit nicht aktiv. Klicke auf '▶️ Controller starten'.";
+        DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush");
     }
 
     private async void OnCheckDigiCamStatusClick(object sender, RoutedEventArgs e)
     {
         await CheckDigiCamStatusAsync();
+    }
+
+    private async void OnStartDigiCamClick(object sender, RoutedEventArgs e)
+    {
+        var exePath = DigiCamExePathTextBox.Text.Trim();
+        var url = DigiCamUrlTextBox.Text.Trim();
+
+        StartDigiCamButton.IsEnabled = false;
+        DigiCamStatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+        DigiCamStatusText.Text = "⏳ digiCamControl wird gestartet...";
+        DigiCamStatusText.Foreground = (System.Windows.Media.Brush)FindResource("AccentOrangeBrush");
+
+        try
+        {
+            var started = await DigiCamControlManager.StartAsync(exePath, url, minimized: true);
+            if (started)
+            {
+                await CheckDigiCamStatusAsync();
+            }
+            else
+            {
+                var found = DigiCamControlManager.FindExecutable(exePath);
+                if (found is null)
+                {
+                    var ask = MessageBox.Show(this,
+                        "CameraControl.exe wurde nicht gefunden!\n\nMöchtest du digiCamControl jetzt von der offiziellen Website herunterladen?",
+                        "digiCamControl nicht gefunden",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+                    if (ask == MessageBoxResult.Yes)
+                    {
+                        OnDownloadDigiCamClick(sender, e);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(this,
+                        "digiCamControl konnte gestartet werden, aber der integrierte Webserver antwortet noch nicht auf Port 5513.\n\nBitte in digiCamControl prüfen: Datei > Einstellungen > Webserver > [x] Aktiviert.",
+                        "Webserver noch nicht bereit",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                await CheckDigiCamStatusAsync();
+            }
+        }
+        finally
+        {
+            StartDigiCamButton.IsEnabled = true;
+        }
+    }
+
+    private async void OnStopDigiCamClick(object sender, RoutedEventArgs e)
+    {
+        StopDigiCamButton.IsEnabled = false;
+        DigiCamStatusText.Text = "⏳ digiCamControl wird beendet...";
+        try
+        {
+            await DigiCamControlManager.StopAsync(DigiCamUrlTextBox.Text.Trim());
+            await CheckDigiCamStatusAsync();
+        }
+        finally
+        {
+            StopDigiCamButton.IsEnabled = true;
+        }
+    }
+
+    private void OnBrowseDigiCamExeClick(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "CameraControl.exe auswählen",
+            Filter = "digiCamControl (CameraControl.exe)|CameraControl.exe|Ausführbare Dateien (*.exe)|*.exe",
+            FileName = "CameraControl.exe"
+        };
+        if (dlg.ShowDialog(this) == true)
+        {
+            DigiCamExePathTextBox.Text = dlg.FileName;
+        }
+    }
+
+    private void OnDownloadDigiCamClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://digicamcontrol.com/download",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Website konnte nicht geöffnet werden: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void OnSelectUsbDriveClick(object sender, RoutedEventArgs e)
@@ -495,6 +610,10 @@ public partial class AdminDashboardDialog : Window
         if (CameraApertureComboBox.SelectedItem is DslrOption aperture) updated.CameraControl.Aperture = aperture.Value;
         if (CameraWhiteBalanceComboBox.SelectedItem is DslrOption wb) updated.CameraControl.WhiteBalance = wb.Value;
         if (CameraExposureCompComboBox.SelectedItem is DslrOption ev) updated.CameraControl.ExposureCompensation = ev.Value;
+
+        updated.DigiCamControlUrl = DigiCamUrlTextBox.Text.Trim();
+        updated.DigiCamControlExePath = string.IsNullOrWhiteSpace(DigiCamExePathTextBox.Text) ? null : DigiCamExePathTextBox.Text.Trim();
+        updated.AutoStartDigiCamControl = AutoStartDigiCamCheckBox.IsChecked ?? false;
 
         _settingsService.Update(updated);
 

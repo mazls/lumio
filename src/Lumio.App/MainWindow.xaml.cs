@@ -110,6 +110,19 @@ public partial class MainWindow : Window
             CameraStatusIndicator.Fill = (Brush)FindResource("WarningBrush");
             CameraStatusText.Text = isReconnect ? "Kamera neu verbinden..." : "Kamera verbindet...";
 
+            if (_settingsService.Current.CameraBackend == CameraBackend.Dslr && _settingsService.Current.AutoStartDigiCamControl)
+            {
+                var status = await DigiCamControlManager.GetStatusAsync(_settingsService.Current.DigiCamControlUrl);
+                if (!status.IsReachable)
+                {
+                    CameraStatusText.Text = "digiCamControl startet...";
+                    await DigiCamControlManager.StartAsync(
+                        _settingsService.Current.DigiCamControlExePath,
+                        _settingsService.Current.DigiCamControlUrl,
+                        minimized: true);
+                }
+            }
+
             _activeCamera = await _cameraManager.GetCameraAsync(_settingsService.Current);
             _activeCamera.FrameReady += OnCameraFrameReady;
             _activeCamera.StatusChanged += OnCameraStatusChanged;
@@ -1149,5 +1162,14 @@ public partial class MainWindow : Window
             _activeCamera.StatusChanged -= OnCameraStatusChanged;
         }
         await _cameraManager.DisposeAsync();
+
+        if (_settingsService.Current.AutoStartDigiCamControl)
+        {
+            try
+            {
+                await DigiCamControlManager.StopAsync(_settingsService.Current.DigiCamControlUrl);
+            }
+            catch { }
+        }
     }
 }

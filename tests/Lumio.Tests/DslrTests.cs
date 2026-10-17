@@ -90,4 +90,34 @@ public class DslrTests
         Assert.Equal(CameraBackend.Dslr, settings.CameraBackend);
         Assert.Equal("http://localhost:5513", settings.DigiCamControlUrl);
     }
+
+    [Fact]
+    public void DigiCamControlManager_FindExecutable_Returns_Null_Or_Valid_Path()
+    {
+        var configuredCustomPath = "non_existent_folder/CameraControl.exe";
+        var found = DigiCamControlManager.FindExecutable(configuredCustomPath);
+        // Should ignore non-existent path and either find installed or return null
+        if (found is not null)
+        {
+            Assert.True(System.IO.File.Exists(found));
+        }
+    }
+
+    [Fact]
+    public void DigiCamStatus_Record_Holds_Expected_Defaults()
+    {
+        var status = new DigiCamStatus(
+            IsRunning: true,
+            IsConnected: true,
+            Message: "Active",
+            IsReachable: true,
+            ConnectedCamera: "Nikon D5600",
+            IsProcessRunning: true);
+
+        Assert.True(status.IsRunning);
+        Assert.True(status.IsConnected);
+        Assert.True(status.IsReachable);
+        Assert.Equal("Nikon D5600", status.ConnectedCamera);
+        Assert.True(status.IsProcessRunning);
+    }
 }
