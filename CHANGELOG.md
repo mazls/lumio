@@ -4,6 +4,43 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.0] – 2026-10-18 – *Die Android-App* 📱
+
+### 📱 Lumio als Android-App (Tablets & Smartphones)
+- **Neue Android-App (`Lumio-android.apk`)**:
+  - Lumio läuft jetzt auch auf Android-Tablets und -Handys – gleiche Oberfläche, gleiche Modi wie auf Windows & Linux (Einzelfoto, 4er Collage, Doppelstreifen, GIF, Boomerang, Videobotschaft).
+  - Gemeinsames UI-Projekt `Lumio.App.Shared` für Desktop (Windows/Linux/Raspberry Pi) und Android.
+  - Installation per Sideloading (direkt oder über die Entwickleroptionen / USB- bzw. WLAN-Debugging). Ein Release im Google Play Store ist geplant.
+- **Echter Kiosk-Vollbildmodus**:
+  - Status- und Navigationsleiste werden komplett ausgeblendet (inkl. Kamera-Aussparung im Display) und nach Dialogen, App-Wechsel oder Drehen automatisch wieder versteckt.
+  - Bildschirm bleibt während des Events dauerhaft an.
+- **Kein Einfrieren mehr auf neuen Geräten**:
+  - Auf manchen GPUs (z. B. Google Pixel 10 / PowerVR) blieb die Oberfläche nach dem Start hängen – Buttons reagierten nicht und der Countdown startete nie. Lumio rendert auf Android jetzt robust per Software-Rendering und hält die UI-Verarbeitung zuverlässig am Laufen.
+  - Avalonia UI auf 11.3.22 aktualisiert.
+
+### 📷 Kameras am Handy/Tablet
+- **Nikon Z 50 II per USB-C (UVC/UAC)**:
+  - Eigener UVC-Treiber direkt über USB-Host – funktioniert auch auf Geräten, die externe Kameras nicht selbst anbieten (z. B. Google Pixel).
+  - Flüssiges MJPEG-Live-Bild mit 30 FPS, Fotos direkt aus dem Video-Stream.
+  - Kamera-Mikrofon per USB-Audio (UAC) für Videobotschaften.
+- **Nikon D5600 per USB-OTG (PTP)**:
+  - USB-Berechtigungsabfrage für Android 14+ repariert (brach vorher mit einem Fehler ab).
+  - Fotos werden auch ohne Speicherkarte direkt aus dem Kamera-Speicher geholt.
+- **Automatische Kamera-Wahl & Hotplug**:
+  - Eine angesteckte externe Kamera hat Vorrang vor den eingebauten Handy-Kameras.
+  - Beim An- und Abstecken verbindet Lumio automatisch neu – ohne App-Neustart.
+  - Beim Anstecken einer Kamera öffnet sich Lumio auf Wunsch automatisch („Immer mit Lumio öffnen“ = keine erneute USB-Abfrage).
+- Kamera- und Mikrofon-Berechtigung werden direkt beim ersten Start abgefragt, damit später kein Dialog einen Gast unterbricht.
+
+### 🎬 Videobotschaften auf Android
+- Videobotschaften werden mit Ton aufgenommen (Kamera-Mikrofon per USB, sonst das Handy-Mikrofon).
+- Speicherung als **MP4 (H.264 + AAC)** über die Hardware-Encoder des Geräts – läuft auf jedem Smartphone der Gäste.
+
+### ⚙️ Build & Release
+- Die GitHub-Release-Pipeline baut jetzt zusätzlich die Android-APK (`Lumio-android.apk`).
+
+---
+
 ## [1.2.1] – 2026-10-17 – *Live-Hardware-Erkennung & Ultra-HD Grafik-Update* ✨
 
 ### 🔄 Kontinuierlicher Live-Scan im Admin-Menü (USB, Kamera & Drucker)

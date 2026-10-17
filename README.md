@@ -8,7 +8,7 @@
 
 # Lumio 📸
 
-A modern, touch-optimized photobooth software for Windows & Linux. Built for parties, weddings, and events with DSLR/mirrorless cameras (**Nikon, Canon, Sony, Fuji**), webcams, and the **Canon Selphy** photo printer.
+A modern, touch-optimized photobooth software for Windows, Linux & Android. Built for parties, weddings, and events with DSLR/mirrorless cameras (**Nikon, Canon, Sony, Fuji**), webcams, and the **Canon Selphy** photo printer.
 
 ---
 
@@ -27,24 +27,18 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
-## New Features in Version 1.2.1 ✨
+## New in Version 1.3.0: Lumio as an Android App 📱
 
-- 📷 **Native DSLR & Mirrorless Tethering (like dslrBooth)**:
-  - Runs directly within the Lumio process via USB PTP – **no external background tools** and no Nikon Webcam Utility required.
-  - Full support for **Nikon (D5600, Z 50 II, D5xxx, Z-series)**, **Canon EOS**, **Sony Alpha**, **Fujifilm**, **Panasonic**, and **Olympus**.
-  - Crystal-clear live preview with automatic mirror-flip and autofocus safety fallback (`CapturePhotoNoAf`).
-  - **📸 Test Photo Button**: Take a quick snapshot directly in the Admin menu for focus and exposure checks (not saved to the gallery).
-- 🗂️ **Touch Admin Dashboard with 4 Tabs**:
-  - **General**: Event name, storage location, automatic USB drive detection, PIN protection.
-  - **Camera**: Camera selector, live view mirroring, connection status, and manual DSLR exposure values.
-  - **Capture**: Templates, photo branding (logo & event text overlay), countdown timers, review pauses & video guestbook messages.
-  - **Printer**: Canon Selphy CP1300/CP1500 integration, auto instant print, and test print button.
-  - Instant opening without UI stutter thanks to asynchronous hardware polling and printer spooler caching.
-- ⌨️ **Integrated On-Screen Keyboard**:
-  - Can be toggled on directly in the Admin menu for touchscreens.
-  - Automatically slides up from the bottom when tapping text fields – no physical keyboard required!
-- 💾 **USB Flash Drive Detection**:
-  - Automatically detects plugged-in USB thumb drives in the Admin menu. One click is all it takes to backup all event photos & videos directly to the external drive.
+I wanted my photo booth to work without a laptop too – just grab an old tablet or phone, plug the camera in via USB-C, done. And that's exactly what works now:
+
+- 📱 **Lumio runs on Android**: Same UI and all modes as on Windows & Linux – single photo, 4-photo collage, double strip, GIF, Boomerang and video message.
+- 📷 **Nikon Z 50 II via USB-C (UVC/UAC)**: Just plug it in – Lumio ships its own UVC driver and doesn't need Android to recognize the camera itself (Google Pixel phones, for example, don't). Smooth 30 FPS live view, and video messages use the camera's microphone as well.
+- 📷 **Nikon D5600 via USB-OTG (PTP)**: Live view and real shutter release straight over USB.
+- 🔌 **Plug in and go**: A connected camera automatically takes priority over the built-in phone cameras. Unplugged or swapped the camera? Lumio reconnects on its own.
+- 🎬 **Video messages with sound as MP4**: Plays on every guest's phone.
+- 🖥️ **Proper kiosk fullscreen**: No status bar, no navigation bar, screen stays on.
+
+What came with 1.2.x (touch admin menu with tabs, on-screen keyboard, USB drive detection, native DSLR tethering) is listed in the **[CHANGELOG](CHANGELOG.md)**.
 
 ---
 
@@ -80,14 +74,20 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
    - **Microsoft Surface (win-arm64)**: Native ARM64 build for Surface Pro & Surface Laptop
    - **Linux PC (linux-x64)**: Arch Linux, CachyOS, Ubuntu, Debian, Fedora, etc.
    - **Raspberry Pi (linux-arm64)**: Raspberry Pi 4 & Raspberry Pi 5 (64-bit Raspberry Pi OS / Debian)
+   - **Android (tablets & smartphones)**: Kiosk app with immersive fullscreen, always-on screen and touch controls (see [Android App](#android-app-))
 2. **Cameras**:
    - **DSLR & Mirrorless Cameras**: Nikon, Canon, Sony, Fujifilm, Panasonic Lumix, Olympus
      - *Windows*: Via digiCamControl (free, MIT license) or direct PTP detection
      - *Linux*: Native via gphoto2
-   - **Webcams**: USB webcams (Logitech, Anker, etc.) and integrated Surface front/rear cameras
+     - *Android*:
+       - **Nikon D5600 via USB-OTG (PTP)**: Own C# PTP driver – releases the shutter, streams live view and pulls the photo straight onto the device. *(Tip: Turn on airplane mode on the camera so SnapBridge/Bluetooth doesn't block the USB port.)*
+       - **Nikon Z 50 II via USB-C (UVC/UAC)**: Own UVC driver – 30 FPS live view and camera microphone for video messages, even on devices without built-in USB camera support (e.g. Google Pixel).
+       - **Other USB webcams & HDMI grabbers**: Anything that shows up as a UVC webcam with MJPEG or YUY2 – including older cameras with clean HDMI out via a $10-15 USB-C video capture dongle.
+       - **Built-in cameras**: Front and rear camera of the tablet/phone.
+   - **Webcams**: USB webcams (Logitech, Anker, etc.) and integrated Surface front/rear and tablet cameras
    - **Simulated Test Camera**: Built-in virtual camera with live timestamp for testing without hardware
 3. **Printers**:
-   - Canon Selphy CP1300 / CP1500 / CP1200 / CP1000 via Windows printer driver or CUPS on Linux/Raspberry Pi
+   - Canon Selphy CP1300 / CP1500 / CP1200 / CP1000 via Windows printer driver, CUPS on Linux/Raspberry Pi, or Selphy Wi-Fi on Android
 
 ---
 
@@ -99,6 +99,7 @@ Simply grab the appropriate ZIP archive under **[Releases](https://github.com/ma
 - **`Lumio-win-arm64.zip`** for Microsoft Surface with ARM/Snapdragon processors
 - **`Lumio-linux-x64.zip`** for **Linux PCs** (CachyOS, Arch Linux, Ubuntu, Debian, Fedora, etc.)
 - **`Lumio-linux-arm64.zip`** for **Raspberry Pi 4 / 5** (64-bit OS)
+- **`Lumio-android.apk`** for **Android tablets & phones** (installation see [Android App](#android-app-))
 
 No .NET runtime needs to be preinstalled, as all releases are fully self-contained.
 
@@ -120,9 +121,56 @@ chmod +x run-lumio.sh Lumio
 
 ---
 
+## Android App 📱
+
+Lumio is also available as an app for Android tablets and phones. **A Google Play Store release is planned** – until then you install the app by sideloading. Sounds more complicated than it is:
+
+### Option 1: Directly on the device (easiest)
+1. On the tablet/phone, download **`Lumio-android.apk`** from **[Releases](https://github.com/mazls/lumio/releases)**.
+2. Tap the APK. The first time, Android asks whether your browser or file manager may **"install unknown apps"** – allow it.
+3. Install, done.
+
+### Option 2: Via developer options & debugging (from your PC)
+Handy if you set up Lumio on several devices or build it yourself.
+
+1. **Unlock developer options**: *Settings → About phone* → **tap "Build number" 7 times** (enter your PIN if asked).
+2. **Turn on debugging**: *Settings → System → Developer options* →
+   - turn on **USB debugging** if the device is connected to your PC by cable, or
+   - turn on **Wireless debugging** if the USB port is needed for the camera (device and PC on the same Wi-Fi).
+3. **Install ADB on your PC** ([Android SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools)).
+4. **Connect**:
+   ```powershell
+   # Via USB cable: plug in the device and confirm the debugging prompt on the device
+   adb devices
+
+   # Via Wi-Fi: under "Wireless debugging" -> "Pair device with pairing code"
+   adb pair 192.168.x.x:PAIRING-PORT PAIRING-CODE
+   adb connect 192.168.x.x:PORT      # port is shown at the top under "IP address & port"
+   ```
+5. **Install**:
+   ```powershell
+   adb install -r Lumio-android.apk
+   ```
+   If you build from source, `install-android.bat` (or `build-android.ps1 -Install`) builds, installs and starts the app in one go.
+
+> **Update fails ("App not installed")?** Then the old version was signed with a different key. Uninstall the old Lumio version and install again – **back up the photos of your last event first**, uninstalling deletes them.
+
+### Connecting a camera
+- **Nikon Z 50 II**: In the camera menu, set the USB connection to **UVC/UAC** (USB webcam) and plug it in via USB-C.
+- **Nikon D5600**: Connect it with a USB-OTG adapter and turn on **airplane mode on the camera** (otherwise SnapBridge blocks the USB port).
+- The first time you plug the camera in, Android asks whether to open Lumio: **tap "Always"** – the USB prompt never comes back and the camera is ready instantly at every event.
+- Lumio automatically uses the connected camera. Without an external camera it uses the device's front or rear camera; you can switch anytime in the admin menu under **Camera**.
+- Simply allow camera and microphone access on first launch.
+
+### Tips for events
+- Keep the charger connected – with the camera on the USB-C port you'll need a USB-C hub with Power Delivery for that.
+- Use Android's **"App pinning"** (*Settings → Security*) so guests can't leave Lumio.
+
+---
+
 ## How to Use
 
-1. **Start**: Launch the application (`Lumio.exe` / `Lumio.bat` on Windows, `./run-lumio.sh` on Linux).
+1. **Start**: Launch the application (`Lumio.exe` / `Lumio.bat` on Windows, `./run-lumio.sh` on Linux, app icon on Android).
 2. **Open Admin Menu**: Tap the lock icon in the top-right corner (or keyboard: `Esc` / `Ctrl+A`) and enter your PIN (default: `1234`).
 3. **Configure**:
    - **General**: Enter event name (e.g. "Wedding Sarah & Tom") and select the storage path. Enable the on-screen keyboard if needed.
@@ -145,16 +193,25 @@ dotnet test Lumio.slnx
 
 # Build standalone locally (start-lumio.ps1 auto-detects x64 vs arm64)
 powershell -ExecutionPolicy Bypass -File .\start-lumio.ps1 -Rebuild
+
+# Build Android APK (ends up in publish-android\Lumio.apk):
+powershell -ExecutionPolicy Bypass -File .\build-android.ps1
+# or simply double-click build-android.bat
+
+# Build the APK, install it on the connected device via ADB and start it:
+.\install-android.bat
 ```
 
 ### Project Structure
 - `src/Lumio.App`: WPF UI for Windows (touch kiosk, themes, dialogs)
-- `src/Lumio.App.Avalonia`: Cross-platform Avalonia UI for Linux & Raspberry Pi
+- `src/Lumio.App.Shared`: Shared cross-platform Avalonia UI components (Views, Modals, Styles, Assets)
+- `src/Lumio.App.Avalonia`: Desktop runner for Windows, Linux & Raspberry Pi
+- `src/Lumio.App.Android`: Android app (.apk) for tablets & phones (PTP driver for the D5600, own UVC/UAC driver for the Z 50 II, Camera2, MP4 video messages, kiosk mode)
 - `src/Lumio.Core`: Session flow, state machine, settings & storage logic
 - `src/Lumio.Camera`: Multi-vendor DSLR drivers (Nikon, Canon, Sony via digiCamControl & gphoto2), webcams & test camera
 - `src/Lumio.Imaging`: SkiaSharp 300-DPI collage renderer & GIF/Boomerang/video encoders
 - `src/Lumio.Printing`: Canon Selphy spooler & CUPS integration
-- `tests/Lumio.Tests`: 28 automated unit tests for Core, templates, collages, GIF & DSLR
+- `tests/Lumio.Tests`: 31 automated unit tests for Core, templates, collages, GIF & DSLR
 
 ---
 
