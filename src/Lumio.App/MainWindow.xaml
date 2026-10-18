@@ -18,6 +18,10 @@
     <Grid x:Name="RootGrid">
 
         <!-- ==================== 1. LIVE VIEW & BACKGROUND LAYER ==================== -->
+        <!-- Party backdrop: visible while the battery saver keeps the live view off and around the
+             (letterboxed) live view in portrait -->
+        <Image x:Name="IdleBackdropImage" Stretch="UniformToFill" IsHitTestVisible="False" />
+
         <Image x:Name="LiveViewImageControl"
                Stretch="UniformToFill"
                HorizontalAlignment="Center"

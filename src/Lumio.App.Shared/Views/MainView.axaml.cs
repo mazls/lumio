@@ -188,12 +188,43 @@ public partial class MainView : UserControl
             button.HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
         }
 
+        UpdateBackdrop(size);
+
         // Live view: fill the screen in landscape; in portrait show the whole camera frame across the full width,
         // otherwise only a narrow middle strip of the (landscape) photo would be visible
         LiveViewImageControl.Stretch = portrait ? Stretch.Uniform : Stretch.UniformToFill;
 
         // Fullscreen gallery: no room for side margins next to the arrows in portrait
         GalleryMainImage.Margin = portrait ? new Thickness(0, 10) : new Thickness(80, 10);
+    }
+
+    /// <summary>Renders the party backdrop in the screen's aspect ratio (only when the orientation changes).</summary>
+    private void UpdateBackdrop(Size size)
+    {
+        if (size.Width <= 0 || size.Height <= 0)
+            return;
+
+        // ~1600 px on the long side is plenty for a soft, blurry background
+        var scale = 1600 / Math.Max(size.Width, size.Height);
+        var width = Math.Max(16, (int)(size.Width * scale));
+        var height = Math.Max(16, (int)(size.Height * scale));
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var png = PartyScene.RenderStillPng(width, height);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    using var stream = new MemoryStream(png);
+                    IdleBackdropImage.Source = new Bitmap(stream);
+                });
+            }
+            catch
+            {
+                // Decorative only
+            }
+        });
     }
 
     private static void PlaceInGrid(Control control, int row, int column, int columnSpan = 1)

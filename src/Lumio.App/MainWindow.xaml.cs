@@ -967,7 +967,50 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        LiveViewImageControl.Stretch = e.NewSize.Height > e.NewSize.Width ? Stretch.Uniform : Stretch.UniformToFill;
+        var portrait = e.NewSize.Height > e.NewSize.Width;
+        LiveViewImageControl.Stretch = portrait ? Stretch.Uniform : Stretch.UniformToFill;
+
+        if (_backdropIsPortrait != portrait)
+        {
+            _backdropIsPortrait = portrait;
+            UpdateBackdrop(e.NewSize);
+        }
+    }
+
+    private bool? _backdropIsPortrait;
+
+    /// <summary>Renders the party backdrop in the window's aspect ratio (only when the orientation changes).</summary>
+    private void UpdateBackdrop(Size size)
+    {
+        if (size.Width <= 0 || size.Height <= 0)
+            return;
+
+        // ~1600 px on the long side is plenty for a soft, blurry background
+        var scale = 1600 / Math.Max(size.Width, size.Height);
+        var width = Math.Max(16, (int)(size.Width * scale));
+        var height = Math.Max(16, (int)(size.Height * scale));
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var png = PartyScene.RenderStillPng(width, height);
+                Dispatcher.InvokeAsync(() =>
+                {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.StreamSource = new MemoryStream(png);
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    IdleBackdropImage.Source = bitmap;
+                });
+            }
+            catch
+            {
+                // Decorative only
+            }
+        });
     }
 
     private void ReturnToIdle()

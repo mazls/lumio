@@ -115,94 +115,130 @@ public sealed class SimulatedCamera : ICameraService
 
 internal static class TestPattern
 {
+    private static readonly SKColor Accent = new(255, 77, 141);
+    private static readonly SKColor AccentWarm = new(255, 112, 90);
+
     public static void Draw(SKCanvas canvas, int width, int height, TimeSpan time)
     {
         var t = (float)time.TotalSeconds;
-        var hue = t * 16f % 360f;
+        PartyScene.DrawBackdrop(canvas, width, height, t, animated: true);
 
-        // Smooth studio lighting backdrop: multi-stop radial gradient with dithering eliminates 8-bit banding completely
-        using (var background = new SKPaint
+        DrawViewfinder(canvas, width, height, t);
+        DrawApertureLogo(canvas, width / 2f, height * 0.44f, height * 0.13f, t);
+
+        using var text = new SKPaint { IsAntialias = true, Color = SKColors.White };
+        using var shadow = new SKPaint
         {
             IsAntialias = true,
-            IsDither = true,
-        })
-        {
-            var cInner = SKColor.FromHsl(hue, 68, 38);
-            var cMid = SKColor.FromHsl((hue + 35) % 360, 70, 26);
-            var cOuter = SKColor.FromHsl((hue + 70) % 360, 72, 16);
-
-            background.Shader = SKShader.CreateRadialGradient(
-                new SKPoint(width * 0.5f, height * 0.42f),
-                MathF.Max(width, height) * 0.85f,
-                [cInner, cMid, cOuter],
-                [0.0f, 0.55f, 1.0f],
-                SKShaderTileMode.Clamp);
-            canvas.DrawRect(0, 0, width, height, background);
-        }
-
-        // Soft, anti-aliased floating orbs / bokeh circles
-        using (var bubble = new SKPaint { IsAntialias = true, IsDither = true, Color = new SKColor(255, 255, 255, 28) })
-        {
-            for (var i = 0; i < 7; i++)
-            {
-                var cx = width * (0.5f + 0.38f * MathF.Sin(t * 0.55f + i * 1.3f));
-                var cy = height * (0.5f + 0.32f * MathF.Cos(t * 0.42f + i * 1.9f));
-                canvas.DrawCircle(cx, cy, height * (0.05f + 0.025f * i), bubble);
-            }
-        }
-
-        DrawSmiley(canvas, width / 2f, height * 0.42f, height * 0.16f, t);
-
-        // Subpixel anti-aliased text with soft drop shadow for crisp readability
-        using var textPaint = new SKPaint
-        {
-            IsAntialias = true,
-            IsDither = true,
-            Color = SKColors.White,
-        };
-        using var shadowPaint = new SKPaint
-        {
-            IsAntialias = true,
-            Color = new SKColor(0, 0, 0, 150),
+            Color = new SKColor(0, 0, 0, 140),
+            MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, height * 0.006f),
         };
 
-        using var titleFont = new SKFont(SKTypeface.Default, height * 0.06f) { Embolden = true, Subpixel = true };
-        using var clockFont = new SKFont(SKTypeface.Default, height * 0.045f) { Subpixel = true };
+        // "LUMIO" wordmark
+        using var wordmark = new SKFont(SKTypeface.FromFamilyName(null, SKFontStyle.Bold), height * 0.075f) { Subpixel = true, ScaleX = 1.08f };
+        var wordY = height * 0.68f;
+        canvas.DrawText("LUMIO", width / 2f, wordY + height * 0.004f, SKTextAlign.Center, wordmark, shadow);
+        canvas.DrawText("LUMIO", width / 2f, wordY, SKTextAlign.Center, wordmark, text);
 
-        var titleY = height * 0.74f;
-        var clockY = height * 0.82f;
-        var shadowOff = height * 0.003f;
+        // "TESTKAMERA" pill
+        using var labelFont = new SKFont(SKTypeface.FromFamilyName(null, SKFontStyle.Bold), height * 0.032f) { Subpixel = true };
+        const string Label = "TESTKAMERA";
+        var labelWidth = labelFont.MeasureText(Label);
+        var pillHeight = height * 0.056f;
+        var pill = SKRect.Create(width / 2f - labelWidth / 2f - pillHeight * 0.6f, height * 0.725f, labelWidth + pillHeight * 1.2f, pillHeight);
+        using (var pillPaint = new SKPaint { IsAntialias = true })
+        {
+            pillPaint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(pill.Left, 0), new SKPoint(pill.Right, 0), [AccentWarm, Accent], null, SKShaderTileMode.Clamp);
+            canvas.DrawRoundRect(pill, pillHeight / 2f, pillHeight / 2f, pillPaint);
+        }
+        canvas.DrawText(Label, width / 2f, pill.MidY + labelFont.Size * 0.36f, SKTextAlign.Center, labelFont, text);
 
-        canvas.DrawText("Lumio · Testkamera", width / 2f + shadowOff, titleY + shadowOff, SKTextAlign.Center, titleFont, shadowPaint);
-        canvas.DrawText("Lumio · Testkamera", width / 2f, titleY, SKTextAlign.Center, titleFont, textPaint);
-
-        var timeString = DateTime.Now.ToString("HH:mm:ss.f");
-        canvas.DrawText(timeString, width / 2f + shadowOff, clockY + shadowOff, SKTextAlign.Center, clockFont, shadowPaint);
-        canvas.DrawText(timeString, width / 2f, clockY, SKTextAlign.Center, clockFont, textPaint);
+        // Live clock - shows that frames are really coming in
+        using var clockFont = new SKFont(SKTypeface.Default, height * 0.036f) { Subpixel = true };
+        using var clockPaint = new SKPaint { IsAntialias = true, Color = new SKColor(255, 255, 255, 200) };
+        canvas.DrawText(DateTime.Now.ToString("HH:mm:ss.f"), width / 2f, height * 0.86f, SKTextAlign.Center, clockFont, clockPaint);
     }
 
-    private static void DrawSmiley(SKCanvas canvas, float cx, float cy, float r, float t)
+    /// <summary>Camera-like corner brackets plus a blinking record dot.</summary>
+    private static void DrawViewfinder(SKCanvas canvas, int width, int height, float t)
     {
-        using var face = new SKPaint { IsAntialias = true, IsDither = true, Color = new SKColor(255, 214, 90) };
-        using var shadow = new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, 60) };
-        using var ink = new SKPaint { IsAntialias = true, Color = new SKColor(40, 30, 20) };
-        using var mouth = new SKPaint
+        var margin = height * 0.07f;
+        var arm = height * 0.08f;
+        using var stroke = new SKPaint
         {
             IsAntialias = true,
-            Color = new SKColor(40, 30, 20),
             Style = SKPaintStyle.Stroke,
-            StrokeWidth = r * 0.09f,
+            StrokeWidth = MathF.Max(2f, height * 0.006f),
             StrokeCap = SKStrokeCap.Round,
+            Color = new SKColor(255, 255, 255, 190),
         };
 
-        var bob = MathF.Sin(t * 2f) * r * 0.05f;
+        float l = margin, r = width - margin, top = margin, b = height - margin;
+        canvas.DrawLine(l, top, l + arm, top, stroke); canvas.DrawLine(l, top, l, top + arm, stroke);
+        canvas.DrawLine(r, top, r - arm, top, stroke); canvas.DrawLine(r, top, r, top + arm, stroke);
+        canvas.DrawLine(l, b, l + arm, b, stroke); canvas.DrawLine(l, b, l, b - arm, stroke);
+        canvas.DrawLine(r, b, r - arm, b, stroke); canvas.DrawLine(r, b, r, b - arm, stroke);
 
-        // Subtle drop shadow under face
-        canvas.DrawCircle(cx, cy + bob + r * 0.04f, r, shadow);
+        // Center focus marks
+        var c = new SKPoint(width / 2f, height / 2f);
+        var tick = height * 0.02f;
+        stroke.Color = new SKColor(255, 255, 255, 90);
+        stroke.StrokeWidth = MathF.Max(1f, height * 0.003f);
+        canvas.DrawLine(c.X - tick, c.Y, c.X + tick, c.Y, stroke);
+        canvas.DrawLine(c.X, c.Y - tick, c.X, c.Y + tick, stroke);
 
-        canvas.DrawCircle(cx, cy + bob, r, face);
-        canvas.DrawCircle(cx - r * 0.35f, cy - r * 0.2f + bob, r * 0.11f, ink);
-        canvas.DrawCircle(cx + r * 0.35f, cy - r * 0.2f + bob, r * 0.11f, ink);
-        canvas.DrawArc(new SKRect(cx - r * 0.5f, cy - r * 0.25f + bob, cx + r * 0.5f, cy + r * 0.55f + bob), 20, 140, false, mouth);
+        // Blinking dot top-left
+        if ((int)(t * 2) % 2 == 0)
+        {
+            using var dot = new SKPaint { IsAntialias = true, Color = Accent };
+            canvas.DrawCircle(l + arm * 0.45f, top + arm * 0.45f, height * 0.012f, dot);
+        }
+    }
+
+    /// <summary>Lumio's aperture mark: six blades in the brand gradient with a soft glow, slowly turning.</summary>
+    private static void DrawApertureLogo(SKCanvas canvas, float cx, float cy, float r, float t)
+    {
+        using (var glow = new SKPaint
+        {
+            IsAntialias = true,
+            Color = Accent.WithAlpha(110),
+            MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, r * 0.35f),
+        })
+        {
+            canvas.DrawCircle(cx, cy, r * 1.05f, glow);
+        }
+
+        using var ringPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = r * 0.1f };
+        ringPaint.Shader = SKShader.CreateSweepGradient(new SKPoint(cx, cy), [AccentWarm, Accent, new SKColor(150, 110, 255), AccentWarm], null);
+        canvas.DrawCircle(cx, cy, r, ringPaint);
+
+        using var dark = new SKPaint { IsAntialias = true, Color = new SKColor(18, 10, 28, 235) };
+        canvas.DrawCircle(cx, cy, r * 0.94f, dark);
+
+        // Six blades
+        using var blade = new SKPaint { IsAntialias = true, IsDither = true };
+        blade.Shader = SKShader.CreateLinearGradient(
+            new SKPoint(cx - r, cy - r), new SKPoint(cx + r, cy + r), [AccentWarm, Accent], null, SKShaderTileMode.Clamp);
+        var rotation = t * 12f;
+        var inner = r * 0.28f;
+        var outer = r * 0.78f;
+        for (var i = 0; i < 6; i++)
+        {
+            var a0 = (rotation + i * 60f) * MathF.PI / 180f;
+            var a1 = a0 + 60f * MathF.PI / 180f;
+            using var builder = new SKPathBuilder();
+            builder.MoveTo(cx + inner * MathF.Cos(a0), cy + inner * MathF.Sin(a0));
+            builder.LineTo(cx + outer * MathF.Cos(a0 + 0.35f), cy + outer * MathF.Sin(a0 + 0.35f));
+            builder.LineTo(cx + outer * MathF.Cos(a1 + 0.05f), cy + outer * MathF.Sin(a1 + 0.05f));
+            builder.LineTo(cx + inner * MathF.Cos(a1), cy + inner * MathF.Sin(a1));
+            builder.Close();
+            using var path = builder.Detach();
+            canvas.DrawPath(path, blade);
+        }
+
+        // Highlight in the middle
+        using var core = new SKPaint { IsAntialias = true, Color = new SKColor(255, 255, 255, 40) };
+        canvas.DrawCircle(cx, cy, inner * 0.9f, core);
     }
 }
