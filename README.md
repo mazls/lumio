@@ -27,6 +27,14 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.3.5: Looks & Beauty Filter 🎨
+
+- 🎨 **Looks for guests**: Original, Sunny, Vivid, Glam B&W, Vintage or Cinema – one tap after the shot, the chosen look is saved and printed.
+- ✨ **Beauty filter** (optional): gentle skin smoothing in three levels.
+- 📷 **Nikon Z 50 II via PTP**: real full-resolution photos instead of video frames.
+- 📱 **Selfie camera follows the screen orientation**, portrait photos get a portrait 10×15 card.
+- 📂 **Photos on Android in "Pictures/Lumio"** – visible in Google Photos, deletable in the gallery with a PIN.
+
 ## New in Version 1.3.4: Webcams on Android & Gallery with Videos 🎥
 
 - 📷 **Regular USB webcams on phones/tablets** (e.g. Anker PowerConf C200) – great for a low-cost tablet setup.

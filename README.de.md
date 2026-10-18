@@ -27,6 +27,14 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
+## Neu in Version 1.3.5: Looks & Schönheitsfilter 🎨
+
+- 🎨 **Looks für Gäste**: Original, Sonnig, Strahlend, Glam S/W, Vintage oder Kino – per Fingertipp nach der Aufnahme, gespeichert und gedruckt wird der gewählte Look.
+- ✨ **Schönheitsfilter** (optional): sanfte Hautglättung in drei Stufen.
+- 📷 **Nikon Z 50 II per PTP**: echte Fotos in voller Auflösung statt Video-Einzelbildern.
+- 📱 **Selfie-Kamera dreht mit**, hochkante Fotos bekommen eine hochkante 10×15-Karte.
+- 📂 **Fotos auf Android unter „Bilder/Lumio“** – sichtbar in Google Fotos, löschbar in der Galerie per PIN.
+
 ## Neu in Version 1.3.4: Webcams auf Android & Galerie mit Videos 🎥
 
 - 📷 **Normale USB-Webcams am Handy/Tablet** (z. B. Anker PowerConf C200) – ideal für ein günstiges Tablet-Setup.

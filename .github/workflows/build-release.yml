@@ -108,16 +108,16 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Webcams auf Android & Galerie mit Videos 🎥
+            ## Lumio Release ${{ github.ref_name }} – Looks & Schönheitsfilter 🎨
 
-            Lumio läuft jetzt auch mit ganz normalen USB-Webcams am Handy oder Tablet – damit wird ein günstiges Tablet-Setup möglich. Dazu kommen Videos in der Galerie, ein Ordner pro Event und ein Update-Hinweis.
+            Gäste können ihrem Foto jetzt per Fingertipp einen Look geben, ein optionaler Schönheitsfilter glättet die Haut. Dazu echte Fotos von der Nikon Z 50 II per PTP und Fotos, die man auf dem Handy auch wiederfindet.
 
             ### Highlights
-            - **USB-Webcams auf Android** (getestet mit der Anker PowerConf C200), mit automatischem Ausweichen auf andere USB-Einstellungen bzw. kleinere Auflösungen.
-            - **Galerie**: Videobotschaften, GIFs und Boomerangs werden abgespielt.
-            - **Ein Ordner pro Event**: Datum des ersten Fotos, auch über Mitternacht hinaus – neuer Ordner mit „Neues Event“ im Admin-Menü.
-            - **Update-Hinweis** auf dem Startbildschirm (wegklickbar) und im Admin-Menü.
-            - **Funkelnde Lichterkette** im Akku-Sparmodus, randlose Darstellung auf Android.
+            - **Looks**: Original, Sonnig, Strahlend, Glam S/W, Vintage, Kino – gespeichert und gedruckt wird der gewählte Look, die Originale bleiben unverändert.
+            - **Schönheitsfilter** (optional, Admin-Menü → Aufnahme): Leicht, Mittel oder Stark.
+            - **Nikon Z 50 II per PTP**: Fotos in voller Auflösung statt Video-Einzelbildern.
+            - **Selfie-Kamera dreht mit** der Bildschirmausrichtung, hochkante Fotos bekommen eine hochkante 10×15-Karte.
+            - **Android**: Fotos liegen unter „Bilder/Lumio“ (sichtbar in Google Fotos), Löschen in der Galerie per PIN – optional mit eigener Lösch-PIN.
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)

@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.5] – 2026-10-18 – *Looks, Schönheitsfilter & Fotos auf dem Handy finden* 🎨
+
+### 🎨 Bilder
+- **Looks für Gäste**: Nach der Aufnahme tippen Gäste einen Look an – Original, Sonnig, Strahlend, Glam S/W, Vintage oder Kino. Gespeichert und gedruckt wird der gewählte Look, die Originalfotos bleiben unverändert. Abschaltbar im Admin-Menü → Aufnahme.
+- **Schönheitsfilter (optional)**: Hautglättung in drei Stufen (Leicht, Mittel, Stark). Glättet nur Hauttöne, Augen, Lippen und Kanten bleiben scharf.
+- **Hochkant-Karte**: Hochkant aufgenommene Einzelfotos kommen auf eine hochkante 10×15-Karte, statt beschnitten zu werden.
+
+### 📷 Kameras
+- **Nikon Z 50 II per PTP**: Im Kameramenü „MTP/PTP“ wählen – dann macht Lumio echte Fotos in voller Auflösung statt Einzelbildern aus dem Videostream. Im Modus „UVC/UAC“ läuft sie weiter als Webcam.
+- **Selfie- und Hauptkamera drehen mit**: Live-Bild und Foto der eingebauten Kameras stehen jetzt passend zur Bildschirmausrichtung aufrecht.
+
+### 📂 Fotos & Galerie
+- **Fotos auf Android sichtbar**: Lumio speichert unter „Bilder/Lumio“ – die Fotos erscheinen in Google Fotos und im Dateimanager. Bisherige Fotos aus dem privaten App-Speicher werden beim ersten Start automatisch umgezogen.
+- **Löschen in der Galerie**: Per PIN geschützt – standardmäßig die Admin-PIN, optional mit eigener Lösch-PIN (z. B. für die Gastgeber), ohne Zugang zum Admin-Menü.
+
+---
+
 ## [1.3.4] – 2026-10-18 – *Webcams auf Android, Update-Hinweis & Galerie mit Videos* 🎥
 
 ### 📷 Kameras
