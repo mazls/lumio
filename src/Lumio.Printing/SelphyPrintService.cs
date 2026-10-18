@@ -5,6 +5,9 @@ using System.IO;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Printing;
+using System.Printing;
+using System.Printing.Interop;
+using System.Runtime.InteropServices;
 #endif
 
 namespace Lumio.Printing;
@@ -20,14 +23,36 @@ public sealed class SelphyPrintService
     private static readonly TimeSpan PrinterCacheTtl = TimeSpan.FromSeconds(60);
     private static readonly object _printerCacheLock = new();
 
-    public static Func<byte[], string?, int, CancellationToken, Task>? CustomPrintHandler { get; set; }
+    // Selphy postcard / KP-108IN paper: 100 x 148 mm, in 1/100 inch as used by System.Drawing.Printing
+    private const int PostcardShortSide = 394;
+    private const int PostcardLongSide = 583;
+    private const int PaperSizeTolerance = 15; // ~4 mm
+
+    /// <summary>Platform print hook (e.g. Android): JPEG, printer name, copies, borderless.</summary>
+    public static Func<byte[], string?, int, bool, CancellationToken, Task>? CustomPrintHandler { get; set; }
     public static Func<IReadOnlyList<PrinterDeviceInfo>>? CustomPrinterDiscovery { get; set; }
 
+    /// <summary>
+    /// Spooler / CUPS printers plus IPP printers found in the network (listed with a " (WLAN)" suffix and printed
+    /// directly via IPP, without a printer driver).
+    /// </summary>
     public static IReadOnlyList<PrinterDeviceInfo> GetInstalledPrinters(bool forceRefresh = false)
     {
         if (CustomPrinterDiscovery?.Invoke() is { } customList)
             return customList;
 
+        var network = NetworkPrinterDiscovery.GetPrinters().Keys
+            .Select(name => new PrinterDeviceInfo(name, IsSelphyName(name), false));
+        return GetSystemPrinters(forceRefresh)
+            .Concat(network)
+            .OrderByDescending(p => p.IsSelphy)
+            .ThenByDescending(p => p.IsDefault)
+            .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<PrinterDeviceInfo> GetSystemPrinters(bool forceRefresh)
+    {
         if (!forceRefresh)
         {
             lock (_printerCacheLock)
@@ -161,13 +186,20 @@ public sealed class SelphyPrintService
         return null;
     }
 
+    public static bool IsSelphyName(string printerName) =>
+        SelphyKeywords.Any(k => printerName.Contains(k, StringComparison.OrdinalIgnoreCase));
+
     public static string? AutoDetectSelphyPrinter()
     {
         var printers = GetInstalledPrinters();
         return printers.FirstOrDefault(p => p.IsSelphy)?.Name ?? printers.FirstOrDefault(p => p.IsDefault)?.Name;
     }
 
-    public async Task PrintPhotoAsync(byte[] jpegData, string? printerName = null, int copies = 1, CancellationToken cancellationToken = default)
+    /// <param name="borderless">
+    /// Fill the whole 100x148 mm card edge to edge (the picture is cropped minimally to the card's aspect ratio);
+    /// otherwise the complete picture is fitted into the printable area.
+    /// </param>
+    public async Task PrintPhotoAsync(byte[] jpegData, string? printerName = null, int copies = 1, CancellationToken cancellationToken = default, bool borderless = true)
     {
         ArgumentNullException.ThrowIfNull(jpegData);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(copies);
@@ -180,24 +212,43 @@ public sealed class SelphyPrintService
 
         if (CustomPrintHandler is not null)
         {
-            await CustomPrintHandler(jpegData, targetPrinter, copies, cancellationToken).ConfigureAwait(false);
+            await CustomPrintHandler(jpegData, targetPrinter, copies, borderless, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (targetPrinter.EndsWith(NetworkPrinterDiscovery.NameSuffix, StringComparison.Ordinal)
+            && !NetworkPrinterDiscovery.TryGetUri(targetPrinter, out _))
+        {
+            // Saved WLAN printer not seen since the app started: look for it once more
+            await NetworkPrinterDiscovery.ScanAsync(cancellationToken).ConfigureAwait(false);
+            if (!NetworkPrinterDiscovery.TryGetUri(targetPrinter, out _))
+                throw new InvalidOperationException($"'{targetPrinter}' wurde im WLAN nicht gefunden. Ist der Drucker eingeschaltet und im selben Netzwerk?");
+        }
+
+        if (NetworkPrinterDiscovery.TryGetUri(targetPrinter, out var ippUri))
+        {
+            await IppPrintClient.PrintJpegAsync(ippUri, jpegData, copies, borderless, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         if (OperatingSystem.IsWindows())
         {
 #if WINDOWS || NET10_0_WINDOWS10_0_19041_0
-            await PrintWindowsAsync(jpegData, targetPrinter, copies, cancellationToken).ConfigureAwait(false);
+            await PrintWindowsAsync(jpegData, targetPrinter, copies, borderless, cancellationToken).ConfigureAwait(false);
             return;
 #endif
         }
 
-        await PrintLinuxAsync(jpegData, targetPrinter, copies, cancellationToken).ConfigureAwait(false);
+        await PrintLinuxAsync(jpegData, targetPrinter, copies, borderless, cancellationToken).ConfigureAwait(false);
     }
 
 #if WINDOWS || NET10_0_WINDOWS10_0_19041_0
-    private static async Task PrintWindowsAsync(byte[] jpegData, string targetPrinter, int copies, CancellationToken cancellationToken)
+    private static async Task PrintWindowsAsync(byte[] jpegData, string targetPrinter, int copies, bool borderless, CancellationToken cancellationToken)
     {
+        // Preferred: XPS print path with a print ticket - the only way real borderless reaches modern drivers
+        if (await XpsPhotoPrinter.TryPrintAsync(jpegData, targetPrinter, copies, borderless, cancellationToken).ConfigureAwait(false))
+            return;
+
         await Task.Run(() =>
         {
             using var imageStream = new MemoryStream(jpegData);
@@ -205,14 +256,17 @@ public sealed class SelphyPrintService
 
             using var doc = new PrintDocument();
             doc.PrinterSettings.PrinterName = targetPrinter;
+            if (borderless)
+            {
+                ApplyBorderlessPrintTicket(doc, targetPrinter);
+            }
             doc.PrinterSettings.Copies = (short)Math.Clamp(copies, 1, 10);
-
-            // Configure Postcard / 4x6" / 10x15cm paper size if available
-            ConfigurePaperSize(doc);
-
-            // Match orientation to image aspect
-            doc.DefaultPageSettings.Landscape = image.Width > image.Height;
             doc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+            ConfigurePaperSize(doc, borderless);
+
+            // Keep the paper in the driver's natural orientation: many drivers (Selphy included) ignore a switch to
+            // landscape, which used to print only the top-left part of the picture. We rotate the picture instead.
+            doc.DefaultPageSettings.Landscape = false;
 
             doc.PrintPage += (s, ev) =>
             {
@@ -223,33 +277,44 @@ public sealed class SelphyPrintService
                 ev.Graphics.SmoothingMode = SmoothingMode.HighQuality;
                 ev.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-                var pageBounds = ev.PageBounds;
-                
-                // Calculate fill or fit inside page
-                var imgAspect = (float)image.Width / image.Height;
-                var pageAspect = (float)pageBounds.Width / pageBounds.Height;
-
-                Rectangle destRect;
-                if (Math.Abs(imgAspect - pageAspect) < 0.05f)
+                // All values in 1/100 inch. The graphics origin sits at the printer's hard margin.
+                var page = ev.PageBounds;
+                var printable = ev.PageSettings.PrintableArea;
+                var hardMarginX = ev.PageSettings.HardMarginX;
+                var hardMarginY = ev.PageSettings.HardMarginY;
+                if (ev.PageSettings.Landscape)
                 {
-                    destRect = pageBounds;
+                    printable = new RectangleF(printable.Y, printable.X, printable.Height, printable.Width);
                 }
-                else if (imgAspect > pageAspect)
+
+                var pageIsPortrait = page.Height > page.Width;
+                var imageIsPortrait = image.Height > image.Width;
+                using var oriented = (Image)image.Clone();
+                if (pageIsPortrait != imageIsPortrait)
                 {
-                    // Image wider: match width
-                    var destHeight = (int)(pageBounds.Width / imgAspect);
-                    var top = pageBounds.Top + (pageBounds.Height - destHeight) / 2;
-                    destRect = new Rectangle(pageBounds.Left, top, pageBounds.Width, destHeight);
+                    oriented.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                }
+
+                RectangleF target;
+                RectangleF source;
+                if (borderless)
+                {
+                    // Whole sheet (bleeds into the non-printable margin), cropped to the sheet's aspect ratio
+                    target = new RectangleF(-hardMarginX, -hardMarginY, page.Width, page.Height);
+                    source = CropToAspect(oriented.Width, oriented.Height, target.Width / target.Height);
                 }
                 else
                 {
-                    // Image taller: match height
-                    var destWidth = (int)(pageBounds.Height * imgAspect);
-                    var left = pageBounds.Left + (pageBounds.Width - destWidth) / 2;
-                    destRect = new Rectangle(left, pageBounds.Top, destWidth, pageBounds.Height);
+                    // Complete picture fitted into the printable area, centered
+                    var area = new RectangleF(printable.X - hardMarginX, printable.Y - hardMarginY, printable.Width, printable.Height);
+                    var scale = Math.Min(area.Width / oriented.Width, area.Height / oriented.Height);
+                    var width = oriented.Width * scale;
+                    var height = oriented.Height * scale;
+                    target = new RectangleF(area.X + (area.Width - width) / 2, area.Y + (area.Height - height) / 2, width, height);
+                    source = new RectangleF(0, 0, oriented.Width, oriented.Height);
                 }
 
-                ev.Graphics.DrawImage(image, destRect);
+                ev.Graphics.DrawImage(oriented, target, source, GraphicsUnit.Pixel);
                 ev.HasMorePages = false;
             };
 
@@ -257,19 +322,93 @@ public sealed class SelphyPrintService
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    private static void ConfigurePaperSize(PrintDocument doc)
+    /// <summary>
+    /// Drivers like Windows' IPP class driver (used for the Selphy) offer borderless printing only as a print ticket
+    /// option, not as a paper size. Converts such a ticket into the driver's DEVMODE so System.Drawing printing uses it.
+    /// </summary>
+    private static void ApplyBorderlessPrintTicket(PrintDocument doc, string printerName)
     {
         try
         {
-            foreach (PaperSize size in doc.PrinterSettings.PaperSizes)
+            using var server = new LocalPrintServer();
+            using var queue = server.GetPrintQueue(printerName);
+            if (!queue.GetPrintCapabilities().PageBorderlessCapability.Contains(PageBorderless.Borderless))
+                return;
+
+            var ticket = queue.UserPrintTicket?.Clone() ?? new PrintTicket();
+            ticket.PageBorderless = PageBorderless.Borderless;
+
+            using var converter = new PrintTicketConverter(printerName, queue.ClientPrintSchemaVersion);
+            var devMode = converter.ConvertPrintTicketToDevMode(ticket, BaseDevModeType.UserDefault);
+
+            var handle = Marshal.AllocHGlobal(devMode.Length);
+            try
+            {
+                Marshal.Copy(devMode, 0, handle, devMode.Length);
+                doc.PrinterSettings.SetHdevmode(handle);
+                doc.DefaultPageSettings.SetHdevmode(handle);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(handle);
+            }
+        }
+        catch
+        {
+            // Driver without print ticket support: the paper size choice and bleed drawing still apply
+        }
+    }
+
+    /// <summary>Largest centered source rectangle with the given aspect ratio (width / height).</summary>
+    private static RectangleF CropToAspect(int width, int height, float aspect)
+    {
+        if ((float)width / height > aspect)
+        {
+            var cropWidth = height * aspect;
+            return new RectangleF((width - cropWidth) / 2, 0, cropWidth, height);
+        }
+
+        var cropHeight = width / aspect;
+        return new RectangleF(0, (height - cropHeight) / 2, width, cropHeight);
+    }
+
+    /// <summary>
+    /// Picks the 100x148 mm postcard paper by its dimensions (driver paper names differ by language and model);
+    /// prefers the borderless variant if requested and offered by the driver.
+    /// </summary>
+    private static void ConfigurePaperSize(PrintDocument doc, bool borderless)
+    {
+        try
+        {
+            var sizes = doc.PrinterSettings.PaperSizes.Cast<PaperSize>().ToList();
+
+            static bool IsPostcard(PaperSize size)
+            {
+                var shortSide = Math.Min(size.Width, size.Height);
+                var longSide = Math.Max(size.Width, size.Height);
+                return Math.Abs(shortSide - PostcardShortSide) <= PaperSizeTolerance && Math.Abs(longSide - PostcardLongSide) <= PaperSizeTolerance;
+            }
+
+            static bool IsBorderlessName(PaperSize size)
             {
                 var name = size.PaperName.ToLowerInvariant();
-                if (name.Contains("postcard") || name.Contains("postkarte") || name.Contains("4x6") || name.Contains("4 x 6") || name.Contains("100 x 148") || name.Contains("10x15"))
-                {
-                    doc.DefaultPageSettings.PaperSize = size;
-                    break;
-                }
+                return name.Contains("borderless") || name.Contains("randlos") || name.Contains("ohne rand") || name.Contains("full bleed");
             }
+
+            static bool IsPostcardName(PaperSize size)
+            {
+                var name = size.PaperName.ToLowerInvariant();
+                return name.Contains("postcard") || name.Contains("postkarte") || name.Contains("4x6") || name.Contains("4 x 6") || name.Contains("100 x 148") || name.Contains("100x148") || name.Contains("10x15");
+            }
+
+            var candidates = sizes.Where(IsPostcard).ToList();
+            if (candidates.Count == 0)
+                candidates = sizes.Where(IsPostcardName).ToList();
+            if (candidates.Count == 0)
+                return; // keep the driver's default paper
+
+            doc.DefaultPageSettings.PaperSize =
+                candidates.FirstOrDefault(size => IsBorderlessName(size) == borderless) ?? candidates[0];
         }
         catch
         {
@@ -278,7 +417,7 @@ public sealed class SelphyPrintService
     }
 #endif
 
-    private static async Task PrintLinuxAsync(byte[] jpegData, string targetPrinter, int copies, CancellationToken cancellationToken)
+    private static async Task PrintLinuxAsync(byte[] jpegData, string targetPrinter, int copies, bool borderless, CancellationToken cancellationToken)
     {
         var tempFile = Path.Combine(Path.GetTempPath(), $"lumio_print_{Guid.NewGuid():N}.jpg");
         try
@@ -287,7 +426,8 @@ public sealed class SelphyPrintService
             using var proc = Process.Start(new ProcessStartInfo
             {
                 FileName = "lp",
-                Arguments = $"-d \"{targetPrinter}\" -n {Math.Clamp(copies, 1, 10)} -o media=Custom.100x148mm -o fit-to-page \"{tempFile}\"",
+                // Borderless: fill the card and crop the overhang; otherwise fit the whole picture onto the card
+                Arguments = $"-d \"{targetPrinter}\" -n {Math.Clamp(copies, 1, 10)} -o media=Custom.100x148mm -o print-scaling={(borderless ? "fill" : "fit")} \"{tempFile}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,

@@ -294,7 +294,10 @@
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="DRUCKER (CANON SELPHY / CUPS)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
                                     <ComboBox x:Name="PrinterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
+                                    <TextBlock Text="💡 Einträge mit „(WLAN)“ drucken direkt übers Netzwerk (IPP) – ganz ohne Druckertreiber."
+                                               TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
                                     <CheckBox x:Name="AutoPrintCheckBox" Content="Automatischer Sofortdruck nach der Aufnahme" Margin="0,4,0,0" />
+                                    <CheckBox x:Name="BorderlessPrintCheckBox" Content="Randlos drucken (ganze 10x15-Karte, minimal beschnitten)" />
                                 </StackPanel>
                             </Border>
 

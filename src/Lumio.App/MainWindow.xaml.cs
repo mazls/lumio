@@ -906,7 +906,7 @@ public partial class MainWindow : Window
         try
         {
             var printer = _settingsService.Current.SelectedPrinter;
-            await _printService.PrintPhotoAsync(_lastResultJpeg, printer, copies: 1);
+            await _printService.PrintPhotoAsync(_lastResultJpeg, printer, copies: 1, borderless: _settingsService.Current.BorderlessPrint);
 
             PrintStatusFeedbackText.Text = "✅ Foto erfolgreich an den Drucker gesendet!";
             PrintButtonLabelText.Text = "Gedruckt ✓";
@@ -1170,7 +1170,7 @@ public partial class MainWindow : Window
         {
             var bytes = await File.ReadAllBytesAsync(path);
             var printer = _settingsService.Current.SelectedPrinter;
-            await _printService.PrintPhotoAsync(bytes, printer, copies: 1);
+            await _printService.PrintPhotoAsync(bytes, printer, copies: 1, borderless: _settingsService.Current.BorderlessPrint);
 
             GalleryPrintStatusText.Text = "✅ Foto erfolgreich an den Selphy gesendet!";
             GalleryPrintButtonLabel.Text = "Gedruckt ✓";

@@ -79,6 +79,9 @@ public sealed class BoothSettings
     public string AdminPin { get; set; } = "1234";
     public string SelectedTemplateId { get; set; } = "single-10x15";
     public bool AutoPrint { get; set; } = false;
+
+    /// <summary>Print edge to edge on the 100x148 mm card (minimal crop) instead of fitting the picture with a white border.</summary>
+    public bool BorderlessPrint { get; set; } = true;
     public string? SelectedPrinter { get; set; }
     public int MaxPrintCopiesPerSession { get; set; } = 2;
 

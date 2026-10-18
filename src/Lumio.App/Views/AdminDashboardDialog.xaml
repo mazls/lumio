@@ -420,7 +420,16 @@
                                                   VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <TextBlock Text="💡 Schließe den Canon Selphy per USB an oder richte ihn im Windows-Netzwerk ein." Style="{StaticResource Caption}" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <CheckBox x:Name="BorderlessPrintCheckBox"
+                                              Content="Randlos drucken (ganze 10x15-Karte, minimal beschnitten)"
+                                              FontSize="15"
+                                              Foreground="White"
+                                              Margin="0,0,0,10" />
+
+                                    <TextBlock Text="💡 Schließe den Canon Selphy per USB an oder verbinde ihn mit dem WLAN. Einträge mit „(WLAN)“ druckt Lumio direkt übers Netzwerk (IPP) – ganz ohne Druckertreiber."
+                                               TextWrapping="Wrap"
+                                               Style="{StaticResource Caption}"
+                                               Foreground="{StaticResource TextSecondaryBrush}" />
                                 </StackPanel>
                             </Border>
 

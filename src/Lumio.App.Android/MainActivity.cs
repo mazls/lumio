@@ -104,6 +104,11 @@ public class MainActivity : AvaloniaMainActivity<Lumio.App.Avalonia.App>
             return new AndroidCameraService(this, settings);
         };
 
+        // Printing: Android has no printer drivers - find the Selphy (AirPrint/IPP) in the WLAN and print to it directly
+        AndroidNetworkPrinters.Start(this);
+        Lumio.Printing.SelphyPrintService.CustomPrinterDiscovery = AndroidNetworkPrinters.GetPrinters;
+        Lumio.Printing.SelphyPrintService.CustomPrintHandler = AndroidNetworkPrinters.PrintAsync;
+
         // Video messages: record sound from the camera's USB audio (UAC) or the phone microphone and encode MP4
         VideoRecorder.CustomAudioCapture = wavPath => AndroidAudioCapture.Start(this, wavPath);
         VideoRecorder.CustomMp4Encoder = AndroidMp4Encoder.EncodeAsync;

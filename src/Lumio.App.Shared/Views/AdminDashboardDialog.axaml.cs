@@ -128,6 +128,7 @@ public partial class AdminDashboardDialog : UserControl
         EnableVideoMessagesCheckBox.IsChecked = current.EnableVideoMessages;
         VideoDurationUpDown.Value = current.VideoMessageDurationSeconds;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
+        BorderlessPrintCheckBox.IsChecked = current.BorderlessPrint;
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         LiveViewPowerSavingCheckBox.IsChecked = current.LiveViewOnlyDuringCapture;
         AdminPinTextBox.Text = current.AdminPin;
@@ -375,6 +376,7 @@ public partial class AdminDashboardDialog : UserControl
         copy.EnableVideoMessages = EnableVideoMessagesCheckBox.IsChecked ?? true;
         copy.VideoMessageDurationSeconds = (int)(VideoDurationUpDown.Value ?? 20);
         copy.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
+        copy.BorderlessPrint = BorderlessPrintCheckBox.IsChecked ?? true;
         copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         copy.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
         copy.OnScreenKeyboardEnabled = OnScreenKeyboardCheckBox.IsChecked ?? false;

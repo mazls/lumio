@@ -162,6 +162,7 @@ public partial class AdminDashboardDialog : Window
         LiveViewPowerSavingCheckBox.IsChecked = current.LiveViewOnlyDuringCapture;
         AdminPinTextBox.Text = current.AdminPin;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
+        BorderlessPrintCheckBox.IsChecked = current.BorderlessPrint;
         OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
     }
 
@@ -567,7 +568,7 @@ public partial class AdminDashboardDialog : Window
             var renderer = new CollageRenderer();
             var testJpeg = renderer.Render(template, samplePhotos, metadata, jpegQuality: 98, renderScale: 2.0f);
 
-            await _printService.PrintPhotoAsync(testJpeg, printerOption.Name, copies: 1);
+            await _printService.PrintPhotoAsync(testJpeg, printerOption.Name, copies: 1, borderless: BorderlessPrintCheckBox.IsChecked ?? true);
 
             MessageBox.Show(this,
                 $"Testdruck erfolgreich an '{printerOption.Name}' gesendet!\n\nPrüfe deinen Drucker.",
@@ -620,6 +621,7 @@ public partial class AdminDashboardDialog : Window
         updated.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         updated.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
         updated.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
+        updated.BorderlessPrint = BorderlessPrintCheckBox.IsChecked ?? true;
 
         var pin = AdminPinTextBox.Text.Trim();
         if (pin.Length >= 4 && pin.All(char.IsAsciiDigit))

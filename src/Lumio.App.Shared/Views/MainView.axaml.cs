@@ -941,7 +941,7 @@ public partial class MainView : UserControl
 
         try
         {
-            await _printService.PrintPhotoAsync(_currentReviewJpeg, _settingsService.Current.SelectedPrinter);
+            await _printService.PrintPhotoAsync(_currentReviewJpeg, _settingsService.Current.SelectedPrinter, borderless: _settingsService.Current.BorderlessPrint);
             PrintStatusFeedbackText.Text = "Druckauftrag an Selphy gesendet!";
             PrintStatusFeedbackText.IsVisible = true;
         }
@@ -1079,7 +1079,7 @@ public partial class MainView : UserControl
         try
         {
             var bytes = await File.ReadAllBytesAsync(file);
-            await _printService.PrintPhotoAsync(bytes, _settingsService.Current.SelectedPrinter);
+            await _printService.PrintPhotoAsync(bytes, _settingsService.Current.SelectedPrinter, borderless: _settingsService.Current.BorderlessPrint);
             GalleryPrintStatusText.Text = "Druckauftrag gesendet!";
             GalleryPrintStatusText.IsVisible = true;
         }
