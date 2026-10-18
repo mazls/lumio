@@ -143,6 +143,13 @@
                                         <TextBlock Text="Admin-PIN ändern (4–8 Ziffern)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
                                         <TextBox x:Name="AdminPinTextBox" CornerRadius="10" FontSize="15" MaxLength="8" PasswordChar="•" Padding="10,8" GotFocus="OnInputGotFocus" />
                                     </StackPanel>
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Lösch-PIN für die Galerie (optional, 4–8 Ziffern)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox x:Name="DeletePinTextBox" CornerRadius="10" FontSize="15" MaxLength="8" PasswordChar="•" Padding="10,8" Watermark="leer = Admin-PIN" GotFocus="OnInputGotFocus" />
+                                        <TextBlock Text="Damit können z. B. die Gastgeber Fotos in der Galerie löschen, ohne ins Admin-Menü zu kommen."
+                                                   TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 
@@ -172,6 +179,17 @@
                                         <CheckBox x:Name="LiveViewPowerSavingCheckBox" Content="🔋 Akku-Sparmodus: Live-Bild erst ab dem Countdown" />
                                         <TextBlock Text="Auf dem Startbildschirm ruht die Kamera (bei DSLRs bleibt der Spiegel unten) – schont den Kamera-Akku spürbar."
                                                    TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="28,0,0,0" />
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="2">
+                                        <CheckBox x:Name="GuestLooksCheckBox" Content="Gäste können einen Look wählen (Sonnig, Glam S/W, Vintage …)" />
+                                        <TextBlock Text="Nach der Aufnahme per Fingertipp – gespeichert und gedruckt wird der gewählte Look, die Originalfotos bleiben unverändert."
+                                                   TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="28,0,0,0" />
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Schönheitsfilter (Hautglättung)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="BeautyFilterComboBox" HorizontalAlignment="Stretch" CornerRadius="10" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

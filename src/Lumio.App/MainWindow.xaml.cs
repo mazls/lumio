@@ -1,5 +1,6 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -783,8 +784,9 @@ public partial class MainWindow : Window
         };
 
         var renderer = new CollageRenderer();
+        var template = BuiltInTemplates.MatchPhotoOrientation(_activeTemplate, capturedPhotos[0]);
         _lastResultJpeg = await Task.Run(() => renderer.Render(
-            _activeTemplate,
+            template,
             capturedPhotos,
             metadata,
             jpegQuality: 98,
@@ -792,10 +794,20 @@ public partial class MainWindow : Window
             logoPosition: settings.LogoPosition,
             embedEventText: settings.EmbedEventTextOnPhotos,
             renderScale: 2.0f));
+
+        if (settings.BeautyFilterStrength > 0)
+        {
+            var strength = settings.BeautyFilterStrength;
+            var collage = _lastResultJpeg;
+            _lastResultJpeg = await Task.Run(() => BeautyFilter.Apply(collage, strength));
+        }
+
         finalPath = await _storage.SaveCollageAsync(_lastResultJpeg, DateTimeOffset.Now);
 
         _lastResultFilePath = finalPath;
         ShowReview(finalPath!, _lastResultJpeg, isGif: false, isBoomerang: false);
+        if (settings.GuestLooksEnabled)
+            ShowLookBar(_lastResultJpeg, finalPath!);
 
         // Auto-Print check
         if (_settingsService.Current.AutoPrint)
@@ -818,6 +830,7 @@ public partial class MainWindow : Window
 
     private void ShowReview(string filePath, byte[]? jpegBytes, bool isGif, bool isBoomerang, bool isVideo = false)
     {
+        HideLookBar();
         CountdownOverlayGrid.Visibility = Visibility.Collapsed;
         VideoRecordingOverlayGrid.Visibility = Visibility.Collapsed;
 
@@ -884,6 +897,139 @@ public partial class MainWindow : Window
             }
         };
         _reviewTimer.Start();
+    }
+
+    // ==================== LOOKS (GUEST FILTERS) ====================
+
+    private byte[]? _lookBaseJpeg;
+    private string? _lookTargetPath;
+    private int _lookVersion;
+    private const int MinLookReviewSeconds = 20;
+    private static readonly Thickness ReviewImageMargin = new(40, 60, 40, 140);
+    private const double LookBarHeight = 130;
+
+    private void ShowLookBar(byte[] baseJpeg, string savedPath)
+    {
+        _lookVersion++;
+        _lookBaseJpeg = baseJpeg;
+        _lookTargetPath = savedPath;
+        LookButtonsPanel.Children.Clear();
+        LookBar.Visibility = Visibility.Visible;
+        ReviewImageControl.Margin = new Thickness(ReviewImageMargin.Left, ReviewImageMargin.Top, ReviewImageMargin.Right, ReviewImageMargin.Bottom + LookBarHeight);
+
+        var previews = new List<(PhotoLook Look, Image Image)>();
+        foreach (var (look, name) in PhotoLooks.All)
+        {
+            var image = new Image { Width = 96, Height = 66, Stretch = Stretch.UniformToFill };
+            var panel = new StackPanel();
+            panel.Children.Add(new Border { CornerRadius = new CornerRadius(10), ClipToBounds = true, Child = image });
+            panel.Children.Add(new TextBlock
+            {
+                Text = name,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 5, 0, 0),
+            });
+
+            var button = new Button
+            {
+                Content = panel,
+                Tag = look,
+                Padding = new Thickness(5),
+                Margin = new Thickness(5, 0, 5, 0),
+                Background = (Brush)FindResource("GlassBrush"),
+                BorderThickness = new Thickness(2),
+                Cursor = Cursors.Hand,
+            };
+            button.Click += (_, _) => _ = SelectLookAsync(look);
+            previews.Add((look, image));
+            LookButtonsPanel.Children.Add(button);
+        }
+        HighlightLook(PhotoLook.Original);
+
+        // Picking a look takes a moment: at least 20 s while the looks are offered
+        _reviewSecondsLeft = Math.Max(_reviewSecondsLeft, MinLookReviewSeconds);
+        UpdateReviewTimerText();
+
+        // Previews from a small copy: decoding the full collage six times would be slow
+        var version = _lookVersion;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var small = PhotoLooks.Preview(baseJpeg, PhotoLook.Original, 220);
+                foreach (var (look, image) in previews)
+                {
+                    var bytes = PhotoLooks.Preview(small, look, 192);
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        if (version == _lookVersion)
+                            image.Source = LoadBitmap(bytes);
+                    });
+                }
+            }
+            catch { }
+        });
+    }
+
+    private void HideLookBar()
+    {
+        _lookVersion++;
+        _lookBaseJpeg = null;
+        LookBar.Visibility = Visibility.Collapsed;
+        ReviewImageControl.Margin = ReviewImageMargin;
+    }
+
+    private void HighlightLook(PhotoLook selected)
+    {
+        foreach (var button in LookButtonsPanel.Children.OfType<Button>())
+        {
+            button.BorderBrush = button.Tag is PhotoLook look && look == selected
+                ? (Brush)FindResource("AccentBrush")
+                : Brushes.Transparent;
+        }
+    }
+
+    /// <summary>Applies the guest's look: shown, printed and saved (overwrites the collage; originals stay untouched).</summary>
+    private async Task SelectLookAsync(PhotoLook look)
+    {
+        if (_lookBaseJpeg is not { } baseJpeg || _lookTargetPath is not { } path)
+            return;
+
+        var version = ++_lookVersion;
+        HighlightLook(look);
+
+        // Give guests time to look at it
+        _reviewSecondsLeft = Math.Max(_settingsService.Current.ReviewSeconds, MinLookReviewSeconds);
+        UpdateReviewTimerText();
+
+        byte[] result;
+        try
+        {
+            result = await Task.Run(() => PhotoLooks.Apply(baseJpeg, look));
+        }
+        catch
+        {
+            return;
+        }
+        if (version != _lookVersion)
+            return; // another look was tapped meanwhile
+
+        _lastResultJpeg = result;
+        ReviewImageControl.Source = LoadBitmap(result);
+
+        try
+        {
+            await File.WriteAllBytesAsync(path, result);
+            EventStorage.NotifyFileSaved(path);
+            UpdateCornerGalleryThumbnail();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Saving look failed: {ex.Message}");
+        }
     }
 
     private void UpdateReviewTimerText()
@@ -1071,6 +1217,7 @@ public partial class MainWindow : Window
 
     private void ReturnToIdle()
     {
+        HideLookBar();
         EndCaptureSession();
         _reviewTimer?.Stop();
         _reviewGifPlayer.Stop();
@@ -1101,10 +1248,10 @@ public partial class MainWindow : Window
             }
 
             // Older video messages have no poster image: show the newest item that has a picture
-            var latest = photos.FirstOrDefault(p => !IsVideoFile(p) || File.Exists(Path.ChangeExtension(p, ".jpg"))) ?? photos[0];
+            var latest = photos.FirstOrDefault(p => !IsVideoFile(p) || EventStorage.FindPoster(p) is not null) ?? photos[0];
             var isGif = latest.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
             if (IsVideoFile(latest))
-                latest = Path.ChangeExtension(latest, ".jpg"); // poster image saved with the video message
+                latest = EventStorage.FindPoster(latest) ?? latest; // poster image saved with the video message
 
             if (isGif)
             {
@@ -1158,8 +1305,8 @@ public partial class MainWindow : Window
             if (isVideo)
             {
                 _galleryGifPlayer.Stop();
-                var poster = Path.ChangeExtension(path, ".jpg");
-                GalleryMainImage.Source = File.Exists(poster) ? LoadBitmap(File.ReadAllBytes(poster)) : null;
+                var poster = EventStorage.FindPoster(path);
+                GalleryMainImage.Source = poster is not null ? LoadBitmap(File.ReadAllBytes(poster)) : null;
                 GalleryVideoPlayer.Source = new Uri(path, UriKind.Absolute);
                 GalleryVideoPlayer.Visibility = Visibility.Visible;
                 GalleryVideoPlayer.Play();
@@ -1210,6 +1357,55 @@ public partial class MainWindow : Window
         if (_galleryPhotos.Count == 0) return;
         _galleryCurrentIndex = (_galleryCurrentIndex - 1 + _galleryPhotos.Count) % _galleryPhotos.Count;
         DisplayGalleryPhoto(_galleryCurrentIndex);
+    }
+
+    /// <summary>Deletes the shown gallery item after the delete PIN (by default the admin PIN) was entered.</summary>
+    private void OnGalleryDeleteClick(object sender, RoutedEventArgs e)
+    {
+        if (_galleryPhotos.Count == 0)
+            return;
+        var file = _galleryPhotos[_galleryCurrentIndex];
+
+        var pinDialog = new AdminPinDialog(
+            _settingsService.Current.EffectiveDeletePin,
+            title: "Löschen",
+            subtitle: $"PIN eingeben, um {Path.GetFileName(file)} zu löschen",
+            hint: "Lösch-PIN – ohne eigene Lösch-PIN gilt die Admin-PIN")
+        {
+            Owner = this,
+        };
+        if (pinDialog.ShowDialog() != true || !pinDialog.IsAuthenticated)
+            return;
+
+        // Release the file: the GIF player / video player keep it open while showing it
+        StopGalleryVideo();
+        _galleryGifPlayer.Stop();
+        GalleryMainImage.Source = null;
+
+        try
+        {
+            EventStorage.DeleteMedia(file);
+        }
+        catch (Exception ex)
+        {
+            DisplayGalleryPhoto(_galleryCurrentIndex);
+            GalleryPrintStatusText.Text = $"Löschen fehlgeschlagen: {ex.Message}";
+            GalleryPrintStatusText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        _galleryPhotos.RemoveAt(_galleryCurrentIndex);
+        UpdateCornerGalleryThumbnail();
+        if (_galleryPhotos.Count == 0)
+        {
+            GalleryOverlayGrid.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        _galleryCurrentIndex = Math.Min(_galleryCurrentIndex, _galleryPhotos.Count - 1);
+        DisplayGalleryPhoto(_galleryCurrentIndex);
+        GalleryPrintStatusText.Text = $"🗑️ {Path.GetFileName(file)} gelöscht";
+        GalleryPrintStatusText.Visibility = Visibility.Visible;
     }
 
     private static bool IsVideoFile(string path) =>

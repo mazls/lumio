@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="com.lumio.booth"
-          android:versionCode="134"
-          android:versionName="1.3.4">
+          android:versionCode="135"
+          android:versionName="1.3.5">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36" />
 
@@ -37,6 +37,7 @@
         android:theme="@style/Theme.Lumio.NoActionBar"
         android:hardwareAccelerated="true"
         android:largeHeap="true"
+        android:requestLegacyExternalStorage="true"
         android:supportsRtl="true">
     </application>
 </manifest>

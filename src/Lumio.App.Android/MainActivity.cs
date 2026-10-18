@@ -112,6 +112,10 @@ public class MainActivity : AvaloniaMainActivity<Lumio.App.Avalonia.App>
         // Video messages: record sound from the camera's USB audio (UAC) or the phone microphone and encode MP4
         VideoRecorder.CustomAudioCapture = wavPath => AndroidAudioCapture.Start(this, wavPath);
         VideoRecorder.CustomMp4Encoder = AndroidMp4Encoder.EncodeAsync;
+
+        // Photos go to the shared "Pictures/Lumio" folder (visible in Google Photos / Files, deletable there)
+        // instead of the app's private storage
+        AndroidPhotoStorage.Configure(this);
         Lumio.App.Avalonia.GalleryMediaPlayer.PlatformVideoViewFactory = path => AndroidVideoView.Create(this, path);
 
         base.OnCreate(savedInstanceState);
@@ -161,7 +165,10 @@ public class MainActivity : AvaloniaMainActivity<Lumio.App.Avalonia.App>
             return;
 
 #pragma warning disable CA1416
-        var missing = new[] { global::Android.Manifest.Permission.Camera, global::Android.Manifest.Permission.RecordAudio }
+        var wanted = new List<string> { global::Android.Manifest.Permission.Camera, global::Android.Manifest.Permission.RecordAudio };
+        if (Build.VERSION.SdkInt <= BuildVersionCodes.Q)
+            wanted.Add(global::Android.Manifest.Permission.WriteExternalStorage); // shared Pictures folder before Android 11
+        var missing = wanted
             .Where(p => CheckSelfPermission(p) != Permission.Granted)
             .ToArray();
         if (missing.Length > 0)

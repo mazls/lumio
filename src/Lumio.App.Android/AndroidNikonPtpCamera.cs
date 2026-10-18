@@ -147,12 +147,8 @@ public sealed class AndroidNikonPtpCamera : ICameraService
             return false;
         }
 
-        // 2. Explicitly EXCLUDE Nikon Z 50 II (0x0455) and mirrorless Z-series.
-        // The Z 50 II MUST run exclusively via UVC / UAC through AndroidCameraService!
-        if (dev.ProductId == 0x0455 || (dev.ProductName?.Contains("Z 50", StringComparison.OrdinalIgnoreCase) == true))
-        {
-            return false;
-        }
+        // 2. Mirrorless Z cameras (e.g. Z 50 II) work both ways: in "UVC/UAC" mode they are a webcam (handled by
+        // AndroidUvcCamera, excluded below), in "MTP/PTP" mode they take real full-resolution photos here.
 
         // 3. If device has a Video Interface (Class 14 = CC_VIDEO / UVC), it is a UVC webcam
         // MUST NEVER be handled by PTP!

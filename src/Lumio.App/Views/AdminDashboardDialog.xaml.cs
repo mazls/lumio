@@ -163,7 +163,11 @@ public partial class AdminDashboardDialog : Window
         VideoDurationTextBox.Text = current.VideoMessageDurationSeconds.ToString();
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         LiveViewPowerSavingCheckBox.IsChecked = current.LiveViewOnlyDuringCapture;
+        GuestLooksCheckBox.IsChecked = current.GuestLooksEnabled;
+        BeautyFilterComboBox.ItemsSource = BeautyFilterLevels;
+        BeautyFilterComboBox.SelectedIndex = Math.Clamp(current.BeautyFilterStrength, 0, BeautyFilterLevels.Length - 1);
         AdminPinTextBox.Text = current.AdminPin;
+        DeletePinTextBox.Text = current.DeletePin ?? string.Empty;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
         BorderlessPrintCheckBox.IsChecked = current.BorderlessPrint;
         OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
@@ -626,12 +630,16 @@ public partial class AdminDashboardDialog : Window
 
         updated.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         updated.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
+        updated.GuestLooksEnabled = GuestLooksCheckBox.IsChecked ?? true;
+        updated.BeautyFilterStrength = Math.Max(0, BeautyFilterComboBox.SelectedIndex);
         updated.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
         updated.BorderlessPrint = BorderlessPrintCheckBox.IsChecked ?? true;
 
         var pin = AdminPinTextBox.Text.Trim();
         if (pin.Length >= 4 && pin.All(char.IsAsciiDigit))
             updated.AdminPin = pin;
+        var deletePin = DeletePinTextBox.Text.Trim();
+        updated.DeletePin = deletePin.Length >= 4 && deletePin.All(char.IsAsciiDigit) ? deletePin : null;
 
         if (CameraSelectionComboBox.SelectedItem is CameraOptionItem selectedCam)
         {
@@ -713,6 +721,8 @@ public partial class AdminDashboardDialog : Window
     }
 
     private bool _startNewEvent;
+
+    private static readonly string[] BeautyFilterLevels = ["Aus", "Leicht", "Mittel", "Stark"];
 
     private void ShowEventFolderInfo()
     {

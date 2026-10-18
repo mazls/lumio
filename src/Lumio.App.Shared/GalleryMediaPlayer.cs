@@ -43,8 +43,8 @@ public sealed class GalleryMediaPlayer : IDisposable
     public static bool IsVideo(string path) =>
         path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".avi", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Poster image saved next to a video message (same name, .jpg).</summary>
-    public static string PosterPath(string videoPath) => Path.ChangeExtension(videoPath, ".jpg");
+    /// <summary>Poster image saved next to a video message (empty path if it has none).</summary>
+    public static string PosterPath(string videoPath) => Lumio.Core.Storage.EventStorage.FindPoster(videoPath) ?? string.Empty;
 
     public void Show(string path)
     {

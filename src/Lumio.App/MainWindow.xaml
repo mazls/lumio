@@ -49,6 +49,18 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center" />
 
+            <StackPanel VerticalAlignment="Bottom">
+            <!-- Look selection: guests tap a filter, the saved and printed photo follows it -->
+            <ScrollViewer x:Name="LookBar"
+                          Visibility="Collapsed"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          HorizontalAlignment="Center"
+                          PanningMode="HorizontalOnly"
+                          Margin="16,0,16,12">
+                <StackPanel x:Name="LookButtonsPanel" Orientation="Horizontal" />
+            </ScrollViewer>
+
             <!-- Bottom Review Actions Bar -->
             <Border VerticalAlignment="Bottom"
                     Background="{StaticResource GlassBrush}"
@@ -96,6 +108,7 @@
                             Click="OnDoneReviewClick" />
                 </Grid>
             </Border>
+            </StackPanel>
         </Grid>
 
         <!-- ==================== 3. IDLE / WELCOME OVERLAY ==================== -->
@@ -461,7 +474,21 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+
+                    <!-- Delete (PIN protected) -->
+                    <Button Grid.Column="1"
+                            Style="{StaticResource TouchGlassButton}"
+                            BorderBrush="{StaticResource DangerBrush}"
+                            Margin="0,0,14,0"
+                            ToolTip="Löschen (PIN erforderlich)"
+                            Click="OnGalleryDeleteClick">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🗑️ " FontSize="18" VerticalAlignment="Center" />
+                            <TextBlock Text="Löschen" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock x:Name="GalleryPhotoInfoText" Text="IMG_20261016_205500.jpg" Style="{StaticResource Caption}" Foreground="{StaticResource TextSecondaryBrush}" />
@@ -469,7 +496,7 @@
                     </StackPanel>
 
                     <Button x:Name="GalleryPrintButton"
-                            Grid.Column="1"
+                            Grid.Column="2"
                             Style="{StaticResource TouchActionButton}"
                             Padding="36,12"
                             Click="OnGalleryPrintClick">

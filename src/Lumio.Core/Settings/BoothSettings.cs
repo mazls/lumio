@@ -44,8 +44,20 @@ public sealed class BoothSettings
     /// </summary>
     public string? EventStartDate { get; set; }
 
-    public string OutputRoot { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Lumio");
+    public string OutputRoot { get; set; } = DefaultOutputRoot;
+
+    /// <summary>
+    /// Shared pictures folder of the platform, set by apps whose <see cref="Environment.SpecialFolder.MyPictures"/>
+    /// is private (Android: the app's own storage, invisible to the gallery and file manager).
+    /// </summary>
+    public static string? PlatformPicturesFolder { get; set; }
+
+    /// <summary>Where photos go unless the admin picks another folder.</summary>
+    public static string DefaultOutputRoot => Path.Combine(
+        PlatformPicturesFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Lumio");
+
+    /// <summary>The private default of older Android versions of Lumio (moved to <see cref="DefaultOutputRoot"/>).</summary>
+    public static string PrivateOutputRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Lumio");
 
     public int CountdownSeconds { get; set; } = 3;
 
@@ -84,8 +96,22 @@ public sealed class BoothSettings
     public bool OnScreenKeyboardEnabled { get; set; } = false;
 
     public string AdminPin { get; set; } = "1234";
+
+    /// <summary>
+    /// Optional own PIN for deleting photos in the gallery, e.g. to hand on to the hosts without giving away the
+    /// admin menu. Empty = the admin PIN.
+    /// </summary>
+    public string? DeletePin { get; set; }
+
+    public string EffectiveDeletePin => string.IsNullOrEmpty(DeletePin) ? AdminPin : DeletePin;
     public string SelectedTemplateId { get; set; } = "single-10x15";
     public bool AutoPrint { get; set; } = false;
+
+    /// <summary>Guests can pick a color look (Sonnig, Glam S/W, ...) for their photo in the review screen.</summary>
+    public bool GuestLooksEnabled { get; set; } = true;
+
+    /// <summary>Skin smoothing for photos and collages: 0 = off, 1 = light, 2 = medium, 3 = strong.</summary>
+    public int BeautyFilterStrength { get; set; } = 0;
 
     /// <summary>Print edge to edge on the 100x148 mm card (minimal crop) instead of fitting the picture with a white border.</summary>
     public bool BorderlessPrint { get; set; } = true;
@@ -128,15 +154,22 @@ public sealed class BoothSettings
         ReviewSeconds = Math.Clamp(ReviewSeconds, MinReview, MaxReview);
         VideoMessageDurationSeconds = Math.Clamp(VideoMessageDurationSeconds, MinVideoDuration, MaxVideoDuration);
 
+        BeautyFilterStrength = Math.Clamp(BeautyFilterStrength, 0, 3);
         if (string.IsNullOrWhiteSpace(EventName))
             EventName = "Mein Event";
 
         if (string.IsNullOrWhiteSpace(OutputRoot))
-            OutputRoot = new BoothSettings().OutputRoot;
+            OutputRoot = DefaultOutputRoot;
+        // Older Android versions saved into the app's private storage, where nobody could see or delete the photos
+        if (PlatformPicturesFolder is not null && string.Equals(OutputRoot, PrivateOutputRoot, StringComparison.Ordinal))
+            OutputRoot = DefaultOutputRoot;
 
         AdminPin = new string((AdminPin ?? string.Empty).Where(char.IsAsciiDigit).Take(8).ToArray());
         if (AdminPin.Length < 4)
             AdminPin = "1234";
+        DeletePin = new string((DeletePin ?? string.Empty).Where(char.IsAsciiDigit).Take(8).ToArray());
+        if (DeletePin.Length < 4)
+            DeletePin = null;
 
         if (!Enum.IsDefined(CameraBackend))
             CameraBackend = CameraBackend.Webcam;

@@ -169,7 +169,11 @@
 
                                     <TextBlock Text="Admin-PIN ändern (4–8 Ziffern)" Style="{StaticResource FieldLabel}" />
                                     <TextBox x:Name="AdminPinTextBox" Style="{StaticResource TouchTextBox}" MaxLength="8" GotFocus="OnInputGotFocus" />
-                                    <TextBlock Text="Schützt das Admin-Menü vor Gästen. Standard-PIN ist 1234." Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                                    <TextBlock Text="Schützt das Admin-Menü vor Gästen. Standard-PIN ist 1234." Style="{StaticResource Caption}" Margin="0,4,0,12" />
+
+                                    <TextBlock Text="Lösch-PIN für die Galerie (optional, 4–8 Ziffern – leer = Admin-PIN)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox x:Name="DeletePinTextBox" Style="{StaticResource TouchTextBox}" MaxLength="8" GotFocus="OnInputGotFocus" />
+                                    <TextBlock Text="Damit können z. B. die Gastgeber Fotos in der Galerie löschen, ohne ins Admin-Menü zu kommen." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
 
@@ -219,6 +223,19 @@
                                                Style="{StaticResource Caption}"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                Margin="28,2,0,14" />
+
+                                    <CheckBox x:Name="GuestLooksCheckBox"
+                                              Content="Gäste können einen Look wählen (Sonnig, Glam S/W, Vintage …)"
+                                              FontSize="16"
+                                              Foreground="White" />
+                                    <TextBlock Text="Nach der Aufnahme per Fingertipp – gespeichert und gedruckt wird der gewählte Look, die Originalfotos bleiben unverändert."
+                                               TextWrapping="Wrap"
+                                               Style="{StaticResource Caption}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="28,2,0,14" />
+
+                                    <TextBlock Text="Schönheitsfilter (Hautglättung)" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox x:Name="BeautyFilterComboBox" Style="{StaticResource TouchComboBox}" Margin="0,0,0,14" />
 
                                     <!-- Test Photo Action -->
                                     <Border Background="#12121E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,12">

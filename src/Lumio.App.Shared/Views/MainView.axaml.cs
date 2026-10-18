@@ -219,7 +219,6 @@ public partial class MainView : UserControl
             PlaceInGrid(PrintButton, row: 2, column: 0);
             PlaceInGrid(ReviewDoneButton, row: 2, column: 2);
             ReviewActionsBar.Padding = WithSafeArea(new Thickness(20, 16), top: false);
-            ReviewImageControl.Margin = WithSafeArea(new Thickness(16, 90, 16, 220));
         }
         else
         {
@@ -228,9 +227,9 @@ public partial class MainView : UserControl
             PlaceInGrid(PrintButton, row: 0, column: 2);
             PlaceInGrid(ReviewDoneButton, row: 0, column: 4);
             ReviewActionsBar.Padding = WithSafeArea(new Thickness(36, 20), top: false);
-            ReviewImageControl.Margin = WithSafeArea(new Thickness(40, 50, 40, 130));
         }
         ReviewDoneButton.Content = portrait ? "Fertig" : "Fertig / Nächstes Foto";
+        UpdateReviewImageMargin();
         foreach (var button in new[] { PrintButton, ReviewDoneButton })
         {
             button.HorizontalAlignment = portrait ? global::Avalonia.Layout.HorizontalAlignment.Stretch : global::Avalonia.Layout.HorizontalAlignment.Left;
@@ -247,6 +246,17 @@ public partial class MainView : UserControl
         GalleryMainImage.Margin = portrait ? new Thickness(0, 10) : new Thickness(80, 10);
         // A native video view is drawn above everything: keep the arrow buttons next to it visible
         GalleryVideoHost.Margin = portrait ? new Thickness(64, 10) : GalleryMainImage.Margin;
+
+        // Gallery footer: file name above the buttons on narrow portrait screens
+        GalleryFooterGrid.RowDefinitions = portrait ? new RowDefinitions("Auto,10,Auto") : new RowDefinitions("Auto");
+        PlaceInGrid(GalleryInfoPanel, row: 0, column: 0, columnSpan: portrait ? 3 : 1);
+        PlaceInGrid(GalleryDeleteButton, row: portrait ? 2 : 0, column: 1);
+        PlaceInGrid(GalleryPrintButton, row: portrait ? 2 : 0, column: 2);
+        GalleryFooterGrid.ColumnDefinitions = portrait ? new ColumnDefinitions("0,*,*") : new ColumnDefinitions("*,Auto,Auto");
+        GalleryDeleteButton.HorizontalAlignment = GalleryPrintButton.HorizontalAlignment = portrait
+            ? global::Avalonia.Layout.HorizontalAlignment.Stretch
+            : global::Avalonia.Layout.HorizontalAlignment.Left;
+        GalleryDeleteButton.HorizontalContentAlignment = GalleryPrintButton.HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
     }
 
     /// <summary>Renders the party backdrop in the screen's aspect ratio (only when the orientation changes).</summary>
@@ -954,8 +964,9 @@ public partial class MainView : UserControl
             ["Year"] = DateTime.Now.Year.ToString(),
         };
 
+        var template = BuiltInTemplates.MatchPhotoOrientation(_activeTemplate, capturedPhotos[0]);
         var finalJpeg = await Task.Run(() => _renderer.Render(
-            _activeTemplate,
+            template,
             capturedPhotos,
             metadata,
             jpegQuality: 98,
@@ -963,9 +974,15 @@ public partial class MainView : UserControl
             logoPosition: settings.LogoPosition,
             embedEventText: settings.EmbedEventTextOnPhotos,
             renderScale: 2.0f));
-        await _storage.SaveCollageAsync(finalJpeg, DateTimeOffset.Now);
 
-        ShowReview(finalJpeg);
+        if (settings.BeautyFilterStrength > 0)
+        {
+            var strength = settings.BeautyFilterStrength;
+            finalJpeg = await Task.Run(() => BeautyFilter.Apply(finalJpeg, strength));
+        }
+
+        var collagePath = await _storage.SaveCollageAsync(finalJpeg, DateTimeOffset.Now);
+        ShowReview(finalJpeg, looksFor: settings.GuestLooksEnabled ? collagePath : null);
     }
 
     private void TriggerFlash()
@@ -978,8 +995,10 @@ public partial class MainView : UserControl
         });
     }
 
-    private void ShowReview(byte[] displayJpeg)
+    /// <param name="looksFor">Saved collage the guests may put a look on (it is overwritten with their choice).</param>
+    private void ShowReview(byte[] displayJpeg, string? looksFor = null)
     {
+        ShowLookBar(displayJpeg, looksFor);
         CountdownOverlayGrid.IsVisible = false;
         MultiShotStepText.IsVisible = false;
         SeriesPreviewBorder.IsVisible = false;
@@ -1005,7 +1024,8 @@ public partial class MainView : UserControl
 
     private void StartReviewCountdown()
     {
-        _reviewRemainingSeconds = Math.Max(5, _settingsService.Current.ReviewSeconds);
+        // Picking a look takes a moment: at least 20 s while the looks are offered
+        _reviewRemainingSeconds = Math.Max(LookBar.IsVisible ? MinLookReviewSeconds : 5, _settingsService.Current.ReviewSeconds);
         ReviewTimerText.Text = $"Zurück in {_reviewRemainingSeconds}s";
 
         _reviewTimer?.Stop();
@@ -1023,8 +1043,141 @@ public partial class MainView : UserControl
         _reviewTimer.Start();
     }
 
+    // ==================== LOOKS (GUEST FILTERS) ====================
+
+    private byte[]? _lookBaseJpeg;
+    private string? _lookTargetPath;
+    private int _lookVersion;
+    private const int MinLookReviewSeconds = 20;
+    private double LookBarHeight => LookButtonsPanel.Rows * 100 + 10;
+
+    private void ShowLookBar(byte[] baseJpeg, string? savedPath)
+    {
+        _lookVersion++;
+        _lookBaseJpeg = savedPath is null ? null : baseJpeg;
+        _lookTargetPath = savedPath;
+        LookButtonsPanel.Children.Clear();
+        LookBar.IsVisible = savedPath is not null;
+        UpdateReviewImageMargin();
+        if (savedPath is null)
+            return;
+
+        var buttons = new List<(PhotoLook Look, Image Preview)>();
+        foreach (var (look, name) in PhotoLooks.All)
+        {
+            var preview = new Image { Height = 58, Stretch = Stretch.UniformToFill };
+            var button = new Button
+            {
+                Padding = new Thickness(4),
+                Margin = new Thickness(4),
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                CornerRadius = new CornerRadius(14),
+                Background = (IBrush)this.FindResource("GlassBrush")!,
+                BorderThickness = new Thickness(2),
+                Tag = look,
+                Content = new StackPanel
+                {
+                    Spacing = 4,
+                    Children =
+                    {
+                        new Border { CornerRadius = new CornerRadius(10), ClipToBounds = true, Child = preview },
+                        new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeight.SemiBold, Foreground = Brushes.White, HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
+                    },
+                },
+            };
+            button.Click += (_, _) => _ = SelectLookAsync(look);
+            buttons.Add((look, preview));
+            LookButtonsPanel.Children.Add(button);
+        }
+        HighlightLook(PhotoLook.Original);
+
+        // Previews from a small copy: decoding the full collage six times would be slow on phones
+        var version = _lookVersion;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var small = PhotoLooks.Preview(baseJpeg, PhotoLook.Original, 200);
+                foreach (var (look, image) in buttons)
+                {
+                    var bytes = PhotoLooks.Preview(small, look, 168);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (version != _lookVersion) return;
+                        using var stream = new MemoryStream(bytes);
+                        image.Source = new Bitmap(stream);
+                    });
+                }
+            }
+            catch { }
+        });
+    }
+
+    private void HighlightLook(PhotoLook selected)
+    {
+        foreach (var button in LookButtonsPanel.Children.OfType<Button>())
+        {
+            button.BorderBrush = button.Tag is PhotoLook look && look == selected
+                ? (IBrush)this.FindResource("AccentBrush")!
+                : Brushes.Transparent;
+        }
+    }
+
+    /// <summary>Applies the guest's look: shown, printed and saved (overwrites the collage; originals stay untouched).</summary>
+    private async Task SelectLookAsync(PhotoLook look)
+    {
+        if (_lookBaseJpeg is not { } baseJpeg || _lookTargetPath is not { } path)
+            return;
+
+        var version = ++_lookVersion;
+        HighlightLook(look);
+        StartReviewCountdown(); // give guests time to look at it
+
+        byte[] result;
+        try
+        {
+            result = await Task.Run(() => PhotoLooks.Apply(baseJpeg, look));
+        }
+        catch
+        {
+            return;
+        }
+        if (version != _lookVersion)
+            return; // another look was tapped meanwhile
+
+        _currentReviewJpeg = result;
+        using (var stream = new MemoryStream(result))
+            ReviewImageControl.Source = new Bitmap(stream);
+
+        try
+        {
+            await File.WriteAllBytesAsync(path, result);
+            EventStorage.NotifyFileSaved(path);
+            RefreshGalleryCorner();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Saving look failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>The review photo keeps clear of the bottom bar (and the look bar when shown).</summary>
+    private void UpdateReviewImageMargin()
+    {
+        var portrait = _isPortraitLayout == true;
+        LookButtonsPanel.Rows = portrait ? 2 : 1;
+        LookButtonsPanel.Columns = portrait ? 3 : PhotoLooks.All.Count;
+        var margin = portrait ? new Thickness(16, 90, 16, 220) : new Thickness(40, 50, 40, 130);
+        if (LookBar.IsVisible)
+            margin = new Thickness(margin.Left, margin.Top, margin.Right, margin.Bottom + LookBarHeight);
+        ReviewImageControl.Margin = WithSafeArea(margin);
+    }
+
     private void OnDoneReviewClick(object? sender, RoutedEventArgs e)
     {
+        _lookVersion++;
+        LookBar.IsVisible = false;
         _reviewTimer?.Stop();
         ReviewGrid.IsVisible = false;
         VideoRecordingOverlayGrid.IsVisible = false;
@@ -1207,6 +1360,62 @@ public partial class MainView : UserControl
             GalleryPrintButtonLabel.Text = "Foto drucken";
             GalleryPrintButton.IsEnabled = true;
         }
+    }
+
+    /// <summary>Deletes the shown gallery item after the delete PIN (by default the admin PIN) was entered.</summary>
+    private async void OnGalleryDeleteClick(object? sender, RoutedEventArgs e)
+    {
+        if (_galleryFiles.Count == 0)
+            return;
+        var file = _galleryFiles[_galleryCurrentIndex];
+
+        // A native video view would cover the PIN dialog
+        _galleryPlayer?.Stop();
+
+        var pinTcs = new TaskCompletionSource<bool>();
+        var pinDialog = new AdminPinDialog(
+            _settingsService.Current.EffectiveDeletePin,
+            title: "Löschen",
+            subtitle: $"PIN eingeben, um {Path.GetFileName(file)} zu löschen",
+            hint: "Lösch-PIN – ohne eigene Lösch-PIN gilt die Admin-PIN");
+        pinDialog.Completed += ok =>
+        {
+            CloseModal();
+            pinTcs.TrySetResult(ok);
+        };
+        ShowModal(pinDialog);
+
+        if (!await pinTcs.Task)
+        {
+            DisplayGalleryPhoto();
+            return;
+        }
+
+        try
+        {
+            EventStorage.DeleteMedia(file);
+        }
+        catch (Exception ex)
+        {
+            DisplayGalleryPhoto();
+            GalleryPrintStatusText.Text = $"Löschen fehlgeschlagen: {ex.Message}";
+            GalleryPrintStatusText.IsVisible = true;
+            return;
+        }
+
+        _galleryFiles.RemoveAt(_galleryCurrentIndex);
+        RefreshGalleryCorner();
+        if (_galleryFiles.Count == 0)
+        {
+            CornerGalleryBorder.IsVisible = false;
+            GalleryOverlayGrid.IsVisible = false;
+            return;
+        }
+
+        _galleryCurrentIndex = Math.Min(_galleryCurrentIndex, _galleryFiles.Count - 1);
+        DisplayGalleryPhoto();
+        GalleryPrintStatusText.Text = $"{Path.GetFileName(file)} gelöscht";
+        GalleryPrintStatusText.IsVisible = true;
     }
 
     private void OnCloseGalleryClick(object? sender, RoutedEventArgs e)

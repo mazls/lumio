@@ -10,10 +10,13 @@ public partial class AdminPinDialog : Window
 
     public bool IsAuthenticated { get; private set; }
 
-    public AdminPinDialog(string expectedPin)
+    public AdminPinDialog(string expectedPin, string? title = null, string? subtitle = null, string? hint = null)
     {
         InitializeComponent();
         _expectedPin = expectedPin;
+        if (title is not null) TitleText.Text = title;
+        if (subtitle is not null) SubtitleText.Text = subtitle;
+        if (hint is not null) HintText.Text = hint;
         UpdateDisplay();
     }
 

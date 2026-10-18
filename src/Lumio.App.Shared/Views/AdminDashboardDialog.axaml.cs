@@ -134,7 +134,11 @@ public partial class AdminDashboardDialog : UserControl
         BorderlessPrintCheckBox.IsChecked = current.BorderlessPrint;
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
         LiveViewPowerSavingCheckBox.IsChecked = current.LiveViewOnlyDuringCapture;
+        GuestLooksCheckBox.IsChecked = current.GuestLooksEnabled;
+        BeautyFilterComboBox.ItemsSource = BeautyFilterLevels;
+        BeautyFilterComboBox.SelectedIndex = Math.Clamp(current.BeautyFilterStrength, 0, BeautyFilterLevels.Length - 1);
         AdminPinTextBox.Text = current.AdminPin;
+        DeletePinTextBox.Text = current.DeletePin ?? string.Empty;
         OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
     }
 
@@ -385,10 +389,13 @@ public partial class AdminDashboardDialog : UserControl
         copy.BorderlessPrint = BorderlessPrintCheckBox.IsChecked ?? true;
         copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
         copy.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
+        copy.GuestLooksEnabled = GuestLooksCheckBox.IsChecked ?? true;
+        copy.BeautyFilterStrength = Math.Max(0, BeautyFilterComboBox.SelectedIndex);
         copy.OnScreenKeyboardEnabled = OnScreenKeyboardCheckBox.IsChecked ?? false;
 
         if (!string.IsNullOrWhiteSpace(AdminPinTextBox.Text))
             copy.AdminPin = AdminPinTextBox.Text.Trim();
+        copy.DeletePin = string.IsNullOrWhiteSpace(DeletePinTextBox.Text) ? null : DeletePinTextBox.Text.Trim();
 
         if (CameraSelectionComboBox.SelectedItem is CameraOptionItem selectedCam)
         {
@@ -470,6 +477,8 @@ public partial class AdminDashboardDialog : UserControl
     }
 
     private bool _startNewEvent;
+
+    private static readonly string[] BeautyFilterLevels = ["Aus", "Leicht", "Mittel", "Stark"];
 
     private void ShowEventFolderInfo()
     {

@@ -30,8 +30,8 @@
 
             <!-- Title & Subtitle -->
             <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,5,0,16" Spacing="4">
-                <TextBlock Text="Admin-Bereich" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                <TextBlock Text="PIN eingeben zum Entsperren" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                <TextBlock x:Name="TitleText" Text="Admin-Bereich" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                <TextBlock x:Name="SubtitleText" Text="PIN eingeben zum Entsperren" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
             </StackPanel>
 
             <!-- PIN Display (Masked Dots) -->
@@ -85,7 +85,8 @@
             </Grid>
 
             <!-- Bottom Note -->
-            <TextBlock Grid.Row="3"
+            <TextBlock x:Name="HintText"
+                       Grid.Row="3"
                        Text="Standard-PIN: 1234 (im Dashboard änderbar)"
                        FontSize="11"
                        Foreground="{StaticResource TextSecondaryBrush}"

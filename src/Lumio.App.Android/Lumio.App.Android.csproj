@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>com.lumio.booth</ApplicationId>
-    <ApplicationVersion>134</ApplicationVersion>
-    <ApplicationDisplayVersion>1.3.4</ApplicationDisplayVersion>
+    <ApplicationVersion>135</ApplicationVersion>
+    <ApplicationDisplayVersion>1.3.5</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <RunAOTCompilation>false</RunAOTCompilation>

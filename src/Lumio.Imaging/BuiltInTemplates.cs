@@ -52,6 +52,79 @@ public static class BuiltInTemplates
         };
     }
 
+    /// <summary>Upright 10x15 cm card (1200x1800 px) for portrait photos, e.g. from a phone or tablet held upright.</summary>
+    public static BoothTemplate CreateSinglePhotoPortrait()
+    {
+        return new BoothTemplate
+        {
+            Id = "single-10x15-portrait",
+            Name = "10x15 Hochformat (1 Einzelfoto)",
+            Width = 1200,
+            Height = 1800,
+            BackgroundColorHex = "#12121E",
+            Slots =
+            [
+                new TemplateSlot
+                {
+                    Index = 0,
+                    X = 60,
+                    Y = 60,
+                    Width = 1080,
+                    Height = 1560,
+                    CornerRadius = 18,
+                    BorderWidth = 2,
+                    BorderColorHex = "#33FFFFFF"
+                }
+            ],
+            Texts =
+            [
+                new TemplateText
+                {
+                    Text = "{EventName}",
+                    X = 600,
+                    Y = 1700,
+                    FontSize = 40,
+                    ColorHex = "#FFFFFF",
+                    Bold = true,
+                    Alignment = "Center"
+                },
+                new TemplateText
+                {
+                    Text = "{Date}",
+                    X = 600,
+                    Y = 1745,
+                    FontSize = 24,
+                    ColorHex = "#A3A2BC",
+                    Bold = false,
+                    Alignment = "Center"
+                }
+            ]
+        };
+    }
+
+    /// <summary>
+    /// The single photo postcard in the photo's orientation: a portrait photo gets the upright card instead of
+    /// being cut down to a landscape strip. Other templates are returned unchanged.
+    /// </summary>
+    public static BoothTemplate MatchPhotoOrientation(BoothTemplate template, byte[] firstPhoto)
+    {
+        if (template.Id != "single-10x15")
+            return template;
+
+        try
+        {
+            using var codec = SkiaSharp.SKCodec.Create(new SkiaSharp.SKMemoryStream(firstPhoto));
+            var info = codec?.Info;
+            if (info is { } size && size.Height > size.Width)
+                return CreateSinglePhotoPortrait();
+        }
+        catch
+        {
+            // Unreadable header: keep the chosen template
+        }
+        return template;
+    }
+
     /// <summary>10x15 cm Postkarte mit 4 Fotos im 2x2 Raster.</summary>
     public static BoothTemplate CreateQuadCollage()
     {

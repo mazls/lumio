@@ -70,3 +70,49 @@ public class EventFolderTests : IDisposable
         try { Directory.Delete(_tempDir, recursive: true); } catch { }
     }
 }
+
+public class DeletePinTests
+{
+    [Fact]
+    public void DeletePin_DefaultsToTheAdminPin()
+    {
+        var settings = new BoothSettings { AdminPin = "4711" };
+        settings.Normalize();
+        Assert.Null(settings.DeletePin);
+        Assert.Equal("4711", settings.EffectiveDeletePin);
+    }
+
+    [Fact]
+    public void DeletePin_CanBeSetSeparately_AndInvalidPinsAreIgnored()
+    {
+        var own = new BoothSettings { AdminPin = "4711", DeletePin = "2580" };
+        own.Normalize();
+        Assert.Equal("2580", own.EffectiveDeletePin);
+
+        var tooShort = new BoothSettings { AdminPin = "4711", DeletePin = "12" };
+        tooShort.Normalize();
+        Assert.Equal("4711", tooShort.EffectiveDeletePin);
+    }
+
+    [Fact]
+    public void DeleteMedia_RemovesAVideoTogetherWithItsPoster()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"lumio_delete_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var video = Path.Combine(dir, "VIDEO_1.mp4");
+            File.WriteAllBytes(video, [1, 2, 3]);
+            File.WriteAllBytes(EventStorage.GetPosterPath(video), [4, 5, 6]);
+
+            EventStorage.DeleteMedia(video);
+
+            Assert.False(File.Exists(video));
+            Assert.Empty(Directory.GetFiles(dir));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+}

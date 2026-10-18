@@ -38,8 +38,8 @@
 
             <!-- Title & Subtitle -->
             <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,5,0,16">
-                <TextBlock Text="Admin-Bereich" Style="{StaticResource H2}" HorizontalAlignment="Center" />
-                <TextBlock Text="PIN eingeben zum Entsperren" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                <TextBlock x:Name="TitleText" Text="Admin-Bereich" Style="{StaticResource H2}" HorizontalAlignment="Center" />
+                <TextBlock x:Name="SubtitleText" Text="PIN eingeben zum Entsperren" Style="{StaticResource Caption}" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>
 
             <!-- PIN Display (Masked Dots) -->
@@ -95,7 +95,8 @@
             </Grid>
 
             <!-- Actions footer info -->
-            <TextBlock Grid.Row="3"
+            <TextBlock x:Name="HintText"
+                       Grid.Row="3"
                        Text="Standard-PIN: 1234 (in Einstellungen änderbar)"
                        Style="{StaticResource Caption}"
                        Foreground="{StaticResource TextMutedBrush}"

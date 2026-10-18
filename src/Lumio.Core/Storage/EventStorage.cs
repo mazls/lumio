@@ -58,8 +58,47 @@ public sealed class EventStorage
         }
     }
 
-    public static string GetDefaultInternalRoot() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Lumio");
+    public static string GetDefaultInternalRoot() => BoothSettings.DefaultOutputRoot;
+
+    /// <summary>
+    /// Raised after a photo / GIF / video was written (also when a guest's look replaced a collage), so the
+    /// platform can announce it (Android: media scanner, then it shows up in Google Photos and the file manager).
+    /// </summary>
+    public static event Action<string>? FileSaved;
+
+    public static void NotifyFileSaved(string path) => FileSaved?.Invoke(path);
+
+    /// <summary>Raised after a gallery item was deleted (Android: removes it from the media library as well).</summary>
+    public static event Action<string>? FileDeleted;
+
+    /// <summary>Deletes a photo / GIF / video of the gallery (a video together with its poster image).</summary>
+    public static void DeleteMedia(string path)
+    {
+        var poster = FindPoster(path);
+        File.Delete(path);
+        FileDeleted?.Invoke(path);
+        if (poster is not null && !string.Equals(poster, path, StringComparison.OrdinalIgnoreCase))
+        {
+            try { File.Delete(poster); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// Still image of a video message for the gallery. Hidden (leading dot), so phone gallery apps do not list it
+    /// as an extra photo.
+    /// </summary>
+    public static string GetPosterPath(string videoPath) =>
+        Path.Combine(Path.GetDirectoryName(videoPath) ?? string.Empty, "." + Path.GetFileNameWithoutExtension(videoPath) + ".jpg");
+
+    /// <summary>The poster of a video message if there is one (also the visible name used by version 1.3.4).</summary>
+    public static string? FindPoster(string videoPath)
+    {
+        var hidden = GetPosterPath(videoPath);
+        if (File.Exists(hidden))
+            return hidden;
+        var legacy = Path.ChangeExtension(videoPath, ".jpg");
+        return File.Exists(legacy) ? legacy : null;
+    }
 
     public string GetOriginalsFolder() => GetSafeFolder(OriginalsFolderName);
     public string GetCollagesFolder() => GetSafeFolder(CollagesFolderName);
@@ -99,6 +138,7 @@ public sealed class EventStorage
             path = Path.Combine(folder, $"{baseName}_{i}.{ext}");
 
         await File.WriteAllBytesAsync(path, videoData, cancellationToken).ConfigureAwait(false);
+        NotifyFileSaved(path);
         return path;
     }
 
@@ -123,8 +163,10 @@ public sealed class EventStorage
                 File.Delete(targetPath);
             File.Move(sourcePath, targetPath);
             if (posterJpeg is not null)
-                File.WriteAllBytes(Path.ChangeExtension(targetPath, ".jpg"), posterJpeg);
+                File.WriteAllBytes(GetPosterPath(targetPath), posterJpeg);
         }, cancellationToken).ConfigureAwait(false);
+
+        NotifyFileSaved(targetPath);
 
         return targetPath;
     }
@@ -143,6 +185,7 @@ public sealed class EventStorage
             path = Path.Combine(folder, $"{baseName}_{i}.gif");
 
         await File.WriteAllBytesAsync(path, gifData, cancellationToken).ConfigureAwait(false);
+        NotifyFileSaved(path);
         return path;
     }
 
@@ -160,6 +203,7 @@ public sealed class EventStorage
             path = Path.Combine(folder, $"{baseName}_{i}.jpg");
 
         await File.WriteAllBytesAsync(path, jpegData, cancellationToken).ConfigureAwait(false);
+        NotifyFileSaved(path);
         return path;
     }
 
@@ -177,6 +221,7 @@ public sealed class EventStorage
             path = Path.Combine(folder, $"{baseName}_{i}.jpg");
 
         await File.WriteAllBytesAsync(path, photo.JpegData, cancellationToken).ConfigureAwait(false);
+        NotifyFileSaved(path);
         return path;
     }
 

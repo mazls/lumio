@@ -43,6 +43,11 @@ public sealed class AndroidCameraService : ICameraService
     private long _lastPreviewTicks;
     private int _isProcessingPreview;
     private byte[]? _cachedNv21;
+    private byte[]? _rotatedNv21;
+
+    // Built-in cameras deliver frames in the sensor's orientation (landscape): turned upright for the screen
+    private int _sensorOrientation;
+    private int? _lensFacing;
     private readonly MemoryStream _cachedJpegStream = new(256 * 1024);
 
     public AndroidCameraService(Activity activity, BoothSettings? settings = null)
@@ -268,6 +273,9 @@ public sealed class AndroidCameraService : ICameraService
             int previewWidth = 1280;
             int previewHeight = 720;
 
+            _sensorOrientation = (chars?.Get(CameraCharacteristics.SensorOrientation) as Java.Lang.Integer)?.IntValue() ?? 0;
+            _lensFacing = (chars?.Get(CameraCharacteristics.LensFacing) as Java.Lang.Integer)?.IntValue();
+
             if (map is not null)
             {
                 // Preview: Hardware-accelerated YUV_420_888 at ~1280x720 or 1920x1080 (supported on 100% of Android devices)
@@ -438,11 +446,11 @@ public sealed class AndroidCameraService : ICameraService
             lockAcquired = true;
             Interlocked.Exchange(ref _lastPreviewTicks, now);
 
-            var jpegBytes = ConvertYuv420888ToJpeg(image, 70);
+            var jpegBytes = ConvertYuv420888ToJpeg(image, 70, out var frameWidth, out var frameHeight);
             if (jpegBytes is not null && jpegBytes.Length > 0)
             {
                 _latestFrameBytes = jpegBytes;
-                FrameReady?.Invoke(this, new LiveViewFrame(jpegBytes, FrameFormat.Jpeg, image.Width, image.Height, 0));
+                FrameReady?.Invoke(this, new LiveViewFrame(jpegBytes, FrameFormat.Jpeg, frameWidth, frameHeight, 0));
             }
         }
         catch (Exception ex)
@@ -459,10 +467,12 @@ public sealed class AndroidCameraService : ICameraService
         }
     }
 
-    private byte[]? ConvertYuv420888ToJpeg(Image image, int quality)
+    private byte[]? ConvertYuv420888ToJpeg(Image image, int quality, out int outWidth, out int outHeight)
     {
         var width = image.Width;
         var height = image.Height;
+        outWidth = width;
+        outHeight = height;
         var planes = image.GetPlanes();
         if (planes is null || planes.Length < 3) return null;
 
@@ -534,12 +544,98 @@ public sealed class AndroidCameraService : ICameraService
             }
         }
 
+        var rotation = UprightRotation();
+        if (rotation != 0)
+        {
+            if (_rotatedNv21 is null || _rotatedNv21.Length != nv21.Length)
+                _rotatedNv21 = new byte[nv21.Length];
+            RotateNv21(nv21, _rotatedNv21, width, height, rotation);
+            nv21 = _rotatedNv21;
+            if (rotation != 180)
+                (width, height) = (height, width);
+        }
+        outWidth = width;
+        outHeight = height;
+
         lock (_cachedJpegStream)
         {
             _cachedJpegStream.SetLength(0);
             var yuvImage = new YuvImage(nv21, ImageFormatType.Nv21, width, height, null);
             yuvImage.CompressToJpeg(new Rect(0, 0, width, height), quality, _cachedJpegStream);
             return _cachedJpegStream.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Clockwise rotation that turns a frame of a built-in camera upright for the current screen orientation
+    /// (same rule as CameraX). External USB cameras do not turn with the device and stay as they are.
+    /// </summary>
+    private int UprightRotation()
+    {
+        if (_lensFacing is not ((int)LensFacing.Front or (int)LensFacing.Back))
+            return 0;
+
+        int displayDegrees;
+        try
+        {
+#pragma warning disable CA1422, CS0618 // Activity.Display needs API 30; WindowManager.DefaultDisplay works everywhere
+            var rotation = (Build.VERSION.SdkInt >= BuildVersionCodes.R ? _activity.Display?.Rotation : _activity.WindowManager?.DefaultDisplay?.Rotation) ?? SurfaceOrientation.Rotation0;
+#pragma warning restore CA1422, CS0618
+            displayDegrees = rotation switch
+            {
+                SurfaceOrientation.Rotation90 => 90,
+                SurfaceOrientation.Rotation180 => 180,
+                SurfaceOrientation.Rotation270 => 270,
+                _ => 0,
+            };
+        }
+        catch
+        {
+            displayDegrees = 0;
+        }
+
+        return _lensFacing == (int)LensFacing.Front
+            ? (_sensorOrientation + displayDegrees) % 360
+            : (_sensorOrientation - displayDegrees + 360) % 360;
+    }
+
+    /// <summary>Rotates an NV21 frame clockwise by 90, 180 or 270 degrees (Y plane plus interleaved VU pairs).</summary>
+    private static void RotateNv21(byte[] source, byte[] target, int width, int height, int degrees)
+    {
+        var ySize = width * height;
+        var halfW = width / 2;
+        var halfH = height / 2;
+
+        for (var y = 0; y < height; y++)
+        {
+            var row = y * width;
+            for (var x = 0; x < width; x++)
+            {
+                var targetIndex = degrees switch
+                {
+                    90 => x * height + (height - 1 - y),
+                    180 => (height - 1 - y) * width + (width - 1 - x),
+                    _ => (width - 1 - x) * height + y, // 270
+                };
+                target[targetIndex] = source[row + x];
+            }
+        }
+
+        for (var cy = 0; cy < halfH; cy++)
+        {
+            for (var cx = 0; cx < halfW; cx++)
+            {
+                var sourceIndex = ySize + (cy * halfW + cx) * 2;
+                var pair = degrees switch
+                {
+                    90 => cx * halfH + (halfH - 1 - cy),
+                    180 => (halfH - 1 - cy) * halfW + (halfW - 1 - cx),
+                    _ => (halfW - 1 - cx) * halfH + cy, // 270
+                };
+                var targetIndex = ySize + pair * 2;
+                target[targetIndex] = source[sourceIndex];
+                target[targetIndex + 1] = source[sourceIndex + 1];
+            }
         }
     }
 
