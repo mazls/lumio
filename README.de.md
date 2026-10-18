@@ -27,6 +27,11 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
+## Neu in Version 1.3.2: Party-Look ✨
+
+- 🎨 **Neue Testkamera** mit animierter Party-Szene (Lichterkette, Bokeh, Lumio-Logo) – sieht auch beim Testen ohne Kamera nach Fotobox aus.
+- 🌙 **Ruhebildschirm im Akku-Sparmodus**: ein stimmungsvolles Party-Standbild statt schwarzem Hintergrund, auch rund ums Kamerabild im Hochformat.
+
 ## Neu in Version 1.3.1: Akku-Sparmodus & Hochformat 🔋
 
 - 🔋 **Akku-Sparmodus**: Live-View nur noch ab dem Countdown – auf dem Startbildschirm ruht die Kamera. Gerade bei DSLRs hält der Akku so deutlich länger durch (Admin-Menü → Kamera).

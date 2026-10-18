@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.2] – 2026-10-18 – *Party-Look für Testkamera & Ruhebildschirm* ✨
+
+### 🎨 Neue Hintergründe
+- **Neue Testkamera**: Statt Smiley eine animierte Party-Szene in den Lumio-Farben – schwebende Bokeh-Lichter, funkelnde Lichterkette, Sucher-Ecken, drehendes Lumio-Blendenlogo, „TESTKAMERA“-Label und Live-Uhrzeit. Auch die Testfotos sehen jetzt so aus.
+- **Ruhebildschirm im Akku-Sparmodus**: Statt eines schwarzen Hintergrunds liegt jetzt ein ruhiges Party-Standbild hinter dem Startbildschirm. Es wird nur einmal passend zur Bildschirmform gerendert und kostet keinen Akku.
+- **Hochformat**: Über und unter dem Kamerabild füllt derselbe Hintergrund die Fläche statt schwarzer Balken – auf Android und Windows.
+- Alles wird per Code gezeichnet: keine Bilddateien, gestochen scharf in jeder Auflösung.
+
+### 🔐 Android
+- Die APK im GitHub-Release ist ab sofort mit einem festen Release-Schlüssel signiert. Updates lassen sich direkt über die installierte Version installieren.
+
+---
+
 ## [1.3.1] – 2026-10-18 – *Akku-Sparmodus, Hochformat & D5600-Feinschliff* 🔋
 
 ### 🔋 Akku-Sparmodus für den Live-View (alle Plattformen)

@@ -27,6 +27,11 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.3.2: Party Look ✨
+
+- 🎨 **New test camera** with an animated party scene (fairy lights, bokeh, Lumio logo) – looks like a real photo booth even when testing without a camera.
+- 🌙 **Resting screen in battery saver mode**: a cozy party still image instead of a black background, also around the camera picture in portrait mode.
+
 ## New in Version 1.3.1: Battery Saver & Portrait Mode 🔋
 
 - 🔋 **Battery saver**: Live view only from the countdown on – the camera rests on the start screen. Especially with DSLRs the battery lasts a lot longer (Admin menu → Camera).

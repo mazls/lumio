@@ -108,16 +108,15 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Akku-Sparmodus & Hochformat 🔋
+            ## Lumio Release ${{ github.ref_name }} – Party-Look ✨
 
-            Nach dem ersten echten Einsatz der Android-App habe ich nachgelegt: weniger Akkuverbrauch an der Kamera, Hochkant-Bedienung und eine Nikon D5600, die am Handy jetzt richtig rund läuft.
+            Kleines, aber schönes Update: Lumio sieht jetzt auch dann nach Party aus, wenn gerade keine Kamera läuft.
 
             ### Highlights
-            - **Akku-Sparmodus** (alle Plattformen): Live-Bild erst ab dem Countdown – auf dem Startbildschirm ruht die Kamera. Einschalten im Admin-Menü → Kamera.
-            - **Hochformat**: Lumio dreht sich mit dem Gerät, eigenes Hochkant-Layout, Live-Bild zeigt das komplette Kamerabild über die volle Breite.
-            - **Nikon D5600 am Handy**: stabiler Live-View, Autofokus vor jedem Foto, volle Auflösung direkt aus der Kamera, automatisches Neuverbinden, RAW+JPEG wird erkannt.
-            - **Stabilität**: „Zurück in X“ zählt auf Android wieder herunter, kein doppelter Start mehr, verständliche Fehlermeldungen.
-            - **Android-APK mit festem Release-Schlüssel** – künftige Updates lassen sich direkt drüber installieren (wer 1.3.0 hat: einmal deinstallieren, vorher Fotos sichern).
+            - **Neue Testkamera**: animierte Party-Szene mit Lichterkette, Bokeh-Lichtern, Sucher-Ecken und Lumio-Logo – auch die Testfotos sehen so aus.
+            - **Ruhebildschirm im Akku-Sparmodus**: stimmungsvolles Party-Standbild statt schwarzem Hintergrund.
+            - **Hochformat**: Der Hintergrund füllt die Flächen rund ums Kamerabild statt schwarzer Balken (Android & Windows).
+            - **Android-APK mit festem Release-Schlüssel signiert** – Updates einfach drüber installieren. Wer noch eine ältere APK hat: einmal deinstallieren (vorher Fotos sichern), danach klappen Updates direkt.
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)
