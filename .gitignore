@@ -8,6 +8,9 @@ publish-linux-x64/
 dist/
 *.zip
 *.apk
+# Android signing keys - never commit
+*.keystore
+*.jks
 [Dd]ebug/
 [Rr]elease/
 *.user

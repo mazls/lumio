@@ -27,6 +27,12 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.3.1: Battery Saver & Portrait Mode 🔋
+
+- 🔋 **Battery saver**: Live view only from the countdown on – the camera rests on the start screen. Especially with DSLRs the battery lasts a lot longer (Admin menu → Camera).
+- 📱 **Portrait mode**: Lumio rotates with the device and has its own upright layout. In portrait the live view shows the whole camera frame across the full width.
+- 📷 **Nikon D5600 on the phone** now runs smoothly: stable live view, autofocus before every shot, automatic reconnect and full resolution straight from the camera.
+
 ## New in Version 1.3.0: Lumio as an Android App 📱
 
 I wanted my photo booth to work without a laptop too – just grab an old tablet or phone, plug the camera in via USB-C, done. And that's exactly what works now:
@@ -59,6 +65,7 @@ What came with 1.2.x (touch admin menu with tabs, on-screen keyboard, USB drive 
   - `Boomerang`: Rapid 1.3-second action burst looping forward and backward (Instagram style)
   - `Video Message`: Personal video and audio guestbook messages from guests (configurable duration in Admin)
 - **👀 Intermediate Photo Review**: In multi-shot modes, guests see a quick full-screen preview of their last pose before the next countdown begins.
+- **🔋 Battery Saver**: Optionally the live view only starts with the countdown – the camera rests while nobody is taking photos.
 - **⚙️ Full DSLR Exposure Control**: Manually adjust shutter speed, aperture, ISO, white balance, and exposure compensation from the Admin menu.
 - **🔒 Guest PIN Lockout**: Prevents guests from accidentally accessing Windows/Linux. The Admin area is protected by a PIN code (default: `1234`). Emergency shortcuts: `Esc` or `Ctrl + A`.
 - **🖨️ Canon Selphy Direct Printing**: Auto-detects Canon Selphy printers (CP1300, CP1500, CP1200) and prints borderless 4x6" photos on demand or automatically after capture.
@@ -157,14 +164,15 @@ Handy if you set up Lumio on several devices or build it yourself.
 
 ### Connecting a camera
 - **Nikon Z 50 II**: In the camera menu, set the USB connection to **UVC/UAC** (USB webcam) and plug it in via USB-C.
-- **Nikon D5600**: Connect it with a USB-OTG adapter and turn on **airplane mode on the camera** (otherwise SnapBridge blocks the USB port).
+- **Nikon D5600**: Connect it with a USB-OTG adapter and turn on **airplane mode on the camera** (otherwise SnapBridge blocks the USB port). Set image quality to **JPEG** or **RAW+JPEG** – Lumio can't process RAW-only.
 - The first time you plug the camera in, Android asks whether to open Lumio: **tap "Always"** – the USB prompt never comes back and the camera is ready instantly at every event.
 - Lumio automatically uses the connected camera. Without an external camera it uses the device's front or rear camera; you can switch anytime in the admin menu under **Camera**.
 - Simply allow camera and microphone access on first launch.
 
 ### Tips for events
 - Keep the charger connected – with the camera on the USB-C port you'll need a USB-C hub with Power Delivery for that.
-- Use Android's **"App pinning"** (*Settings → Security*) so guests can't leave Lumio.
+- Turn on the **battery saver** (Admin menu → Camera) – then the camera battery lasts the whole night too.
+- Use Android's **"App pinning" (*Settings → Security*) so guests can't leave Lumio.
 
 ---
 

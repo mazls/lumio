@@ -27,6 +27,12 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
+## Neu in Version 1.3.1: Akku-Sparmodus & Hochformat 🔋
+
+- 🔋 **Akku-Sparmodus**: Live-View nur noch ab dem Countdown – auf dem Startbildschirm ruht die Kamera. Gerade bei DSLRs hält der Akku so deutlich länger durch (Admin-Menü → Kamera).
+- 📱 **Hochformat**: Lumio dreht sich mit dem Gerät und hat ein eigenes Hochkant-Layout. Das Live-Bild zeigt im Hochformat das komplette Kamerabild über die volle Breite.
+- 📷 **Nikon D5600 am Handy** läuft jetzt rund: stabiler Live-View, Autofokus vor jedem Foto, automatisches Neuverbinden und volle Auflösung direkt aus der Kamera.
+
 ## Neu in Version 1.3.0: Lumio als Android-App 📱
 
 Meine Fotobox soll auch ohne Laptop funktionieren – einfach ein altes Tablet oder Handy, Kamera per USB-C dran, fertig. Genau das geht jetzt:
@@ -59,6 +65,7 @@ Was in 1.2.x dazugekommen ist (Touch-Admin-Menü mit Tabs, Bildschirmtastatur, U
   - `Boomerang`: Schneller 1,3s Action-Burst, der vor- und zurückspringt (Instagram-Style)
   - `Videobotschaft`: Persönliche Video- und Audio-Nachrichten der Gäste (Dauer im Admin-Menü einstellbar)
 - **👀 Zwischenbild-Vorschau**: Bei Serienaufnahmen sieht man das gerade geschossene Bild kurz groß auf dem Bildschirm, bevor der nächste Countdown runterzählt.
+- **🔋 Akku-Sparmodus**: Auf Wunsch läuft das Live-Bild erst ab dem Countdown – die Kamera ruht, solange niemand fotografiert.
 - **⚙️ Volle DSLR-Kontrolle**: Verschlusszeit, Blende, ISO, Weißabgleich und Belichtungskorrektur manuell im Admin-Menü anpassbar.
 - **🔒 PIN-Sperre für Gäste**: Gäste können nicht versehentlich in Windows/Linux landen. Admin-Bereich ist mit Zahlencode geschützt (Standard-PIN: `1234`). Notfall-Shortcut: `Esc` oder `Strg + A`.
 - **🖨️ Canon Selphy Direktdruck**: Erkennt Canon Selphy Drucker (CP1300, CP1500, CP1200) automatisch und druckt randlose 10x15 Abzüge auf Knopfdruck oder per Auto-Print.
@@ -157,13 +164,14 @@ Praktisch, wenn du Lumio auf mehreren Geräten installierst oder selbst baust.
 
 ### Kamera anschließen
 - **Nikon Z 50 II**: Im Kameramenü bei der USB-Verbindung **UVC/UAC** (USB-Webcam) wählen und per USB-C anstecken.
-- **Nikon D5600**: Per USB-OTG-Adapter anstecken und den **Flugmodus an der Kamera** einschalten (sonst blockiert SnapBridge den USB-Port).
+- **Nikon D5600**: Per USB-OTG-Adapter anstecken und den **Flugmodus an der Kamera** einschalten (sonst blockiert SnapBridge den USB-Port). Bildqualität auf **JPEG** oder **RAW+JPEG** stellen – reines RAW kann Lumio nicht verarbeiten.
 - Beim ersten Anstecken fragt Android, ob Lumio geöffnet werden soll: **„Immer“ antippen** – dann kommt die USB-Abfrage nie wieder und die Kamera ist bei jedem Event sofort da.
 - Lumio nimmt automatisch die angesteckte Kamera. Ohne externe Kamera wird die Front- bzw. Rückkamera des Geräts genutzt; im Admin-Menü unter **Kamera** kannst du jederzeit umschalten.
 - Kamera- und Mikrofon-Zugriff beim ersten Start einfach erlauben.
 
 ### Tipps für den Event-Einsatz
 - Ladegerät dranlassen – mit Kamera am USB-C-Port brauchst du dafür einen USB-C-Hub mit Power-Delivery.
+- **Akku-Sparmodus** einschalten (Admin-Menü → Kamera) – dann hält auch der Kamera-Akku den ganzen Abend.
 - Mit der Android-Funktion **„App-Fixierung“** (*Einstellungen → Sicherheit*) kommen die Gäste nicht aus Lumio heraus.
 
 ---

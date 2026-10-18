@@ -108,17 +108,16 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Die Android-App 📱
+            ## Lumio Release ${{ github.ref_name }} – Akku-Sparmodus & Hochformat 🔋
 
-            Meine Fotobox läuft jetzt auch auf einem Android-Tablet oder -Handy – Kamera per USB-C dran, fertig. Kein Laptop mehr nötig.
+            Nach dem ersten echten Einsatz der Android-App habe ich nachgelegt: weniger Akkuverbrauch an der Kamera, Hochkant-Bedienung und eine Nikon D5600, die am Handy jetzt richtig rund läuft.
 
             ### Highlights
-            - **Lumio als Android-App**: Gleiche Oberfläche und alle Modi wie auf Windows & Linux (Einzelfoto, 4er Collage, Doppelstreifen, GIF, Boomerang, Videobotschaft).
-            - **Nikon Z 50 II per USB-C (UVC/UAC)**: Eigener UVC-Treiber – läuft auch auf Geräten, die USB-Kameras nicht selbst erkennen (z. B. Google Pixel). Live-Bild mit 30 FPS und Kamera-Mikro für Videobotschaften.
-            - **Nikon D5600 per USB-OTG (PTP)**: Live-View und echte Auslösung, USB-Berechtigung für Android 14+ repariert.
-            - **Anstecken & loslegen**: Angesteckte Kamera hat Vorrang vor den Handy-Kameras, automatisches Neuverbinden beim Ab- und Anstecken.
-            - **Videobotschaften mit Ton als MP4** (H.264 + AAC) – laufen auf jedem Handy.
-            - **Echter Kiosk-Vollbildmodus** und kein Einfrieren der Oberfläche mehr auf neuen Geräten.
+            - **Akku-Sparmodus** (alle Plattformen): Live-Bild erst ab dem Countdown – auf dem Startbildschirm ruht die Kamera. Einschalten im Admin-Menü → Kamera.
+            - **Hochformat**: Lumio dreht sich mit dem Gerät, eigenes Hochkant-Layout, Live-Bild zeigt das komplette Kamerabild über die volle Breite.
+            - **Nikon D5600 am Handy**: stabiler Live-View, Autofokus vor jedem Foto, volle Auflösung direkt aus der Kamera, automatisches Neuverbinden, RAW+JPEG wird erkannt.
+            - **Stabilität**: „Zurück in X“ zählt auf Android wieder herunter, kein doppelter Start mehr, verständliche Fehlermeldungen.
+            - **Android-APK mit festem Release-Schlüssel** – künftige Updates lassen sich direkt drüber installieren (wer 1.3.0 hat: einmal deinstallieren, vorher Fotos sichern).
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)

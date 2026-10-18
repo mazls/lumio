@@ -4,6 +4,38 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.1] – 2026-10-18 – *Akku-Sparmodus, Hochformat & D5600-Feinschliff* 🔋
+
+### 🔋 Akku-Sparmodus für den Live-View (alle Plattformen)
+- **Neue Option im Admin-Menü → Kamera: „Akku-Sparmodus: Live-Bild erst ab dem Countdown“**:
+  - Auf dem Startbildschirm ruht die Kamera – bei DSLRs bleibt der Spiegel unten, bei der Z 50 II stoppt der Video-Stream.
+  - Mit „Foto starten“ wird der Live-View eingeschaltet („Kamera wird vorbereitet…“), der Countdown startet, sobald das erste Bild da ist.
+  - Nach dem Ergebnis geht die Kamera automatisch wieder in den Ruhezustand.
+  - Standardmäßig aus – ohne Haken bleibt alles wie gewohnt.
+
+### 📱 Hochformat
+- Lumio dreht sich mit dem Gerät (Rotationssperre wird respektiert).
+- Eigenes Layout für Hochkant-Bildschirme: Modus-Buttons im 2×3-Raster, kompakter Start-Button, zweizeilige Ergebnis-Leiste.
+- **Live-Bild passend zum Bildschirm**: Im Hochformat wird das komplette Kamerabild über die volle Breite gezeigt statt nur ein schmaler Streifen aus der Mitte – auch in der Windows-Version auf hochkant gedrehten Monitoren.
+- Dialoge (Admin-Menü, PIN, Info) passen sich kleinen Bildschirmen an und scrollen bei Bedarf.
+- Die Galerie-Kachel verdeckt im Ergebnis-Bildschirm nicht mehr den „Foto gespeichert“-Text.
+
+### 📷 Nikon D5600 am Handy/Tablet
+- Live-View läuft stabil (vorher wurde er nach jedem Bild sofort wieder beendet).
+- Fotos werden zuverlässig in voller Auflösung direkt aus dem Kamera-Speicher geholt – keine doppelten Auslösungen mehr.
+- Autofokus vor jedem Foto; kann die Kamera nicht scharfstellen, kommt ein klarer Hinweis statt eines Hängers.
+- Bei RAW+JPEG wird automatisch das JPEG genommen; speichert die Kamera nur RAW, sagt Lumio Bescheid.
+- Nach dem Aus- und Einschalten der Kamera verbindet sich Lumio von selbst wieder.
+- Die gewählte Kamera wird dauerhaft gespeichert (vorher änderte sich ihre ID bei jedem Einstecken).
+
+### 🛠️ Stabilität
+- „Zurück in X“ zählt auf Android wieder herunter (Timer liefen auf manchen Geräten nicht).
+- Ein doppeltes Antippen von „Foto starten“ startet keine zweite Aufnahme mehr.
+- Unlesbare Kamerabilder führen zu einer verständlichen Meldung statt „Value cannot be null“.
+- Die Android-APK aus dem GitHub-Release kann jetzt mit einem festen Release-Schlüssel signiert werden – künftige Updates lassen sich direkt drüber installieren.
+
+---
+
 ## [1.3.0] – 2026-10-18 – *Die Android-App* 📱
 
 ### 📱 Lumio als Android-App (Tablets & Smartphones)
