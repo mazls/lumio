@@ -108,15 +108,16 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Selphy-Druck repariert 🖨️
+            ## Lumio Release ${{ github.ref_name }} – Webcams auf Android & Galerie mit Videos 🎥
 
-            Beim ersten Testdruck kam auf dem Selphy nur ein Ausschnitt oben links raus. Das ist behoben – und randlos drucken geht jetzt auch.
+            Lumio läuft jetzt auch mit ganz normalen USB-Webcams am Handy oder Tablet – damit wird ein günstiges Tablet-Setup möglich. Dazu kommen Videos in der Galerie, ein Ordner pro Event und ein Update-Hinweis.
 
             ### Highlights
-            - **Ganzes Foto auf der Karte**: passend auf 100×148 mm skaliert und bei Bedarf gedreht.
-            - **Randlos drucken** (Admin-Menü → Drucker): Foto füllt die Karte, nur minimal beschnitten. Ohne Haken: komplettes Foto mit schmalem Rand.
-            - **Drucken auf Android**: Selphy wird im WLAN automatisch gefunden, gedruckt wird direkt ohne Druckdialog.
-            - **WLAN-Drucker unter Windows & Linux**: zusätzlich als „(WLAN)“ in der Druckerauswahl.
+            - **USB-Webcams auf Android** (getestet mit der Anker PowerConf C200), mit automatischem Ausweichen auf andere USB-Einstellungen bzw. kleinere Auflösungen.
+            - **Galerie**: Videobotschaften, GIFs und Boomerangs werden abgespielt.
+            - **Ein Ordner pro Event**: Datum des ersten Fotos, auch über Mitternacht hinaus – neuer Ordner mit „Neues Event“ im Admin-Menü.
+            - **Update-Hinweis** auf dem Startbildschirm (wegklickbar) und im Admin-Menü.
+            - **Funkelnde Lichterkette** im Akku-Sparmodus, randlose Darstellung auf Android.
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)

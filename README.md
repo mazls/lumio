@@ -27,6 +27,14 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.3.4: Webcams on Android & Gallery with Videos 🎥
+
+- 📷 **Regular USB webcams on phones/tablets** (e.g. Anker PowerConf C200) – great for a low-cost tablet setup.
+- 🖼️ **Videos, GIFs & boomerangs play in the gallery**.
+- 📂 **One folder per event**, even when the party goes past midnight or over several days.
+- 🔔 **Update notice** as soon as a new version is released on GitHub.
+- ✨ **Twinkling fairy lights** in battery saver mode and edge-to-edge display on Android.
+
 ## New in Version 1.3.3: Selphy Printing Fixed 🖨️
 
 - 🖨️ **Whole photo on the card**: The picture is now scaled to the 100×148 mm Selphy card (previously only a section was printed).
@@ -100,7 +108,7 @@ What came with 1.2.x (touch admin menu with tabs, on-screen keyboard, USB drive 
      - *Android*:
        - **Nikon D5600 via USB-OTG (PTP)**: Own C# PTP driver – releases the shutter, streams live view and pulls the photo straight onto the device. *(Tip: Turn on airplane mode on the camera so SnapBridge/Bluetooth doesn't block the USB port.)*
        - **Nikon Z 50 II via USB-C (UVC/UAC)**: Own UVC driver – 30 FPS live view and camera microphone for video messages, even on devices without built-in USB camera support (e.g. Google Pixel).
-       - **Other USB webcams & HDMI grabbers**: Anything that shows up as a UVC webcam with MJPEG or YUY2 – including older cameras with clean HDMI out via a $10-15 USB-C video capture dongle.
+       - **Other USB webcams & HDMI grabbers** (e.g. Anker PowerConf C200): Anything that shows up as a UVC webcam with MJPEG or YUY2 – including older cameras with clean HDMI out via a $10-15 USB-C video capture dongle.
        - **Built-in cameras**: Front and rear camera of the tablet/phone.
    - **Webcams**: USB webcams (Logitech, Anker, etc.) and integrated Surface front/rear and tablet cameras
    - **Simulated Test Camera**: Built-in virtual camera with live timestamp for testing without hardware

@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.4] – 2026-10-18 – *Webcams auf Android, Update-Hinweis & Galerie mit Videos* 🎥
+
+### 📷 Kameras
+- **USB-Webcams auf Android**: Der eigene UVC-Treiber kann jetzt auch isochron übertragen – damit laufen die meisten normalen Webcams (getestet mit der Anker PowerConf C200) direkt am Handy oder Tablet. Gut für ein günstiges Tablet-Setup.
+- **Robuster Videostream**: Klappt eine USB-Einstellung nicht oder kommt kein Bild, probiert Lumio selbst die nächste und schaltet notfalls auf eine kleinere Auflösung (z. B. bei wenig Bandbreite hinter einem USB-Hub). USB-3-Webcams werden mit der richtigen Paketgröße angesprochen.
+- Fotos werden nur aus vollständig übertragenen Bildern gemacht; liefert eine Kamera dauerhaft kein Bild, versucht Lumio nicht mehr endlos neu zu verbinden.
+
+### ✨ Oberfläche
+- **Animierte Lichterkette**: Im Akku-Sparmodus zeigt der Startbildschirm den Party-Hintergrund mit sanft funkelnden Lichtern – vorher blieb dort manchmal das letzte Kamerabild stehen.
+- **Randlos auf Android**: Der Hintergrund läuft bis an den Bildschirmrand (auch um die Frontkamera), die dunklen Balken oben und unten sind schmaler und weich.
+- **Update-Hinweis**: Gibt es auf GitHub eine neue Version, erscheint auf dem Startbildschirm ein wegklickbarer Hinweis, im Admin-Menü → Allgemein steht die Version mit Download-Link. Nur mit Internet und nur bei echten Releases.
+- Der Info-Dialog zeigt jetzt die richtige Versionsnummer.
+
+### 🖼️ Galerie
+- **Videobotschaften, GIFs und Boomerangs laufen in der Galerie** – auf Android und Windows mit Ton, auf Linux/Raspberry Pi über ffmpeg. Videobotschaften bekommen ein Vorschaubild für die Galerie-Kachel.
+
+### 📂 Speichern
+- **Ein Ordner pro Event**: Der Event-Ordner trägt das Datum des ersten Fotos und bleibt bestehen – auch über Mitternacht und mehrtägige Feiern hinweg. Neuer Ordner erst mit „Neues Event“ im Admin-Menü oder einem neuen Event-Namen.
+
+---
+
 ## [1.3.3] – 2026-10-18 – *Selphy-Druck repariert* 🖨️
 
 ### 🖨️ Drucken

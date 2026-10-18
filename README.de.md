@@ -27,6 +27,14 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
+## Neu in Version 1.3.4: Webcams auf Android & Galerie mit Videos 🎥
+
+- 📷 **Normale USB-Webcams am Handy/Tablet** (z. B. Anker PowerConf C200) – ideal für ein günstiges Tablet-Setup.
+- 🖼️ **Videos, GIFs & Boomerangs laufen in der Galerie**.
+- 📂 **Ein Ordner pro Event**, auch wenn über Mitternacht oder mehrere Tage gefeiert wird.
+- 🔔 **Update-Hinweis**, sobald eine neue Version auf GitHub erscheint.
+- ✨ **Funkelnde Lichterkette** im Akku-Sparmodus und randlose Darstellung auf Android.
+
 ## Neu in Version 1.3.3: Selphy-Druck repariert 🖨️
 
 - 🖨️ **Ganzes Foto auf der Karte**: Das Bild wird jetzt passend auf die 100×148 mm Selphy-Karte skaliert (vorher wurde nur ein Ausschnitt gedruckt).
@@ -100,7 +108,7 @@ Was in 1.2.x dazugekommen ist (Touch-Admin-Menü mit Tabs, Bildschirmtastatur, U
      - *Android*:
        - **Nikon D5600 via USB-OTG (PTP)**: Eigener PTP-Treiber in C# – löst aus, streamt Live-View und holt das Foto direkt aufs Gerät. *(Tipp: Flugmodus an der Kamera einschalten, damit SnapBridge/Bluetooth den USB-Port nicht blockiert.)*
        - **Nikon Z 50 II via USB-C (UVC/UAC)**: Eigener UVC-Treiber – Live-Bild mit 30 FPS und Kamera-Mikro für Videobotschaften, auch auf Geräten ohne eigene USB-Kamera-Unterstützung (z. B. Google Pixel).
-       - **Andere USB-Webcams & HDMI-Grabber**: Alles, was sich als UVC-Webcam mit MJPEG oder YUY2 meldet – auch ältere Kameras mit Clean-HDMI über einen 10–15 € USB-C Video-Grabber.
+       - **Andere USB-Webcams & HDMI-Grabber** (z. B. Anker PowerConf C200): Alles, was sich als UVC-Webcam mit MJPEG oder YUY2 meldet – auch ältere Kameras mit Clean-HDMI über einen 10–15 € USB-C Video-Grabber.
        - **Eingebaute Kameras**: Front- und Rückkamera des Tablets/Handys.
    - **Webcams**: USB-Webcams (Logitech, Anker etc.) sowie integrierte Surface-Front-/Rückkameras und Tablet-Kameras
    - **Simulierte Test-Kamera**: Integrierte virtuelle Testkamera mit Live-Zeitstempel zum Testen ohne Hardware
