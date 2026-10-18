@@ -16,6 +16,7 @@ using Lumio.Core.Camera;
 using Lumio.Core.Session;
 using Lumio.Core.Settings;
 using Lumio.Core.Storage;
+using Lumio.Core.Updates;
 using Lumio.Imaging;
 using Lumio.Printing;
 using SkiaSharp;
@@ -40,6 +41,7 @@ public partial class MainView : UserControl
     private UiTimer? _reviewTimer;
     private int _galleryCurrentIndex;
     private List<string> _galleryFiles = [];
+    private GalleryMediaPlayer? _galleryPlayer;
 
     // Resilient Auto-Reconnect
     private readonly object _reconnectLock = new();
@@ -47,12 +49,16 @@ public partial class MainView : UserControl
     private bool _isReconnecting;
     private DateTime _lastFrameTime = DateTime.MinValue;
     private UiTimer? _watchdogTimer;
+    private int _noFrameReconnects;
+    private const int MaxNoFrameReconnects = 3;
+    private UiTimer? _bulbTimer;
     private int _isRenderingFrame = 0;
     private long _lastFrameRenderTicks = 0;
 
     public MainView()
     {
         InitializeComponent();
+        _galleryPlayer = new GalleryMediaPlayer(GalleryMainImage, GalleryVideoHost);
 
         var timeProvider = TimeProvider.System;
         var settingsStore = new SettingsStore();
@@ -70,6 +76,7 @@ public partial class MainView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        SetupEdgeToEdge();
         Focus();
         InitializeBooth();
     }
@@ -107,6 +114,48 @@ public partial class MainView : UserControl
         if (!double.IsPositiveInfinity(_modalDesignMaxHeight))
             content.MaxHeight = Math.Min(_modalDesignMaxHeight, availableHeight);
     }
+
+    // ==================== EDGE TO EDGE ====================
+
+    /// <summary>Space taken by the camera cutout / system bars (Android); zero on desktops.</summary>
+    private Thickness _safeArea;
+
+    /// <summary>
+    /// Backgrounds and live view reach into the camera cutout area (instead of a black bar there),
+    /// while buttons and texts are kept out of it.
+    /// </summary>
+    private void SetupEdgeToEdge()
+    {
+        // Avalonia would otherwise pad the whole view, leaving a bare strip around the cutout
+        TopLevel.SetAutoSafeAreaPadding(this, false);
+        if (TopLevel.GetTopLevel(this)?.InsetsManager is not { } insets)
+            return;
+
+        insets.DisplayEdgeToEdgePreference = true;
+        insets.SafeAreaChanged += (_, e) => ApplySafeArea(e.SafeAreaPadding);
+        ApplySafeArea(insets.SafeAreaPadding);
+    }
+
+    private void ApplySafeArea(Thickness safe)
+    {
+        _safeArea = safe;
+        TopBarGrid.Margin = new Thickness(24 + safe.Left, 20 + safe.Top, 24 + safe.Right, 0);
+        UpdateBanner.Margin = new Thickness(16 + safe.Left, 84 + safe.Top, 16 + safe.Right, 0);
+        CornerGalleryBorder.Margin = new Thickness(24 + safe.Left, 0, 0, 20 + safe.Bottom);
+        GalleryHeaderGrid.Margin = new Thickness(28 + safe.Left, 20 + safe.Top, 28 + safe.Right, 20);
+        GalleryFooterBorder.Padding = new Thickness(28 + safe.Left, 16, 28 + safe.Right, 16 + safe.Bottom);
+
+        // Review layout depends on the orientation: lay it out again with the new insets
+        _isPortraitLayout = null;
+        if (Bounds.Width > 0)
+            ApplyOrientationLayout(Bounds.Size);
+    }
+
+    private Thickness WithSafeArea(Thickness margin, bool top = true) => new(
+        margin.Left + _safeArea.Left,
+        margin.Top + (top ? _safeArea.Top : 0),
+        margin.Right + _safeArea.Right,
+        margin.Bottom + _safeArea.Bottom);
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
@@ -169,8 +218,8 @@ public partial class MainView : UserControl
             PlaceInGrid(ReviewStatusPanel, row: 0, column: 0, columnSpan: 3);
             PlaceInGrid(PrintButton, row: 2, column: 0);
             PlaceInGrid(ReviewDoneButton, row: 2, column: 2);
-            ReviewActionsBar.Padding = new Thickness(20, 16);
-            ReviewImageControl.Margin = new Thickness(16, 90, 16, 220);
+            ReviewActionsBar.Padding = WithSafeArea(new Thickness(20, 16), top: false);
+            ReviewImageControl.Margin = WithSafeArea(new Thickness(16, 90, 16, 220));
         }
         else
         {
@@ -178,8 +227,8 @@ public partial class MainView : UserControl
             PlaceInGrid(ReviewStatusPanel, row: 0, column: 0);
             PlaceInGrid(PrintButton, row: 0, column: 2);
             PlaceInGrid(ReviewDoneButton, row: 0, column: 4);
-            ReviewActionsBar.Padding = new Thickness(36, 20);
-            ReviewImageControl.Margin = new Thickness(40, 50, 40, 130);
+            ReviewActionsBar.Padding = WithSafeArea(new Thickness(36, 20), top: false);
+            ReviewImageControl.Margin = WithSafeArea(new Thickness(40, 50, 40, 130));
         }
         ReviewDoneButton.Content = portrait ? "Fertig" : "Fertig / Nächstes Foto";
         foreach (var button in new[] { PrintButton, ReviewDoneButton })
@@ -196,6 +245,8 @@ public partial class MainView : UserControl
 
         // Fullscreen gallery: no room for side margins next to the arrows in portrait
         GalleryMainImage.Margin = portrait ? new Thickness(0, 10) : new Thickness(80, 10);
+        // A native video view is drawn above everything: keep the arrow buttons next to it visible
+        GalleryVideoHost.Margin = portrait ? new Thickness(64, 10) : GalleryMainImage.Margin;
     }
 
     /// <summary>Renders the party backdrop in the screen's aspect ratio (only when the orientation changes).</summary>
@@ -213,11 +264,13 @@ public partial class MainView : UserControl
         {
             try
             {
-                var png = PartyScene.RenderStillPng(width, height);
+                var (background, bulbsA, bulbsB) = PartyScene.RenderLayeredPng(width, height);
                 Dispatcher.UIThread.Post(() =>
                 {
-                    using var stream = new MemoryStream(png);
-                    IdleBackdropImage.Source = new Bitmap(stream);
+                    IdleBackdropImage.Source = LoadBitmap(background);
+                    IdleBulbsAImage.Source = LoadBitmap(bulbsA);
+                    IdleBulbsBImage.Source = LoadBitmap(bulbsB);
+                    StartBulbAnimation();
                 });
             }
             catch
@@ -225,6 +278,35 @@ public partial class MainView : UserControl
                 // Decorative only
             }
         });
+    }
+
+    private static Bitmap LoadBitmap(byte[] png)
+    {
+        using var stream = new MemoryStream(png);
+        return new Bitmap(stream);
+    }
+
+    /// <summary>
+    /// Lets the fairy lights twinkle by fading the two bulb layers against each other. Runs at ~12 fps and only
+    /// while the backdrop is actually visible (no live view), so it costs next to nothing.
+    /// </summary>
+    private void StartBulbAnimation()
+    {
+        if (_bulbTimer is not null)
+            return;
+
+        var start = Environment.TickCount64;
+        _bulbTimer = new UiTimer { Interval = TimeSpan.FromMilliseconds(80) };
+        _bulbTimer.Tick += (_, _) =>
+        {
+            if (LiveViewImageControl.Source is not null || ReviewGrid.IsVisible || GalleryOverlayGrid.IsVisible)
+                return;
+
+            var t = (Environment.TickCount64 - start) / 1000.0;
+            IdleBulbsAImage.Opacity = 0.6 + 0.4 * Math.Sin(t * 1.9);
+            IdleBulbsBImage.Opacity = 0.6 + 0.4 * Math.Sin(t * 1.9 + Math.PI * 0.85 + 0.3 * Math.Sin(t * 0.37));
+        };
+        _bulbTimer.Start();
     }
 
     private static void PlaceInGrid(Control control, int row, int column, int columnSpan = 1)
@@ -249,6 +331,26 @@ public partial class MainView : UserControl
         _ = StartCameraAsync();
         StartWatchdog();
         RefreshGalleryCorner();
+
+        UpdateChecker.UpdateAvailable += OnUpdateAvailable;
+        ShowUpdateBanner(UpdateChecker.AvailableUpdate);
+        UpdateChecker.StartPeriodicCheck();
+    }
+
+    private void OnUpdateAvailable(ReleaseInfo release) => Dispatcher.UIThread.Post(() => ShowUpdateBanner(release));
+
+    private void ShowUpdateBanner(ReleaseInfo? release)
+    {
+        UpdateBanner.IsVisible = release is not null && !UpdateChecker.IsDismissed(release);
+        if (release is not null)
+            UpdateBannerText.Text = $"Lumio {release.DisplayVersion} ist verfügbar – Details im Admin-Menü";
+    }
+
+    private void OnDismissUpdateClick(object? sender, RoutedEventArgs e)
+    {
+        UpdateBanner.IsVisible = false;
+        if (UpdateChecker.AvailableUpdate is { } release)
+            UpdateChecker.Dismiss(release);
     }
 
     private void OnHardwareChanged(bool devicesChanged)
@@ -267,6 +369,7 @@ public partial class MainView : UserControl
 
         Dispatcher.UIThread.Post(() =>
         {
+            _noFrameReconnects = 0;
             TriggerAutoReconnect("Hardware geändert", cameraSwitch: devicesChanged);
         });
     }
@@ -343,7 +446,11 @@ public partial class MainView : UserControl
                 {
                     if (_lastFrameTime != DateTime.MinValue && (DateTime.UtcNow - _lastFrameTime) > TimeSpan.FromSeconds(6))
                     {
-                        TriggerAutoReconnect("Keine Bilder empfangen");
+                        // A camera that is connected but never delivers a picture is not reconnected forever
+                        if (++_noFrameReconnects <= MaxNoFrameReconnects)
+                            TriggerAutoReconnect("Keine Bilder empfangen");
+                        else
+                            CameraStatusText.Text = $"{_activeCamera.DisplayName} liefert kein Bild – bitte neu einstecken";
                     }
                 }
             }
@@ -430,6 +537,7 @@ public partial class MainView : UserControl
     private void OnCameraFrameReady(object? sender, LiveViewFrame frame)
     {
         _lastFrameTime = DateTime.UtcNow;
+        _noFrameReconnects = 0;
         _firstLiveViewFrame?.TrySetResult();
         if (!LiveViewNeeded)
             return;
@@ -488,7 +596,7 @@ public partial class MainView : UserControl
                 {
                     try
                     {
-                        if (ReviewGrid.IsVisible || GalleryOverlayGrid.IsVisible)
+                        if (ReviewGrid.IsVisible || GalleryOverlayGrid.IsVisible || !LiveViewNeeded)
                         {
                             bitmap.Dispose();
                             return;
@@ -664,7 +772,7 @@ public partial class MainView : UserControl
 
         // 4. Move to storage
         var extension = Path.GetExtension(result.VideoPath).TrimStart('.');
-        var finalPath = await _storage.MoveVideoAsync(result.VideoPath, DateTimeOffset.Now, extension: extension);
+        var finalPath = await _storage.MoveVideoAsync(result.VideoPath, DateTimeOffset.Now, extension: extension, posterJpeg: result.ThumbnailJpeg);
 
         if (result.ThumbnailJpeg is not null)
         {
@@ -1008,11 +1116,13 @@ public partial class MainView : UserControl
             var files = _storage.GetEventPhotos();
             if (files.Count > 0)
             {
-                var latest = files[0];
-                if (latest.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
+                // GIFs decode to their first frame, video messages show their poster image
+                var latest = files.FirstOrDefault(f => !GalleryMediaPlayer.IsVideo(f) || File.Exists(GalleryMediaPlayer.PosterPath(f))) ?? files[0];
+                var thumbnail = GalleryMediaPlayer.IsVideo(latest) ? GalleryMediaPlayer.PosterPath(latest) : latest;
+                if (File.Exists(thumbnail))
                 {
-                    using var ms = new MemoryStream(File.ReadAllBytes(latest));
-                    CornerThumbnailImage.Source = new Bitmap(ms);
+                    using var ms = new MemoryStream(File.ReadAllBytes(thumbnail));
+                    CornerThumbnailImage.Source = Bitmap.DecodeToWidth(ms, 400);
                 }
                 GalleryCountText.Text = $"{files.Count} Foto{(files.Count == 1 ? "" : "s")}";
                 // Only on the start screen - in the review it would cover the status text
@@ -1039,12 +1149,16 @@ public partial class MainView : UserControl
             return;
 
         var file = _galleryFiles[_galleryCurrentIndex];
-        GalleryIndexTitleText.Text = $"Foto {_galleryCurrentIndex + 1} von {_galleryFiles.Count}";
+        var isVideo = GalleryMediaPlayer.IsVideo(file);
+        var isAnimation = GalleryMediaPlayer.IsGif(file);
+        var kind = isVideo ? "Video" : isAnimation ? "Animation" : "Foto";
+        GalleryIndexTitleText.Text = $"{kind} {_galleryCurrentIndex + 1} von {_galleryFiles.Count}";
         GalleryPhotoInfoText.Text = Path.GetFileName(file);
+        GalleryPrintStatusText.IsVisible = false;
+        GalleryPrintButton.IsVisible = !isVideo && !isAnimation;
         try
         {
-            using var ms = new MemoryStream(File.ReadAllBytes(file));
-            GalleryMainImage.Source = new Bitmap(ms);
+            _galleryPlayer?.Show(file);
         }
         catch { }
     }
@@ -1097,6 +1211,7 @@ public partial class MainView : UserControl
 
     private void OnCloseGalleryClick(object? sender, RoutedEventArgs e)
     {
+        _galleryPlayer?.Stop();
         GalleryOverlayGrid.IsVisible = false;
     }
 
@@ -1196,6 +1311,7 @@ public partial class MainView : UserControl
     private async Task TeardownBoothAsync()
     {
         CameraManager.OnHardwareChanged -= OnHardwareChanged;
+        UpdateChecker.UpdateAvailable -= OnUpdateAvailable;
         _watchdogTimer?.Stop();
         _reconnectCts?.Cancel();
 

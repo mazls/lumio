@@ -21,6 +21,9 @@
         <!-- Party backdrop: visible while the battery saver keeps the live view off and around the
              (letterboxed) live view in portrait -->
         <Image x:Name="IdleBackdropImage" Stretch="UniformToFill" IsHitTestVisible="False" />
+        <!-- Every other bulb of the fairy lights; fading the two layers against each other makes them twinkle -->
+        <Image x:Name="IdleBulbsAImage" Stretch="UniformToFill" IsHitTestVisible="False" />
+        <Image x:Name="IdleBulbsBImage" Stretch="UniformToFill" IsHitTestVisible="False" />
 
         <Image x:Name="LiveViewImageControl"
                Stretch="UniformToFill"
@@ -97,6 +100,31 @@
 
         <!-- ==================== 3. IDLE / WELCOME OVERLAY ==================== -->
         <Grid x:Name="IdleOverlayGrid" Visibility="Visible">
+            <!-- New release available: closable, comes back only for the next release -->
+            <Border x:Name="UpdateBanner"
+                    Visibility="Collapsed"
+                    VerticalAlignment="Top"
+                    HorizontalAlignment="Center"
+                    MaxWidth="620"
+                    Margin="20,100,20,0"
+                    Background="{StaticResource GlassBrush}"
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="20"
+                    Padding="18,4,4,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="UpdateBannerText" Text="✨ Neue Lumio-Version verfügbar" TextWrapping="Wrap" Style="{StaticResource Caption}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Style="{StaticResource CircularIconButton}" Margin="10,0,0,0"
+                            ToolTip="Hinweis ausblenden" Click="OnDismissUpdateClick">
+                        <TextBlock Text="✕" FontSize="16" />
+                    </Button>
+                </Grid>
+            </Border>
+
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
 
                 <!-- Glowing Event Title & Lumio Badge -->
@@ -396,6 +424,15 @@
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Margin="100,10" />
+
+                <!-- Video messages (with sound, looped) -->
+                <MediaElement x:Name="GalleryVideoPlayer"
+                              Visibility="Collapsed"
+                              LoadedBehavior="Manual"
+                              UnloadedBehavior="Stop"
+                              Stretch="Uniform"
+                              Margin="100,10"
+                              MediaEnded="OnGalleryVideoEnded" />
 
                 <!-- Previous Button -->
                 <Button HorizontalAlignment="Left" VerticalAlignment="Center"

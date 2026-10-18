@@ -11,6 +11,7 @@ using Lumio.Camera;
 using Lumio.Core.Camera;
 using Lumio.Core.Settings;
 using Lumio.Core.Storage;
+using Lumio.Core.Updates;
 using Lumio.Imaging;
 using Lumio.Printing;
 
@@ -76,6 +77,7 @@ public partial class AdminDashboardDialog : UserControl
         _templateStore = templateStore ?? new TemplateStore();
 
         LoadSettings();
+        _ = ShowVersionInfoAsync();
         _ = PopulateCameraOptionsAsync();
         PopulateDslrOptions();
         PopulatePrinterOptions();
@@ -122,6 +124,7 @@ public partial class AdminDashboardDialog : UserControl
     {
         var current = _settingsService.Current;
         EventNameTextBox.Text = current.EventName;
+        ShowEventFolderInfo();
         OutputFolderTextBox.Text = current.OutputRoot;
         CountdownUpDown.Value = current.CountdownSeconds;
         ReviewUpDown.Value = current.ReviewSeconds;
@@ -368,6 +371,9 @@ public partial class AdminDashboardDialog : UserControl
         var copy = _settingsService.Current.Clone();
         if (!string.IsNullOrWhiteSpace(EventNameTextBox.Text))
             copy.EventName = EventNameTextBox.Text.Trim();
+        // A new event (or a renamed one) gets its own folder, dated with its first photo
+        if (_startNewEvent || copy.EventName != _settingsService.Current.EventName)
+            copy.EventStartDate = null;
         if (!string.IsNullOrWhiteSpace(OutputFolderTextBox.Text))
             copy.OutputRoot = OutputFolderTextBox.Text.Trim();
 
@@ -435,6 +441,48 @@ public partial class AdminDashboardDialog : UserControl
             });
         }
         catch { }
+    }
+
+    /// <summary>Shows the running version and, if GitHub has a newer release, a download hint (checked again on open).</summary>
+    private async Task ShowVersionInfoAsync()
+    {
+        CurrentVersionText.Text = $"Lumio {UpdateChecker.CurrentVersion.ToString(3)}";
+        ShowUpdate(UpdateChecker.AvailableUpdate);
+        ShowUpdate(await UpdateChecker.CheckAsync() ?? UpdateChecker.AvailableUpdate);
+    }
+
+    private void ShowUpdate(ReleaseInfo? release)
+    {
+        UpdateAvailablePanel.IsVisible = release is not null;
+        if (release is not null)
+            UpdateAvailableText.Text = $"Neue Version {release.DisplayVersion} verfügbar";
+    }
+
+    private async void OnOpenReleaseClick(object? sender, RoutedEventArgs e)
+    {
+        var url = UpdateChecker.AvailableUpdate?.Url ?? UpdateChecker.ReleasesPage;
+        try
+        {
+            if (TopLevel.GetTopLevel(this)?.Launcher is { } launcher)
+                await launcher.LaunchUriAsync(new Uri(url));
+        }
+        catch { }
+    }
+
+    private bool _startNewEvent;
+
+    private void ShowEventFolderInfo()
+    {
+        EventFolderInfoText.Text = _settingsService.Current.EventStartDate is { } started
+                                   && DateOnly.TryParse(started, System.Globalization.CultureInfo.InvariantCulture, out var date)
+            ? $"📂 {_storage.GetEventFolderName()} – läuft seit {date:dd.MM.yyyy}, auch über Mitternacht hinaus"
+            : $"📂 {_storage.GetEventFolderName()} – beginnt mit dem ersten Foto";
+    }
+
+    private void OnStartNewEventClick(object? sender, RoutedEventArgs e)
+    {
+        _startNewEvent = true;
+        EventFolderInfoText.Text = "✅ Nach dem Speichern beginnt mit dem nächsten Foto ein neuer Event-Ordner.";
     }
 
     private void OnAboutClick(object? sender, RoutedEventArgs e)

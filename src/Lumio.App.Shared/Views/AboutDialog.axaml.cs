@@ -12,6 +12,8 @@ public partial class AboutDialog : UserControl
     public AboutDialog()
     {
         InitializeComponent();
+        var edition = OperatingSystem.IsAndroid() ? "Android Edition" : "Raspberry Pi / Linux Edition";
+        VersionText.Text = $"Version {Lumio.Core.Updates.UpdateChecker.CurrentVersion.ToString(3)} • {edition}";
         Loaded += (s, e) => Focus();
     }
 

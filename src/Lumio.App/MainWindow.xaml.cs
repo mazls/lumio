@@ -12,6 +12,7 @@ using Lumio.Core.Camera;
 using Lumio.Core.Session;
 using Lumio.Core.Settings;
 using Lumio.Core.Storage;
+using Lumio.Core.Updates;
 using Lumio.Imaging;
 using Lumio.Printing;
 using SkiaSharp;
@@ -89,6 +90,10 @@ public partial class MainWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         UpdateCornerGalleryThumbnail();
+        UpdateChecker.UpdateAvailable += release => Dispatcher.InvokeAsync(() => ShowUpdateBanner(release));
+        ShowUpdateBanner(UpdateChecker.AvailableUpdate);
+        UpdateChecker.StartPeriodicCheck();
+
         await InitializeCameraAsync();
         StartFrameWatchdog();
 
@@ -265,6 +270,10 @@ public partial class MainWindow : Window
         Dispatcher.InvokeAsync(() =>
         {
             if (_isCapturing && ReviewGrid.Visibility == Visibility.Visible)
+                return;
+
+            // A frame queued while the capture session ended must not stay on screen as background
+            if (!LiveViewNeeded)
                 return;
 
             if (GalleryOverlayGrid.Visibility == Visibility.Visible)
@@ -547,7 +556,7 @@ public partial class MainWindow : Window
 
         // 4. Move to event storage
         var extension = Path.GetExtension(result.VideoPath).TrimStart('.');
-        var finalPath = await _storage.MoveVideoAsync(result.VideoPath, DateTimeOffset.Now, extension: extension);
+        var finalPath = await _storage.MoveVideoAsync(result.VideoPath, DateTimeOffset.Now, extension: extension, posterJpeg: result.ThumbnailJpeg);
 
         _lastResultFilePath = finalPath;
         _lastResultJpeg = result.ThumbnailJpeg;
@@ -994,16 +1003,13 @@ public partial class MainWindow : Window
         {
             try
             {
-                var png = PartyScene.RenderStillPng(width, height);
+                var (background, bulbsA, bulbsB) = PartyScene.RenderLayeredPng(width, height);
                 Dispatcher.InvokeAsync(() =>
                 {
-                    var bitmap = new BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmap.StreamSource = new MemoryStream(png);
-                    bitmap.EndInit();
-                    bitmap.Freeze();
-                    IdleBackdropImage.Source = bitmap;
+                    IdleBackdropImage.Source = LoadBitmap(background);
+                    IdleBulbsAImage.Source = LoadBitmap(bulbsA);
+                    IdleBulbsBImage.Source = LoadBitmap(bulbsB);
+                    StartBulbAnimation();
                 });
             }
             catch
@@ -1011,6 +1017,56 @@ public partial class MainWindow : Window
                 // Decorative only
             }
         });
+    }
+
+    private void ShowUpdateBanner(ReleaseInfo? release)
+    {
+        UpdateBanner.Visibility = release is not null && !UpdateChecker.IsDismissed(release) ? Visibility.Visible : Visibility.Collapsed;
+        if (release is not null)
+            UpdateBannerText.Text = $"✨ Lumio {release.DisplayVersion} ist verfügbar – Details im Admin-Menü";
+    }
+
+    private void OnDismissUpdateClick(object sender, RoutedEventArgs e)
+    {
+        UpdateBanner.Visibility = Visibility.Collapsed;
+        if (UpdateChecker.AvailableUpdate is { } release)
+            UpdateChecker.Dismiss(release);
+    }
+
+    private static BitmapImage LoadBitmap(byte[] png)
+    {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.StreamSource = new MemoryStream(png);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    private bool _bulbAnimationRunning;
+
+    /// <summary>Lets the fairy lights twinkle by fading the two bulb layers against each other (GPU composited).</summary>
+    private void StartBulbAnimation()
+    {
+        if (_bulbAnimationRunning)
+            return;
+        _bulbAnimationRunning = true;
+
+        AnimateBulbs(IdleBulbsAImage, from: 1.0, to: 0.25, seconds: 1.7);
+        AnimateBulbs(IdleBulbsBImage, from: 0.3, to: 1.0, seconds: 2.1);
+    }
+
+    private static void AnimateBulbs(UIElement layer, double from, double to, double seconds)
+    {
+        var animation = new DoubleAnimation(from, to, TimeSpan.FromSeconds(seconds))
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
+        };
+        Timeline.SetDesiredFrameRate(animation, 20);
+        layer.BeginAnimation(UIElement.OpacityProperty, animation);
     }
 
     private void ReturnToIdle()
@@ -1044,8 +1100,11 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var latest = photos[0];
+            // Older video messages have no poster image: show the newest item that has a picture
+            var latest = photos.FirstOrDefault(p => !IsVideoFile(p) || File.Exists(Path.ChangeExtension(p, ".jpg"))) ?? photos[0];
             var isGif = latest.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+            if (IsVideoFile(latest))
+                latest = Path.ChangeExtension(latest, ".jpg"); // poster image saved with the video message
 
             if (isGif)
             {
@@ -1093,8 +1152,21 @@ public partial class MainWindow : Window
         var path = _galleryPhotos[index];
         try
         {
+            StopGalleryVideo();
             var isGif = path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
-            if (isGif)
+            var isVideo = IsVideoFile(path);
+            if (isVideo)
+            {
+                _galleryGifPlayer.Stop();
+                var poster = Path.ChangeExtension(path, ".jpg");
+                GalleryMainImage.Source = File.Exists(poster) ? LoadBitmap(File.ReadAllBytes(poster)) : null;
+                GalleryVideoPlayer.Source = new Uri(path, UriKind.Absolute);
+                GalleryVideoPlayer.Visibility = Visibility.Visible;
+                GalleryVideoPlayer.Play();
+                GalleryPrintButton.IsEnabled = false;
+                GalleryPrintButtonLabel.Text = "🎥 Videobotschaft";
+            }
+            else if (isGif)
             {
                 _galleryGifPlayer.Play(path);
                 GalleryPrintButton.IsEnabled = false;
@@ -1116,7 +1188,7 @@ public partial class MainWindow : Window
                 GalleryPrintButtonLabel.Text = "Foto drucken (Selphy)";
             }
 
-            GalleryIndexTitleText.Text = $"{(isGif ? "Animation" : "Foto")} {index + 1} von {_galleryPhotos.Count}";
+            GalleryIndexTitleText.Text = $"{(isVideo ? "Video" : isGif ? "Animation" : "Foto")} {index + 1} von {_galleryPhotos.Count}";
             GalleryPhotoInfoText.Text = Path.GetFileName(path);
             GalleryPrintStatusText.Visibility = Visibility.Collapsed;
         }
@@ -1140,8 +1212,25 @@ public partial class MainWindow : Window
         DisplayGalleryPhoto(_galleryCurrentIndex);
     }
 
+    private static bool IsVideoFile(string path) =>
+        path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".avi", StringComparison.OrdinalIgnoreCase);
+
+    private void StopGalleryVideo()
+    {
+        GalleryVideoPlayer.Stop();
+        GalleryVideoPlayer.Source = null;
+        GalleryVideoPlayer.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnGalleryVideoEnded(object sender, RoutedEventArgs e)
+    {
+        GalleryVideoPlayer.Position = TimeSpan.Zero;
+        GalleryVideoPlayer.Play();
+    }
+
     private void OnCloseGalleryClick(object sender, RoutedEventArgs e)
     {
+        StopGalleryVideo();
         _galleryGifPlayer.Stop();
         GalleryMainImage.Source = null;
         GalleryOverlayGrid.Visibility = Visibility.Collapsed;

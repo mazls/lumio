@@ -4,8 +4,8 @@ namespace Lumio.Camera;
 
 /// <summary>
 /// Evening party backdrop in Lumio's colors: soft glows, depth-of-field bokeh lights and a string of fairy lights.
-/// Used animated by the test camera and as a still background on the start screen while the
-/// battery saver keeps the real camera's live view switched off.
+/// Used animated by the test camera and as background on the start screen while the battery saver keeps the
+/// real camera's live view switched off (there as layers, so the UI can let the fairy lights twinkle cheaply).
 /// </summary>
 public static class PartyScene
 {
@@ -23,6 +23,36 @@ public static class PartyScene
     {
         using var surface = SKSurface.Create(new SKImageInfo(width, height));
         DrawBackdrop(surface.Canvas, width, height, 0f, animated: false);
+        using var image = surface.Snapshot();
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+
+    /// <summary>
+    /// Renders the start screen backdrop as three PNG layers: the scene with the bare light strings, and two
+    /// transparent layers holding every other bulb. Fading the bulb layers against each other lets the fairy
+    /// lights twinkle without redrawing the (blurry, expensive) scene.
+    /// </summary>
+    public static (byte[] Background, byte[] BulbsA, byte[] BulbsB) RenderLayeredPng(int width, int height)
+    {
+        var size = MathF.Max(width, height);
+        return (
+            Render(width, height, canvas =>
+            {
+                DrawSky(canvas, width, height, size, 0f);
+                DrawBokeh(canvas, width, height, size, 0f);
+                DrawFairyLights(canvas, width, height, size, 0f, animated: false, bulbs: BulbsNone);
+                DrawVignette(canvas, width, height, size);
+            }),
+            Render(width, height, canvas => DrawFairyLights(canvas, width, height, size, 0f, animated: false, bulbs: BulbsEven, wire: false)),
+            Render(width, height, canvas => DrawFairyLights(canvas, width, height, size, 0f, animated: false, bulbs: BulbsOdd, wire: false)));
+    }
+
+    private static byte[] Render(int width, int height, Action<SKCanvas> draw)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
+        surface.Canvas.Clear(SKColors.Transparent);
+        draw(surface.Canvas);
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         return data.ToArray();
@@ -107,9 +137,12 @@ public static class PartyScene
         }
     }
 
-    private static void DrawFairyLights(SKCanvas canvas, int width, int height, float size, float t, bool animated)
+    private const int BulbsAll = 0, BulbsNone = 1, BulbsEven = 2, BulbsOdd = 3;
+
+    private static void DrawFairyLights(SKCanvas canvas, int width, int height, float size, float t, bool animated,
+        int bulbs = BulbsAll, bool wire = true)
     {
-        using var wire = new SKPaint
+        using var wirePaint = new SKPaint
         {
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
@@ -139,11 +172,15 @@ public static class PartyScene
                 if (s == 0) builder.MoveTo(point); else builder.LineTo(point);
             }
             using var path = builder.Detach();
-            canvas.DrawPath(path, wire);
+            if (wire)
+                canvas.DrawPath(path, wirePaint);
 
             var bulbCount = 14 + stringIndex * 4;
             for (var b = 1; b < bulbCount; b++)
             {
+                if (bulbs == BulbsNone || (bulbs == BulbsEven && b % 2 != 0) || (bulbs == BulbsOdd && b % 2 == 0))
+                    continue;
+
                 var u = b / (float)bulbCount;
                 var p = StringPoint(width, y0, y1, sagHeight, u, stringIndex);
                 var twinkle = animated ? 0.7f + 0.3f * MathF.Sin(t * 2.2f + b * 1.7f + stringIndex) : 1f;

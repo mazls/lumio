@@ -57,7 +57,7 @@
                            Style="{StaticResource H1}"
                            FontSize="28"
                            HorizontalAlignment="Center" />
-                <TextBlock Text="Version 1.2.1 • Standalone Edition"
+                <TextBlock x:Name="VersionText" Text="Version"
                            Style="{StaticResource Caption}"
                            Foreground="{StaticResource AccentOrangeBrush}"
                            FontWeight="SemiBold"

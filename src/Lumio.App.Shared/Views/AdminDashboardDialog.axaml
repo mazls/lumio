@@ -42,6 +42,22 @@
                     <ScrollViewer Margin="0,10,-6,0" Padding="0,0,6,0">
                         <StackPanel Spacing="14">
 
+                            <!-- Version & updates -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="VERSION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
+                                    <TextBlock x:Name="CurrentVersionText" Text="Lumio" FontSize="14" Foreground="White" />
+                                    <Border x:Name="UpdateAvailablePanel" IsVisible="False" Background="#2210B981" BorderBrush="{StaticResource SuccessBrush}" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock x:Name="UpdateAvailableText" TextWrapping="Wrap" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                                            <Button Grid.Column="1" Margin="10,0,0,0" CornerRadius="10" Padding="12,8" Click="OnOpenReleaseClick">
+                                                <TextBlock Text="Download" FontSize="14" FontWeight="SemiBold" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Quick Actions -->
                             <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="14" Padding="16">
                                 <StackPanel Spacing="10">
@@ -77,6 +93,13 @@
                                         <TextBlock Text="Event-Name" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
                                         <TextBox x:Name="EventNameTextBox" CornerRadius="10" FontSize="14" Padding="10,8" GotFocus="OnInputGotFocus" />
                                     </StackPanel>
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock x:Name="EventFolderInfoText" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Margin="10,0,0,0" CornerRadius="10" Padding="12,8" Click="OnStartNewEventClick">
+                                            <TextBlock Text="Neues Event" FontSize="14" FontWeight="SemiBold" />
+                                        </Button>
+                                    </Grid>
 
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="Speicherordner für Fotos &amp; Videos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />

@@ -12,6 +12,7 @@ public partial class AboutDialog : Window
     public AboutDialog()
     {
         InitializeComponent();
+        VersionText.Text = $"Version {Lumio.Core.Updates.UpdateChecker.CurrentVersion.ToString(3)} • Windows Edition";
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e)

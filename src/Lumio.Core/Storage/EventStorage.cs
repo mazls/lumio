@@ -6,6 +6,8 @@ namespace Lumio.Core.Storage;
 /// <summary>
 /// Decides where event files are stored:
 /// <c>{OutputRoot}/{yyyy-MM-dd}_{EventName}/Originale/IMG_....jpg</c>
+/// The date is the day the event began (its first file), so a party past midnight or over a weekend stays
+/// in one folder until a new event is started.
 /// </summary>
 public sealed class EventStorage
 {
@@ -23,11 +25,37 @@ public sealed class EventStorage
         _time = time;
     }
 
-    public string GetEventFolder()
+    public string GetEventFolder() => Path.Combine(_settings.Current.OutputRoot, GetEventFolderName());
+
+    /// <summary>Folder name of the current event; before its first file it carries today's date.</summary>
+    public string GetEventFolderName()
     {
         var settings = _settings.Current;
-        var date = _time.GetLocalNow().ToString("yyyy-MM-dd");
-        return Path.Combine(settings.OutputRoot, $"{date}_{SanitizeFileName(settings.EventName)}");
+        var date = IsValidDate(settings.EventStartDate) ? settings.EventStartDate! : Today;
+        return $"{date}_{SanitizeFileName(settings.EventName)}";
+    }
+
+    private string Today => _time.GetLocalNow().ToString("yyyy-MM-dd");
+
+    private static bool IsValidDate(string? date) =>
+        DateOnly.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
+
+    /// <summary>The first saved file fixes the event's date (and with it the folder) until a new event is started.</summary>
+    private void EnsureEventStarted()
+    {
+        if (IsValidDate(_settings.Current.EventStartDate))
+            return;
+
+        try
+        {
+            var copy = _settings.Current.Clone();
+            copy.EventStartDate = Today;
+            _settings.Update(copy, notify: false);
+        }
+        catch
+        {
+            // Settings not writable: the folder simply follows today's date
+        }
     }
 
     public static string GetDefaultInternalRoot() =>
@@ -49,8 +77,7 @@ public sealed class EventStorage
         catch
         {
             // Fail-safe: if USB drive is disconnected, unwritable or removed, write to internal drive
-            var date = _time.GetLocalNow().ToString("yyyy-MM-dd");
-            var fallbackEvent = Path.Combine(GetDefaultInternalRoot(), $"{date}_{SanitizeFileName(_settings.Current.EventName)}");
+            var fallbackEvent = Path.Combine(GetDefaultInternalRoot(), GetEventFolderName());
             var fallbackFolder = Path.Combine(fallbackEvent, subFolderName);
             Directory.CreateDirectory(fallbackFolder);
             return fallbackFolder;
@@ -59,6 +86,7 @@ public sealed class EventStorage
 
     public async Task<string> SaveVideoAsync(byte[] videoData, DateTimeOffset timestamp, string extension = "mp4", CancellationToken cancellationToken = default)
     {
+        EnsureEventStarted();
         ArgumentNullException.ThrowIfNull(videoData);
 
         var folder = GetVideosFolder();
@@ -74,8 +102,10 @@ public sealed class EventStorage
         return path;
     }
 
-    public async Task<string> MoveVideoAsync(string sourcePath, DateTimeOffset timestamp, string extension = "mp4", CancellationToken cancellationToken = default)
+    /// <param name="posterJpeg">Optional still saved next to the video (same name, .jpg) for the gallery.</param>
+    public async Task<string> MoveVideoAsync(string sourcePath, DateTimeOffset timestamp, string extension = "mp4", byte[]? posterJpeg = null, CancellationToken cancellationToken = default)
     {
+        EnsureEventStarted();
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
 
         var folder = GetVideosFolder();
@@ -92,6 +122,8 @@ public sealed class EventStorage
             if (File.Exists(targetPath))
                 File.Delete(targetPath);
             File.Move(sourcePath, targetPath);
+            if (posterJpeg is not null)
+                File.WriteAllBytes(Path.ChangeExtension(targetPath, ".jpg"), posterJpeg);
         }, cancellationToken).ConfigureAwait(false);
 
         return targetPath;
@@ -99,6 +131,7 @@ public sealed class EventStorage
 
     public async Task<string> SaveGifAsync(byte[] gifData, DateTimeOffset timestamp, string prefix = "GIF", CancellationToken cancellationToken = default)
     {
+        EnsureEventStarted();
         ArgumentNullException.ThrowIfNull(gifData);
 
         var folder = GetGifsFolder();
@@ -115,6 +148,7 @@ public sealed class EventStorage
 
     public async Task<string> SaveCollageAsync(byte[] jpegData, DateTimeOffset timestamp, CancellationToken cancellationToken = default)
     {
+        EnsureEventStarted();
         ArgumentNullException.ThrowIfNull(jpegData);
 
         var folder = GetCollagesFolder();
@@ -131,6 +165,7 @@ public sealed class EventStorage
 
     public async Task<string> SaveOriginalAsync(CapturedPhoto photo, CancellationToken cancellationToken = default)
     {
+        EnsureEventStarted();
         ArgumentNullException.ThrowIfNull(photo);
 
         var folder = GetOriginalsFolder();

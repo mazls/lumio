@@ -112,6 +112,7 @@ public class MainActivity : AvaloniaMainActivity<Lumio.App.Avalonia.App>
         // Video messages: record sound from the camera's USB audio (UAC) or the phone microphone and encode MP4
         VideoRecorder.CustomAudioCapture = wavPath => AndroidAudioCapture.Start(this, wavPath);
         VideoRecorder.CustomMp4Encoder = AndroidMp4Encoder.EncodeAsync;
+        Lumio.App.Avalonia.GalleryMediaPlayer.PlatformVideoViewFactory = path => AndroidVideoView.Create(this, path);
 
         base.OnCreate(savedInstanceState);
 

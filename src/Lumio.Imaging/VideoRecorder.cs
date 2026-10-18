@@ -489,7 +489,8 @@ public sealed class VideoRecorder : IDisposable
         }
     }
 
-    private static string? FindFfmpegExecutable()
+    /// <summary>Path or command name of a working ffmpeg, or null.</summary>
+    public static string? FindFfmpegExecutable()
     {
         var names = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? new[] { "ffmpeg.exe", "ffmpeg" }

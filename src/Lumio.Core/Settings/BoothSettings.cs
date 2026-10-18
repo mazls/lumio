@@ -37,6 +37,13 @@ public sealed class BoothSettings
 
     public string EventName { get; set; } = "Mein Event";
 
+    /// <summary>
+    /// Day the current event began (yyyy-MM-dd), fixed with its first saved file. All files of the event go into
+    /// one folder with this date, even when the party goes on past midnight or over several days.
+    /// Cleared when a new event is started in the admin menu or the event name changes.
+    /// </summary>
+    public string? EventStartDate { get; set; }
+
     public string OutputRoot { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Lumio");
 

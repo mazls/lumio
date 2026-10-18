@@ -49,6 +49,26 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,-6,0" Padding="0,0,6,0">
                         <StackPanel>
 
+                            <!-- Version & updates -->
+                            <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="18" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <TextBlock Text="VERSION" Style="{StaticResource Eyebrow}" Margin="0,0,0,10" />
+                                    <TextBlock x:Name="CurrentVersionText" Text="Lumio" Style="{StaticResource Caption}" />
+                                    <Border x:Name="UpdateAvailablePanel" Visibility="Collapsed" Margin="0,10,0,0" Background="#2210B981" BorderBrush="{StaticResource SuccessBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="UpdateAvailableText" TextWrapping="Wrap" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                                            <Button Grid.Column="1" Style="{StaticResource TouchGlassButton}" Margin="12,0,0,0" Click="OnOpenReleaseClick">
+                                                <TextBlock Text="⬇️ Download" FontSize="14" FontWeight="SemiBold" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Quick Actions -->
                             <Border Background="{StaticResource SurfaceElevatedBrush}" CornerRadius="16" Padding="18" Margin="0,0,0,14">
                                 <StackPanel>
@@ -92,7 +112,17 @@
                                     <TextBlock Text="EVENT &amp; SPEICHERORT" Style="{StaticResource Eyebrow}" Margin="0,0,0,10" />
 
                                     <TextBlock Text="Event-Name (z.B. Hochzeit Marcel &amp; Julia)" Style="{StaticResource FieldLabel}" />
-                                    <TextBox x:Name="EventNameTextBox" Style="{StaticResource TouchTextBox}" Margin="0,0,0,12" GotFocus="OnInputGotFocus" />
+                                    <TextBox x:Name="EventNameTextBox" Style="{StaticResource TouchTextBox}" Margin="0,0,0,8" GotFocus="OnInputGotFocus" />
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="EventFolderInfoText" TextWrapping="Wrap" Style="{StaticResource FieldLabel}" Margin="0" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Style="{StaticResource TouchGlassButton}" Margin="12,0,0,0" Click="OnStartNewEventClick">
+                                            <TextBlock Text="🆕 Neues Event" FontSize="14" FontWeight="SemiBold" />
+                                        </Button>
+                                    </Grid>
 
                                     <TextBlock Text="Speicherordner für Originalfotos &amp; Videos" Style="{StaticResource FieldLabel}" />
                                     <Grid Margin="0,0,0,12">

@@ -11,6 +11,9 @@
         <!-- Party backdrop: visible while the battery saver keeps the live view off and around the
              (letterboxed) live view in portrait -->
         <Image x:Name="IdleBackdropImage" Stretch="UniformToFill" IsHitTestVisible="False" />
+        <!-- Every other bulb of the fairy lights; fading the two layers against each other makes them twinkle -->
+        <Image x:Name="IdleBulbsAImage" Stretch="UniformToFill" IsHitTestVisible="False" />
+        <Image x:Name="IdleBulbsBImage" Stretch="UniformToFill" IsHitTestVisible="False" />
 
         <Image x:Name="LiveViewImageControl"
                Stretch="UniformToFill"
@@ -23,9 +26,23 @@
             </Image.RenderTransform>
         </Image>
 
-        <!-- Top and Bottom Vignette Overlays -->
-        <Border Background="#99000000" Height="140" VerticalAlignment="Top" IsHitTestVisible="False" />
-        <Border Background="#BB000000" Height="180" VerticalAlignment="Bottom" IsHitTestVisible="False" />
+        <!-- Soft top and bottom fades keep the status bar and gallery thumbnail readable -->
+        <Border Height="110" VerticalAlignment="Top" IsHitTestVisible="False">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#8C000000" />
+                    <GradientStop Offset="1" Color="#00000000" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <Border Height="130" VerticalAlignment="Bottom" IsHitTestVisible="False">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#00000000" />
+                    <GradientStop Offset="1" Color="#A6000000" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
 
         <!-- ==================== 2. REVIEW LAYER (CAPTURED PHOTO) ==================== -->
         <Grid x:Name="ReviewGrid" IsVisible="False" Background="{StaticResource BackgroundBrush}">
@@ -90,6 +107,29 @@
 
         <!-- ==================== 3. IDLE / WELCOME OVERLAY ==================== -->
         <Grid x:Name="IdleOverlayGrid" IsVisible="True">
+            <!-- New release available: closable, comes back only for the next release -->
+            <Border x:Name="UpdateBanner"
+                    IsVisible="False"
+                    VerticalAlignment="Top"
+                    HorizontalAlignment="Center"
+                    MaxWidth="560"
+                    Margin="16,84,16,0"
+                    Background="{StaticResource GlassBrush}"
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="18"
+                    Padding="16,4,4,4">
+                <!-- Emoji in its own normal-weight text: Android's emoji font has no bold glyphs -->
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Text="✨" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock x:Name="UpdateBannerText" Grid.Column="1" Text="Neue Lumio-Version verfügbar" TextWrapping="Wrap" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+                    <Button Grid.Column="2" Width="36" Height="36" CornerRadius="18" Margin="8,0,0,0" Background="Transparent"
+                            ToolTip.Tip="Hinweis ausblenden" Click="OnDismissUpdateClick">
+                        <TextBlock Text="✕" FontSize="15" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Button>
+                </Grid>
+            </Border>
+
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
 
                 <!-- Glowing Event Title with Logo Badge -->
@@ -236,7 +276,7 @@
         <Border x:Name="FlashBorder" Background="White" Opacity="0" IsHitTestVisible="False" />
 
         <!-- ==================== 6. TOP BAR (CAMERA STATUS & BUTTONS) ==================== -->
-        <Grid VerticalAlignment="Top" Margin="24,20" Height="50">
+        <Grid x:Name="TopBarGrid" VerticalAlignment="Top" Margin="24,20" Height="50">
             <!-- Camera & Mode Info (Left) -->
             <Border HorizontalAlignment="Left"
                     Background="{StaticResource GlassBrush}"
@@ -313,7 +353,7 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <Grid Grid.Row="0" Margin="28,20">
+            <Grid x:Name="GalleryHeaderGrid" Grid.Row="0" Margin="28,20">
                 <StackPanel>
                     <TextBlock Text="EVENT-GALERIE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
                     <TextBlock x:Name="GalleryIndexTitleText" Text="Foto 1 von 10" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,2,0,0" />
@@ -333,6 +373,8 @@
             <!-- Main Image & Navigation -->
             <Grid Grid.Row="1" Margin="20,0">
                 <Image x:Name="GalleryMainImage" Stretch="Uniform" Margin="80,10" />
+                <!-- Native video player (Android) for video messages -->
+                <ContentControl x:Name="GalleryVideoHost" IsVisible="False" Margin="80,10" />
 
                 <Button HorizontalAlignment="Left" VerticalAlignment="Center"
                         Width="60" Height="74" CornerRadius="16"
@@ -350,7 +392,8 @@
             </Grid>
 
             <!-- Footer: Reprint -->
-            <Border Grid.Row="2"
+            <Border x:Name="GalleryFooterBorder"
+                    Grid.Row="2"
                     Background="{StaticResource GlassBrush}"
                     BorderBrush="{StaticResource GlassBorderBrush}"
                     BorderThickness="0,1.5,0,0"
