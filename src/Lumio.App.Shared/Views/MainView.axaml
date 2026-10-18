@@ -33,12 +33,13 @@
                    VerticalAlignment="Center" />
 
             <!-- Bottom Review Actions Bar -->
-            <Border VerticalAlignment="Bottom"
+            <Border x:Name="ReviewActionsBar"
+                    VerticalAlignment="Bottom"
                     Background="{StaticResource GlassBrush}"
                     BorderBrush="{StaticResource GlassBorderBrush}"
                     BorderThickness="0,1.5,0,0"
                     Padding="36,20">
-                <Grid>
+                <Grid x:Name="ReviewActionsGrid">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -47,7 +48,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <StackPanel x:Name="ReviewStatusPanel" Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock x:Name="ReviewStatusTitleText" Text="FOTO GESPEICHERT!" FontSize="18" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" />
                         <TextBlock x:Name="ReviewTimerText" Text="Zurück in 12s" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" />
                         <TextBlock x:Name="PrintStatusFeedbackText" Text="" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" IsVisible="False" Margin="0,4,0,0" />
@@ -69,7 +70,8 @@
                     </Button>
 
                     <!-- Done / Next Photo Button -->
-                    <Button Grid.Column="4"
+                    <Button x:Name="ReviewDoneButton"
+                            Grid.Column="4"
                             Content="Fertig / Nächstes Foto"
                             Background="{StaticResource AccentGradientBrush}"
                             Foreground="White"
@@ -99,6 +101,7 @@
                             <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
                         </Border>
                         <TextBlock x:Name="EventTitleText"
+                                   TextTrimming="CharacterEllipsis"
                                    Text="LUMIO"
                                    FontSize="22"
                                    FontWeight="ExtraBold"
@@ -107,15 +110,15 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Mode Selector Pills -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                    <Button x:Name="ModeSingleButton" Content="📸 Einzelfoto" CornerRadius="18" Padding="16,10" Click="OnSelectModeSingleClick" />
-                    <Button x:Name="ModeQuadButton" Content="🖼️ 4er Collage" CornerRadius="18" Padding="16,10" Click="OnSelectModeQuadClick" />
-                    <Button x:Name="ModeStripButton" Content="🎞️ Doppelstreifen" CornerRadius="18" Padding="16,10" Click="OnSelectModeStripClick" />
-                    <Button x:Name="ModeGifButton" Content="🎬 GIF" CornerRadius="18" Padding="16,10" Click="OnSelectModeGifClick" />
-                    <Button x:Name="ModeBoomerangButton" Content="⚡ Boomerang" CornerRadius="18" Padding="16,10" Click="OnSelectModeBoomerangClick" />
-                    <Button x:Name="ModeVideoButton" Content="📹 Videobotschaft" CornerRadius="18" Padding="16,10" Click="OnSelectModeVideoClick" />
-                </StackPanel>
+                <!-- Mode Selector Pills (one row in landscape, 2-column grid in portrait - see ApplyOrientationLayout) -->
+                <Grid x:Name="ModeSelectorGrid" HorizontalAlignment="Center">
+                    <Button x:Name="ModeSingleButton" Content="📸 Einzelfoto" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeSingleClick" />
+                    <Button x:Name="ModeQuadButton" Content="🖼️ 4er Collage" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeQuadClick" />
+                    <Button x:Name="ModeStripButton" Content="🎞️ Doppelstreifen" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeStripClick" />
+                    <Button x:Name="ModeGifButton" Content="🎬 GIF" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeGifClick" />
+                    <Button x:Name="ModeBoomerangButton" Content="⚡ Boomerang" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeBoomerangClick" />
+                    <Button x:Name="ModeVideoButton" Content="📹 Videobotschaft" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeVideoClick" />
+                </Grid>
 
                 <!-- Big Touch Callout Button -->
                 <Button x:Name="StartCaptureButton"
@@ -134,6 +137,8 @@
 
                 <TextBlock x:Name="StartSubtitleText"
                            Text="Tippe auf den Button, um den Countdown zu starten"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
                            FontSize="18"
                            Foreground="{StaticResource TextSecondaryBrush}"
                            HorizontalAlignment="Center" />
@@ -213,7 +218,7 @@
                         Click="OnStopRecordingClick">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <TextBlock Text="⏹️" FontSize="30" VerticalAlignment="Center" />
-                        <TextBlock Text="AUFNAHME BEENDEN" FontSize="24" FontWeight="ExtraBold" Foreground="White" VerticalAlignment="Center" />
+                        <TextBlock x:Name="StopRecordingLabel" Text="AUFNAHME BEENDEN" FontSize="24" FontWeight="ExtraBold" Foreground="White" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <TextBlock Text="Tippe hier, wenn du fertig gesprochen hast"
@@ -241,7 +246,7 @@
                         <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
                     </Border>
                     <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
-                    <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+                    <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" TextTrimming="CharacterEllipsis" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
 
@@ -377,11 +382,15 @@
 
         <!-- ==================== 9. MODAL IN-APP DIALOG OVERLAY ==================== -->
         <Grid x:Name="ModalOverlayGrid" IsVisible="False" Background="#CC000000">
-            <Border HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    CornerRadius="24">
-                <ContentControl x:Name="ModalOverlayContent" />
-            </Border>
+            <!-- Scrolls dialogs that are taller than small (phone) screens -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <Border HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="12"
+                        CornerRadius="24">
+                    <ContentControl x:Name="ModalOverlayContent" />
+                </Border>
+            </ScrollViewer>
         </Grid>
 
     </Grid>

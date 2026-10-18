@@ -80,7 +80,10 @@ public sealed class CollageRenderer
             var photoData = i < photoJpegs.Count ? photoJpegs[i] : (photoJpegs.Count > 0 ? photoJpegs[0] : null);
             if (photoData is null) continue;
 
-            using var photoBitmap = SKBitmap.Decode(photoData);
+            // SKBitmap.Decode(byte[]) throws a cryptic ArgumentNullException for unreadable data (e.g. RAW files)
+            using var codec = SKCodec.Create(new MemoryStream(photoData))
+                ?? throw new InvalidOperationException("Das Foto der Kamera ist kein lesbares JPEG. Bitte an der Kamera die Bildqualität auf JPEG oder RAW+JPEG stellen.");
+            using var photoBitmap = SKBitmap.Decode(codec);
             if (photoBitmap is null) continue;
 
             DrawPhotoInSlot(canvas, photoBitmap, slot);

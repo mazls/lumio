@@ -144,6 +144,12 @@
                                     </StackPanel>
 
                                     <CheckBox x:Name="MirrorLiveViewCheckBox" Content="Live-View horizontal spiegeln (Spiegeleffekt)" Margin="0,4,0,0" />
+
+                                    <StackPanel Spacing="2">
+                                        <CheckBox x:Name="LiveViewPowerSavingCheckBox" Content="🔋 Akku-Sparmodus: Live-Bild erst ab dem Countdown" />
+                                        <TextBlock Text="Auf dem Startbildschirm ruht die Kamera (bei DSLRs bleibt der Spiegel unten) – schont den Kamera-Akku spürbar."
+                                                   TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="28,0,0,0" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 

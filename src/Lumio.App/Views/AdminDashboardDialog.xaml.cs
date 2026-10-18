@@ -159,6 +159,7 @@ public partial class AdminDashboardDialog : Window
         EnableVideoMessagesCheckBox.IsChecked = current.EnableVideoMessages;
         VideoDurationTextBox.Text = current.VideoMessageDurationSeconds.ToString();
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
+        LiveViewPowerSavingCheckBox.IsChecked = current.LiveViewOnlyDuringCapture;
         AdminPinTextBox.Text = current.AdminPin;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
         OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
@@ -617,6 +618,7 @@ public partial class AdminDashboardDialog : Window
             updated.VideoMessageDurationSeconds = vidDur;
 
         updated.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
+        updated.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
         updated.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
 
         var pin = AdminPinTextBox.Text.Trim();

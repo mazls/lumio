@@ -178,7 +178,17 @@
                                               Content="Live-Vorschau horizontal spiegeln (wie ein Spiegel)"
                                               FontSize="16"
                                               Foreground="White"
-                                              Margin="0,0,0,14" />
+                                              Margin="0,0,0,10" />
+
+                                    <CheckBox x:Name="LiveViewPowerSavingCheckBox"
+                                              Content="🔋 Akku-Sparmodus: Live-Bild erst ab dem Countdown"
+                                              FontSize="16"
+                                              Foreground="White" />
+                                    <TextBlock Text="Auf dem Startbildschirm ruht die Kamera (bei DSLRs bleibt der Spiegel unten) – schont den Kamera-Akku spürbar."
+                                               TextWrapping="Wrap"
+                                               Style="{StaticResource Caption}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="28,2,0,14" />
 
                                     <!-- Test Photo Action -->
                                     <Border Background="#12121E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,12">

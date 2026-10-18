@@ -83,6 +83,7 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closing += OnClosing;
+        SizeChanged += OnWindowSizeChanged;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -121,7 +122,16 @@ public partial class MainWindow : Window
             _activeCamera.FrameReady += OnCameraFrameReady;
             _activeCamera.StatusChanged += OnCameraStatusChanged;
 
-            await _activeCamera.StartLiveViewAsync();
+            if (LiveViewNeeded)
+            {
+                await _activeCamera.StartLiveViewAsync();
+            }
+            else
+            {
+                // Battery saver: camera stays connected but idle until the next countdown
+                await _activeCamera.StopLiveViewAsync();
+                LiveViewImageControl.Source = null;
+            }
 
             _lastFrameReceivedTime = DateTime.UtcNow;
 
@@ -156,7 +166,7 @@ public partial class MainWindow : Window
         _frameWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _frameWatchdogTimer.Tick += (s, e) =>
         {
-            if (_isCapturing || ReviewGrid.Visibility == Visibility.Visible || GalleryOverlayGrid.Visibility == Visibility.Visible)
+            if (_isCapturing || !LiveViewNeeded || ReviewGrid.Visibility == Visibility.Visible || GalleryOverlayGrid.Visibility == Visibility.Visible)
                 return;
 
             if (_activeCamera is not null && _activeCamera is not SimulatedCamera && _activeCamera.Status == CameraStatus.Connected && !_isReconnecting)
@@ -239,6 +249,9 @@ public partial class MainWindow : Window
     private void OnCameraFrameReady(object? sender, LiveViewFrame frame)
     {
         _lastFrameReceivedTime = DateTime.UtcNow;
+        _firstLiveViewFrame?.TrySetResult();
+        if (!LiveViewNeeded)
+            return;
 
         if (_isReconnecting)
         {
@@ -435,6 +448,7 @@ public partial class MainWindow : Window
             return;
 
         _isCapturing = true;
+        _captureSessionActive = true;
         IdleOverlayGrid.Visibility = Visibility.Collapsed;
         ReviewGrid.Visibility = Visibility.Collapsed;
         CountdownOverlayGrid.Visibility = Visibility.Visible;
@@ -445,6 +459,11 @@ public partial class MainWindow : Window
 
         try
         {
+            if (_settingsService.Current.LiveViewOnlyDuringCapture)
+            {
+                await StartCaptureLiveViewAsync();
+            }
+
             if (_activeMode == BoothMode.VideoMessage)
             {
                 await RunVideoMessageWorkflowAsync();
@@ -900,8 +919,60 @@ public partial class MainWindow : Window
         }
     }
 
+    // ==================== BATTERY SAVER LIVE VIEW ====================
+
+    /// <summary>From the start of a capture until the booth is back on the start screen.</summary>
+    private bool _captureSessionActive;
+    private TaskCompletionSource? _firstLiveViewFrame;
+
+    /// <summary>The live view runs permanently, or only during a capture session in battery saver mode.</summary>
+    private bool LiveViewNeeded => !_settingsService.Current.LiveViewOnlyDuringCapture || _captureSessionActive;
+
+    private async Task StartCaptureLiveViewAsync()
+    {
+        if (_activeCamera is null)
+            return;
+
+        MultiShotStepText.Visibility = Visibility.Collapsed;
+        CountdownNumberText.Text = "📷";
+        CountdownStatusText.Text = "Kamera wird vorbereitet...";
+
+        _firstLiveViewFrame = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _lastFrameReceivedTime = DateTime.UtcNow;
+        await _activeCamera.StartLiveViewAsync();
+
+        // Start the countdown once guests can see themselves (DSLRs need a moment to raise the mirror)
+        await Task.WhenAny(_firstLiveViewFrame.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        _firstLiveViewFrame = null;
+    }
+
+    private void EndCaptureSession()
+    {
+        _captureSessionActive = false;
+        if (!_settingsService.Current.LiveViewOnlyDuringCapture || _activeCamera is null)
+            return;
+
+        var camera = _activeCamera;
+        LiveViewImageControl.Source = null;
+        _liveBitmap = null;
+        _ = Task.Run(async () =>
+        {
+            try { await camera.StopLiveViewAsync(); } catch { }
+        });
+    }
+
+    /// <summary>
+    /// Live view fills a landscape screen; on a portrait screen the whole camera frame is shown across the
+    /// full width, otherwise only a narrow middle strip of the (landscape) photo would be visible.
+    /// </summary>
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        LiveViewImageControl.Stretch = e.NewSize.Height > e.NewSize.Width ? Stretch.Uniform : Stretch.UniformToFill;
+    }
+
     private void ReturnToIdle()
     {
+        EndCaptureSession();
         _reviewTimer?.Stop();
         _reviewGifPlayer.Stop();
         ReviewImageControl.Source = null;

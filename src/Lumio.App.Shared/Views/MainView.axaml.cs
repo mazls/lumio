@@ -37,7 +37,7 @@ public partial class MainView : UserControl
 
     private byte[]? _currentReviewJpeg;
     private int _reviewRemainingSeconds;
-    private DispatcherTimer? _reviewTimer;
+    private UiTimer? _reviewTimer;
     private int _galleryCurrentIndex;
     private List<string> _galleryFiles = [];
 
@@ -46,7 +46,7 @@ public partial class MainView : UserControl
     private CancellationTokenSource? _reconnectCts;
     private bool _isReconnecting;
     private DateTime _lastFrameTime = DateTime.MinValue;
-    private DispatcherTimer? _watchdogTimer;
+    private UiTimer? _watchdogTimer;
     private int _isRenderingFrame = 0;
     private long _lastFrameRenderTicks = 0;
 
@@ -82,8 +82,125 @@ public partial class MainView : UserControl
 
     public void ShowModal(Control content)
     {
+        // Remember the dialog's designed size so it can shrink on small screens and grow back on rotation
+        _modalDesignWidth = content.Width;
+        _modalDesignMaxHeight = content.MaxHeight;
         ModalOverlayContent.Content = content;
         ModalOverlayGrid.IsVisible = true;
+        FitModalToScreen();
+    }
+
+    private double _modalDesignWidth = double.NaN;
+    private double _modalDesignMaxHeight = double.PositiveInfinity;
+    private bool? _isPortraitLayout;
+
+    private void FitModalToScreen()
+    {
+        if (ModalOverlayContent.Content is not Control content || Bounds.Width <= 0)
+            return;
+
+        var availableWidth = Math.Max(200, Bounds.Width - 24);
+        var availableHeight = Math.Max(200, Bounds.Height - 24);
+        if (!double.IsNaN(_modalDesignWidth))
+            content.Width = Math.Min(_modalDesignWidth, availableWidth);
+        // Dialogs with their own scrolling (admin menu) are capped to the screen; the others scroll as a whole
+        if (!double.IsPositiveInfinity(_modalDesignMaxHeight))
+            content.MaxHeight = Math.Min(_modalDesignMaxHeight, availableHeight);
+    }
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        ApplyOrientationLayout(e.NewSize);
+        FitModalToScreen();
+    }
+
+    /// <summary>
+    /// Rearranges the kiosk UI for portrait screens (phones/tablets held upright, portrait monitors)
+    /// and back to the original landscape layout.
+    /// </summary>
+    private void ApplyOrientationLayout(Size size)
+    {
+        var portrait = size.Height > size.Width;
+        var width = size.Width;
+
+        // Size-dependent limits
+        StartSubtitleText.MaxWidth = Math.Max(200, width - 48);
+        EventTitleText.MaxWidth = Math.Max(120, width - 140);
+        CameraStatusText.MaxWidth = Math.Max(100, width - 230);
+        var previewWidth = Math.Min(480, width - 48);
+        SeriesPreviewBorder.Width = previewWidth;
+        SeriesPreviewBorder.Height = previewWidth * 2 / 3;
+
+        if (_isPortraitLayout == portrait)
+            return;
+        _isPortraitLayout = portrait;
+
+        // Mode pills: one row in landscape, 2 columns x 3 rows in portrait
+        Button[] modeButtons = [ModeSingleButton, ModeQuadButton, ModeStripButton, ModeGifButton, ModeBoomerangButton, ModeVideoButton];
+        var columns = portrait ? 2 : modeButtons.Length;
+        ModeSelectorGrid.ColumnDefinitions.Clear();
+        ModeSelectorGrid.RowDefinitions.Clear();
+        for (var c = 0; c < columns; c++)
+            ModeSelectorGrid.ColumnDefinitions.Add(new ColumnDefinition(portrait ? GridLength.Star : GridLength.Auto));
+        for (var r = 0; r < (modeButtons.Length + columns - 1) / columns; r++)
+            ModeSelectorGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        for (var i = 0; i < modeButtons.Length; i++)
+        {
+            PlaceInGrid(modeButtons[i], row: i / columns, column: i % columns);
+            modeButtons[i].HorizontalAlignment = portrait ? global::Avalonia.Layout.HorizontalAlignment.Stretch : global::Avalonia.Layout.HorizontalAlignment.Left;
+            modeButtons[i].HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
+        }
+
+        // Start button
+        StartCaptureButton.Height = portrait ? 84 : 100;
+        StartCaptureButton.Padding = portrait ? new Thickness(32, 0) : new Thickness(50, 0);
+        StartButtonIcon.FontSize = portrait ? 32 : 40;
+        StartButtonLabel.FontSize = portrait ? 26 : 32;
+        StopRecordingLabel.FontSize = portrait ? 20 : 24;
+
+        // Review bar: one row in landscape; status on top and both buttons side by side below in portrait
+        ReviewActionsGrid.ColumnDefinitions.Clear();
+        ReviewActionsGrid.RowDefinitions.Clear();
+        if (portrait)
+        {
+            ReviewActionsGrid.ColumnDefinitions = new ColumnDefinitions("*,12,*");
+            ReviewActionsGrid.RowDefinitions = new RowDefinitions("Auto,14,Auto");
+            PlaceInGrid(ReviewStatusPanel, row: 0, column: 0, columnSpan: 3);
+            PlaceInGrid(PrintButton, row: 2, column: 0);
+            PlaceInGrid(ReviewDoneButton, row: 2, column: 2);
+            ReviewActionsBar.Padding = new Thickness(20, 16);
+            ReviewImageControl.Margin = new Thickness(16, 90, 16, 220);
+        }
+        else
+        {
+            ReviewActionsGrid.ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,16,Auto");
+            PlaceInGrid(ReviewStatusPanel, row: 0, column: 0);
+            PlaceInGrid(PrintButton, row: 0, column: 2);
+            PlaceInGrid(ReviewDoneButton, row: 0, column: 4);
+            ReviewActionsBar.Padding = new Thickness(36, 20);
+            ReviewImageControl.Margin = new Thickness(40, 50, 40, 130);
+        }
+        ReviewDoneButton.Content = portrait ? "Fertig" : "Fertig / Nächstes Foto";
+        foreach (var button in new[] { PrintButton, ReviewDoneButton })
+        {
+            button.HorizontalAlignment = portrait ? global::Avalonia.Layout.HorizontalAlignment.Stretch : global::Avalonia.Layout.HorizontalAlignment.Left;
+            button.HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
+        }
+
+        // Live view: fill the screen in landscape; in portrait show the whole camera frame across the full width,
+        // otherwise only a narrow middle strip of the (landscape) photo would be visible
+        LiveViewImageControl.Stretch = portrait ? Stretch.Uniform : Stretch.UniformToFill;
+
+        // Fullscreen gallery: no room for side margins next to the arrows in portrait
+        GalleryMainImage.Margin = portrait ? new Thickness(0, 10) : new Thickness(80, 10);
+    }
+
+    private static void PlaceInGrid(Control control, int row, int column, int columnSpan = 1)
+    {
+        Grid.SetRow(control, row);
+        Grid.SetColumn(control, column);
+        Grid.SetColumnSpan(control, columnSpan);
     }
 
     public void CloseModal()
@@ -119,7 +236,7 @@ public partial class MainView : UserControl
 
         Dispatcher.UIThread.Post(() =>
         {
-            TriggerAutoReconnect("Hardware geändert");
+            TriggerAutoReconnect("Hardware geändert", cameraSwitch: devicesChanged);
         });
     }
 
@@ -149,7 +266,16 @@ public partial class MainView : UserControl
             _activeCamera.FrameReady += OnCameraFrameReady;
             _activeCamera.StatusChanged += OnCameraStatusChanged;
 
-            await Task.Run(() => _activeCamera.StartLiveViewAsync());
+            if (LiveViewNeeded)
+            {
+                await Task.Run(() => _activeCamera.StartLiveViewAsync());
+            }
+            else
+            {
+                // Battery saver: camera stays connected but idle until the next countdown
+                await Task.Run(() => _activeCamera.StopLiveViewAsync());
+                Dispatcher.UIThread.Post(() => LiveViewImageControl.Source = null);
+            }
             _lastFrameTime = DateTime.UtcNow;
 
             Dispatcher.UIThread.Post(() =>
@@ -172,10 +298,10 @@ public partial class MainView : UserControl
     private void StartWatchdog()
     {
         _watchdogTimer?.Stop();
-        _watchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _watchdogTimer = new UiTimer { Interval = TimeSpan.FromSeconds(5) };
         _watchdogTimer.Tick += (s, e) =>
         {
-            if (!_isReconnecting)
+            if (!_isReconnecting && LiveViewNeeded)
             {
                 // Only monitor if a REAL camera is currently connected and supposed to be sending frames
                 // Never poll or loop when in simulated fallback mode. Hardware change events handle reconnect!
@@ -194,14 +320,23 @@ public partial class MainView : UserControl
         _watchdogTimer.Start();
     }
 
-    private void TriggerAutoReconnect(string reason)
+    // A camera switch (device plugged in/out) must not be ended by frames of the still running old camera,
+    // and a switch requested during a running reconnect is repeated afterwards instead of being dropped.
+    private bool _reconnectIsCameraSwitch;
+    private bool _cameraSwitchPending;
+
+    private void TriggerAutoReconnect(string reason, bool cameraSwitch = false)
     {
         lock (_reconnectLock)
         {
             if (_isReconnecting)
+            {
+                _cameraSwitchPending |= cameraSwitch;
                 return;
+            }
 
             _isReconnecting = true;
+            _reconnectIsCameraSwitch = cameraSwitch;
             _reconnectCts?.Cancel();
             _reconnectCts = new CancellationTokenSource();
         }
@@ -228,7 +363,19 @@ public partial class MainView : UserControl
             catch (OperationCanceledException) { }
             finally
             {
-                lock (_reconnectLock) { _isReconnecting = false; }
+                bool switchAgain;
+                lock (_reconnectLock)
+                {
+                    _isReconnecting = false;
+                    switchAgain = _cameraSwitchPending;
+                    _cameraSwitchPending = false;
+                }
+
+                if (switchAgain)
+                {
+                    _cameraManager.Invalidate();
+                    Dispatcher.UIThread.Post(() => TriggerAutoReconnect("Hardware geändert", cameraSwitch: true));
+                }
             }
         }, token);
     }
@@ -252,7 +399,11 @@ public partial class MainView : UserControl
     private void OnCameraFrameReady(object? sender, LiveViewFrame frame)
     {
         _lastFrameTime = DateTime.UtcNow;
-        if (_isReconnecting)
+        _firstLiveViewFrame?.TrySetResult();
+        if (!LiveViewNeeded)
+            return;
+
+        if (_isReconnecting && !_reconnectIsCameraSwitch)
         {
             lock (_reconnectLock)
             {
@@ -343,12 +494,21 @@ public partial class MainView : UserControl
             }
         }
 
+        if (_captureSessionActive)
+            return;
+        _captureSessionActive = true;
+
         IdleOverlayGrid.IsVisible = false;
         CornerGalleryBorder.IsVisible = false;
         CountdownOverlayGrid.IsVisible = true;
 
         try
         {
+            if (_settingsService.Current.LiveViewOnlyDuringCapture)
+            {
+                await StartCaptureLiveViewAsync();
+            }
+
             if (_activeMode == BoothMode.VideoMessage)
             {
                 await RunVideoMessageWorkflowAsync();
@@ -372,8 +532,51 @@ public partial class MainView : UserControl
             VideoRecordingOverlayGrid.IsVisible = false;
             IdleOverlayGrid.IsVisible = true;
             CornerGalleryBorder.IsVisible = true;
+            Console.Error.WriteLine($"Capture workflow failed: {ex}");
             CameraStatusText.Text = $"Fehler: {ex.Message}";
+            EndCaptureSession();
         }
+    }
+
+    // ==================== BATTERY SAVER LIVE VIEW ====================
+
+    /// <summary>From the start of a capture until the result is dismissed.</summary>
+    private bool _captureSessionActive;
+    private TaskCompletionSource? _firstLiveViewFrame;
+
+    /// <summary>The live view runs permanently, or only during a capture session in battery saver mode.</summary>
+    private bool LiveViewNeeded => !_settingsService.Current.LiveViewOnlyDuringCapture || _captureSessionActive;
+
+    private async Task StartCaptureLiveViewAsync()
+    {
+        if (_activeCamera is null)
+            return;
+
+        MultiShotStepText.IsVisible = false;
+        CountdownNumberText.Text = "📷";
+        CountdownStatusText.Text = "Kamera wird vorbereitet...";
+
+        _firstLiveViewFrame = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _lastFrameTime = DateTime.UtcNow;
+        await Task.Run(() => _activeCamera.StartLiveViewAsync());
+
+        // Start the countdown once guests can see themselves (DSLRs need a moment to raise the mirror)
+        await Task.WhenAny(_firstLiveViewFrame.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        _firstLiveViewFrame = null;
+    }
+
+    private void EndCaptureSession()
+    {
+        _captureSessionActive = false;
+        if (!_settingsService.Current.LiveViewOnlyDuringCapture || _activeCamera is null)
+            return;
+
+        var camera = _activeCamera;
+        LiveViewImageControl.Source = null;
+        _ = Task.Run(async () =>
+        {
+            try { await camera.StopLiveViewAsync(); } catch { }
+        });
     }
 
     private CancellationTokenSource? _videoRecordingCts;
@@ -667,7 +870,7 @@ public partial class MainView : UserControl
         ReviewTimerText.Text = $"Zurück in {_reviewRemainingSeconds}s";
 
         _reviewTimer?.Stop();
-        _reviewTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _reviewTimer = new UiTimer { Interval = TimeSpan.FromSeconds(1) };
         _reviewTimer.Tick += (s, e) =>
         {
             _reviewRemainingSeconds--;
@@ -689,6 +892,7 @@ public partial class MainView : UserControl
         CountdownOverlayGrid.IsVisible = false;
         IdleOverlayGrid.IsVisible = true;
         CornerGalleryBorder.IsVisible = true;
+        EndCaptureSession();
     }
 
     private async void OnPrintPhotoClick(object? sender, RoutedEventArgs e)
@@ -780,7 +984,8 @@ public partial class MainView : UserControl
                     CornerThumbnailImage.Source = new Bitmap(ms);
                 }
                 GalleryCountText.Text = $"{files.Count} Foto{(files.Count == 1 ? "" : "s")}";
-                CornerGalleryBorder.IsVisible = true;
+                // Only on the start screen - in the review it would cover the status text
+                CornerGalleryBorder.IsVisible = IdleOverlayGrid.IsVisible;
             }
         }
         catch { }

@@ -2,7 +2,6 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using Debug = System.Diagnostics.Debug;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +11,7 @@ using Android.Hardware.Usb;
 using Android.OS;
 using Lumio.Core.Camera;
 using Lumio.Core.Settings;
+using Log = Android.Util.Log;
 
 namespace Lumio.App.Android;
 
@@ -21,6 +21,7 @@ namespace Lumio.App.Android;
 /// </summary>
 public sealed class AndroidNikonPtpCamera : ICameraService
 {
+    private const string LogTag = "LumioPtp";
     private const int NikonVendorId = 0x04B0; // 1200 decimal
 
     // Standard PTP Opcodes
@@ -28,15 +29,24 @@ public sealed class AndroidNikonPtpCamera : ICameraService
     private const ushort PtpOcOpenSession = 0x1002;
     private const ushort PtpOcCloseSession = 0x1003;
     private const ushort PtpOcGetObjectHandles = 0x1007;
+    private const ushort PtpOcGetObjectInfo = 0x1008;
     private const ushort PtpOcGetObject = 0x1009;
+    private const ushort PtpFormatExifJpeg = 0x3801;
     private const ushort PtpOcInitiateCapture = 0x100E;
 
     // Nikon-specific PTP Opcodes
     private const ushort PtpOcNikonCapture = 0x90C0;
     private const ushort PtpOcNikonStartLiveView = 0x9201;
-    private const ushort PtpOcNikonGetLiveViewImage = 0x9202;
-    private const ushort PtpOcNikonEndLiveView = 0x9203;
-    private const ushort PtpOcNikonDeviceReady = 0x9207;
+    private const ushort PtpOcNikonGetLiveViewImage = 0x9203;
+    private const ushort PtpOcNikonEndLiveView = 0x9202;
+    private const ushort PtpOcNikonDeviceReady = 0x90C8;
+    private const ushort PtpOcNikonGetEvent = 0x90C7;
+    private const ushort PtpOcNikonAfDrive = 0x90C1;
+    private const ushort PtpRcNikonOutOfFocus = 0xA002;
+
+    // PTP / Nikon event codes
+    private const ushort PtpEcObjectAdded = 0x4002;
+    private const ushort PtpEcNikonObjectAddedInSdram = 0xC101;
 
     // Nikon stores pictures in camera RAM (no SD card / "PC" destination) under this fixed handle
     private const uint NikonSdramObjectHandle = 0xFFFF0001;
@@ -44,6 +54,8 @@ public sealed class AndroidNikonPtpCamera : ICameraService
     // PTP Response Codes
     private const ushort PtpRcOk = 0x2001;
     private const ushort PtpRcDeviceBusy = 0x2019;
+    private const ushort PtpRcSessionAlreadyOpen = 0x201E;
+    private const ushort PtpRcNotInLiveView = 0xA00B;
 
     private readonly Activity _activity;
     private readonly BoothSettings? _settings;
@@ -111,18 +123,21 @@ public sealed class AndroidNikonPtpCamera : ICameraService
                     if (IsNikonDevice(dev))
                     {
                         var name = GetNikonModelName(dev);
-                        results.Add(new CameraDeviceInfo($"ptp:nikon:{dev.DeviceId}", $"📷 {name} (USB-OTG PTP)"));
+                        results.Add(new CameraDeviceInfo(GetDeviceKey(dev), $"📷 {name} (USB-OTG PTP)"));
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error scanning Nikon USB devices: {ex.Message}");
+            Log.Warn(LogTag, $"Error scanning Nikon USB devices: {ex.Message}");
         }
 
         return results;
     }
+
+    /// <summary>Stable camera ID for the settings (Android's DeviceId changes every time the camera is plugged in).</summary>
+    private static string GetDeviceKey(UsbDevice dev) => $"ptp:nikon:{dev.VendorId:X4}:{dev.ProductId:X4}";
 
     public static bool IsNikonDevice(UsbDevice dev)
     {
@@ -213,14 +228,14 @@ public sealed class AndroidNikonPtpCamera : ICameraService
         UsbDevice? targetDevice = null;
         if (usbManager.DeviceList != null)
         {
-            if (!string.IsNullOrWhiteSpace(_settings?.WebcamDeviceId) &&
-                _settings.WebcamDeviceId.StartsWith("ptp:nikon:", StringComparison.OrdinalIgnoreCase))
+            var requested = _settings?.WebcamDeviceId;
+            if (requested?.StartsWith("ptp:nikon:", StringComparison.OrdinalIgnoreCase) == true)
             {
-                var idStr = _settings.WebcamDeviceId.Substring("ptp:nikon:".Length);
-                if (int.TryParse(idStr, out var requestedId))
-                {
-                    targetDevice = usbManager.DeviceList.Values.FirstOrDefault(d => d.DeviceId == requestedId);
-                }
+                // Current key is vendor/product ID (stable); older settings stored Android's per-plug device number
+                targetDevice = usbManager.DeviceList.Values.FirstOrDefault(d => string.Equals(GetDeviceKey(d), requested, StringComparison.OrdinalIgnoreCase))
+                               ?? (int.TryParse(requested["ptp:nikon:".Length..], out var legacyId)
+                                   ? usbManager.DeviceList.Values.FirstOrDefault(d => d.DeviceId == legacyId)
+                                   : null);
             }
 
             targetDevice ??= usbManager.DeviceList.Values.FirstOrDefault(IsNikonDevice);
@@ -303,6 +318,10 @@ public sealed class AndroidNikonPtpCamera : ICameraService
         await _usbLock.WaitAsync(cancellationToken);
         try
         {
+            // A previous app run (or Android's own MTP service) can leave a session, pending data or a
+            // stalled endpoint behind - reset the PTP state machine first
+            await ResetPtpStateAsync(cancellationToken);
+
             _transactionId = 1;
             ushort responseCode = 0;
             for (int attempt = 0; attempt < 3; attempt++)
@@ -311,21 +330,36 @@ public sealed class AndroidNikonPtpCamera : ICameraService
                 {
                     var (code, _) = await ExecuteCommandNoDataAsync(PtpOcOpenSession, 1);
                     responseCode = code;
-                    if (code == PtpRcOk || code == 0x201E) // 0x201E: SessionAlreadyOpen
+                    if (code == PtpRcSessionAlreadyOpen)
+                    {
+                        // Restart the stale session so transaction IDs start fresh
+                        await ExecuteCommandNoDataAsync(PtpOcCloseSession);
+                        _transactionId = 1;
+                        (code, _) = await ExecuteCommandNoDataAsync(PtpOcOpenSession, 1);
+                        responseCode = code;
+                    }
+                    if (code == PtpRcOk || code == PtpRcSessionAlreadyOpen)
                     {
                         break;
                     }
                 }
                 catch when (attempt < 2)
                 {
+                    Log.Warn(LogTag, $"OpenSession attempt {attempt + 1} failed, resetting");
                     await Task.Delay(300, cancellationToken);
+                    await ResetPtpStateAsync(cancellationToken);
                 }
             }
 
+            if (responseCode != PtpRcOk && responseCode != PtpRcSessionAlreadyOpen)
+                throw new CameraException($"Kamera lehnt die PTP-Sitzung ab (Code 0x{responseCode:X4}).");
+
+            Log.Info(LogTag, $"{DisplayName}: PTP session opened (response 0x{responseCode:X4})");
             Status = CameraStatus.Connected;
         }
         catch (Exception ex)
         {
+            Log.Error(LogTag, $"{DisplayName}: OpenSession failed: {ex}");
             Status = CameraStatus.Error;
             throw new CameraException($"Fehler beim Starten der PTP-Sitzung: {ex.Message}", ex);
         }
@@ -354,17 +388,19 @@ public sealed class AndroidNikonPtpCamera : ICameraService
             await _usbLock.WaitAsync(CancellationToken.None);
             try
             {
-                await ExecuteCommandNoDataAsync(PtpOcNikonStartLiveView);
+                await StartNikonLiveViewAsync(token);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Nikon StartLiveView error: {ex.Message}");
+                Log.Warn(LogTag, $"Nikon StartLiveView error: {ex.Message}");
             }
             finally
             {
                 _usbLock.Release();
             }
 
+            var liveViewRequests = 0;
+            var consecutiveErrors = 0;
             while (!token.IsCancellationRequested)
             {
                 if (_isCapturing)
@@ -380,12 +416,25 @@ public sealed class AndroidNikonPtpCamera : ICameraService
                     await _usbLock.WaitAsync(token);
                     try
                     {
-                        var (_, data) = await ExecuteCommandWithDataAsync(PtpOcNikonGetLiveViewImage);
+                        var (code, data) = await ExecuteCommandWithDataAsync(PtpOcNikonGetLiveViewImage);
                         payload = data;
+                        if (++liveViewRequests <= 5 || (code != PtpRcOk && liveViewRequests % 50 == 0))
+                            Log.Info(LogTag, $"GetLiveViewImage #{liveViewRequests}: 0x{code:X4}, {data?.Length ?? 0} bytes");
+
+                        // The camera left live view on its own (standby timer, menu, ...): start it again
+                        if (code == PtpRcNotInLiveView)
+                            await StartNikonLiveViewAsync(token);
                     }
                     finally
                     {
                         _usbLock.Release();
+                    }
+
+                    if (payload is null)
+                    {
+                        // No picture (camera busy or just restarting live view): back off instead of hammering it
+                        await Task.Delay(300, token);
+                        continue;
                     }
 
                     if (payload != null && payload.Length > 200)
@@ -402,6 +451,7 @@ public sealed class AndroidNikonPtpCamera : ICameraService
                         }
                     }
 
+                    consecutiveErrors = 0;
                     await Task.Delay(35, token); // ~28 FPS
                 }
                 catch (System.OperationCanceledException)
@@ -410,8 +460,14 @@ public sealed class AndroidNikonPtpCamera : ICameraService
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"LiveView loop frame error: {ex.Message}");
-                    await Task.Delay(100, token);
+                    Log.Warn(LogTag, $"LiveView loop frame error: {ex.Message}");
+                    if (++consecutiveErrors >= 10)
+                    {
+                        // Camera unplugged or switched off: report it so the booth reconnects
+                        Status = CameraStatus.Disconnected;
+                        break;
+                    }
+                    try { await Task.Delay(100, token); } catch (System.OperationCanceledException) { break; }
                 }
             }
 
@@ -459,119 +515,103 @@ public sealed class AndroidNikonPtpCamera : ICameraService
             throw new CameraException("Nikon-Kamera ist nicht verbunden.");
 
         _isCapturing = true;
+        var hadLiveView = _isLiveViewRunning;
 
         try
         {
             // Give in-flight live view frame a moment to finish
             await Task.Delay(100, cancellationToken);
 
-            // Temporarily stop live view so DSLR mirror can flip down and shutter can actuate cleanly
-            bool hadLiveView = _isLiveViewRunning;
-            if (hadLiveView)
-            {
-                await _usbLock.WaitAsync(cancellationToken);
-                try
-                {
-                    await ExecuteCommandNoDataAsync(PtpOcNikonEndLiveView);
-                }
-                catch { }
-                finally
-                {
-                    _usbLock.Release();
-                }
-
-                await Task.Delay(150, cancellationToken);
-            }
-
-            // Fetch known object handles before capture
-            var existingHandles = new HashSet<uint>();
             await _usbLock.WaitAsync(cancellationToken);
             try
             {
-                var handles = await GetObjectHandlesAsync();
-                foreach (var h in handles) existingHandles.Add(h);
-            }
-            finally
-            {
-                _usbLock.Release();
-            }
-
-            // Trigger shutter / photo capture
-            await _usbLock.WaitAsync(cancellationToken);
-            try
-            {
-                // Try Nikon Capture command (0x90C0)
-                var (code, _) = await ExecuteCommandNoDataAsync(PtpOcNikonCapture, 0xFFFFFFFF, 0x00000000);
-                if (code != PtpRcOk && code != PtpRcDeviceBusy)
+                // Stop live view so the DSLR mirror can flip down and the shutter can actuate cleanly
+                if (hadLiveView)
                 {
-                    // Fallback to standard PTP InitiateCapture (0x100E)
-                    await ExecuteCommandNoDataAsync(PtpOcInitiateCapture, 0x00000000, 0x00000000);
+                    var (endCode, _) = await ExecuteCommandNoDataAsync(PtpOcNikonEndLiveView);
+                    Log.Info(LogTag, $"EndLiveView: 0x{endCode:X4}");
+                    await WaitDeviceReadyAsync(TimeSpan.FromSeconds(3), cancellationToken);
                 }
-            }
-            finally
-            {
-                _usbLock.Release();
-            }
 
-            // Wait for camera to write picture to storage and find newly created object handle
-            uint newObjectHandle = 0;
-            for (int attempt = 0; attempt < 35; attempt++) // up to 10.5 seconds
-            {
-                await Task.Delay(300, cancellationToken);
+                // Focus first: in AF-S the D5600 silently refuses to fire when it is not in focus
+                var (afCode, _) = await ExecuteCommandNoDataAsync(PtpOcNikonAfDrive);
+                var focusResult = afCode == PtpRcOk ? await WaitDeviceReadyAsync(TimeSpan.FromSeconds(4), cancellationToken) : afCode;
+                Log.Info(LogTag, $"AfDrive: 0x{afCode:X4}, focus result 0x{focusResult:X4}");
 
-                await _usbLock.WaitAsync(cancellationToken);
-                try
+                // Nikon "InitiateCaptureRecInSdram": the picture stays in the camera's RAM buffer
+                var (captureCode, _) = await ExecuteCommandNoDataAsync(PtpOcNikonCapture, 0xFFFFFFFF);
+                Log.Info(LogTag, $"Capture (SDRAM): 0x{captureCode:X4}");
+
+                if (captureCode == PtpRcOk)
                 {
-                    var currentHandles = await GetObjectHandlesAsync();
-                    var newHandles = currentHandles.Where(h => !existingHandles.Contains(h)).ToList();
-                    if (newHandles.Count > 0)
+                    // The shutter has fired: only fetch this picture, never trigger a second shot
+                    var handles = await WaitForNikonPicturesAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                    if (handles.Count == 0)
                     {
-                        newObjectHandle = newHandles.Last();
-                        break;
+                        throw new CameraException(focusResult == PtpRcNikonOutOfFocus
+                            ? "Die Kamera konnte nicht scharfstellen. Bitte Motiv/Licht prüfen oder das Objektiv auf manuellen Fokus (M) stellen."
+                            : "Die Kamera hat nicht ausgelöst. Bitte Fokus und Kamera-Einstellungen prüfen.");
                     }
-                }
-                catch { }
-                finally
-                {
-                    _usbLock.Release();
-                }
-            }
 
-            // No new file on the card: the camera may have kept the picture in its RAM buffer
-            newObjectHandle = newObjectHandle == 0 ? NikonSdramObjectHandle : newObjectHandle;
+                    for (var attempt = 0; attempt < 25; attempt++)
+                    {
+                        await WaitDeviceReadyAsync(TimeSpan.FromSeconds(5), cancellationToken);
 
-            // Download the high-resolution JPEG (GetObject 0x1009)
-            byte[]? photoBytes;
-            await _usbLock.WaitAsync(cancellationToken);
-            try
-            {
-                var (code, data) = await ExecuteCommandWithDataAsync(PtpOcGetObject, newObjectHandle);
-                if (code != PtpRcOk || data is null || data.Length == 0)
-                {
-                    throw newObjectHandle == NikonSdramObjectHandle
-                        ? new CameraException("Nikon-Fotoauslösung: Kein neues Foto auf der Kamera gefunden.")
-                        : new CameraException($"Foto-Übertragung von der Kamera fehlgeschlagen (PTP Code 0x{code:X4}).");
+                        // RAW+JPEG delivers two pictures: take the JPEG. Like gphoto2, read the object info first;
+                        // the picture is ready once it reports a size.
+                        var rawOnly = true;
+                        foreach (var handle in handles)
+                        {
+                            var (infoCode, info) = await ExecuteCommandWithDataAsync(PtpOcGetObjectInfo, handle);
+                            var ready = infoCode == PtpRcOk && info is { Length: >= 12 };
+                            var format = ready ? BinaryPrimitives.ReadUInt16LittleEndian(info!.AsSpan(4, 2)) : (ushort)0;
+                            var size = ready ? BinaryPrimitives.ReadUInt32LittleEndian(info!.AsSpan(8, 4)) : 0u;
+                            if (attempt % 5 == 0)
+                                Log.Info(LogTag, $"Picture 0x{handle:X8}: info 0x{infoCode:X4}, format 0x{format:X4}, {size} bytes");
+
+                            if (size == 0 || format == 0)
+                            {
+                                rawOnly = false; // not ready yet
+                                continue;
+                            }
+                            if (format != PtpFormatExifJpeg)
+                                continue;
+
+                            rawOnly = false;
+                            var (code, data) = await ExecuteCommandWithDataAsync(PtpOcGetObject, handle);
+                            Log.Info(LogTag, $"GetObject (SDRAM 0x{handle:X8}, {size} bytes announced): 0x{code:X4}, {data?.Length ?? 0} bytes");
+                            if (code == PtpRcOk && data is { Length: > 0 })
+                                return new CapturedPhoto(data, DateTimeOffset.Now);
+                        }
+
+                        if (rawOnly)
+                        {
+                            throw new CameraException("Die Kamera speichert nur RAW. Bitte an der Kamera die Bildqualität auf JPEG oder RAW+JPEG stellen.");
+                        }
+                        await Task.Delay(200, cancellationToken);
+                    }
+                    throw new CameraException("Foto wurde ausgelöst, konnte aber nicht von der Kamera geladen werden.");
                 }
-                photoBytes = data;
             }
             finally
             {
                 _usbLock.Release();
             }
 
-            return new CapturedPhoto(photoBytes, DateTimeOffset.Now);
+            // Fallback: standard PTP capture onto the memory card, then download the new file
+            return await CaptureToCardAsync(cancellationToken);
         }
         finally
         {
             _isCapturing = false;
 
             // Resume Live View if it was running
-            if (_liveViewTask != null && Status == CameraStatus.Connected)
+            if (hadLiveView && _liveViewTask != null && Status == CameraStatus.Connected)
             {
                 await _usbLock.WaitAsync(CancellationToken.None);
                 try
                 {
-                    await ExecuteCommandNoDataAsync(PtpOcNikonStartLiveView);
+                    await StartNikonLiveViewAsync(CancellationToken.None);
                 }
                 catch { }
                 finally
@@ -580,6 +620,166 @@ public sealed class AndroidNikonPtpCamera : ICameraService
                 }
             }
         }
+    }
+
+    private async Task<CapturedPhoto> CaptureToCardAsync(CancellationToken cancellationToken)
+    {
+        await _usbLock.WaitAsync(cancellationToken);
+        try
+        {
+            var existingHandles = new HashSet<uint>(await GetObjectHandlesAsync());
+
+            var (captureCode, _) = await ExecuteCommandNoDataAsync(PtpOcInitiateCapture, 0x00000000, 0x00000000);
+            Log.Info(LogTag, $"InitiateCapture (card): 0x{captureCode:X4}");
+            if (captureCode != PtpRcOk)
+                throw new CameraException($"Die Kamera hat nicht ausgelöst (PTP Code 0x{captureCode:X4}).");
+
+            // Wait until the camera has finished writing, then pick the new JPEG (skips new folders and RAW files)
+            for (var attempt = 0; attempt < 35; attempt++) // up to ~10 seconds
+            {
+                await Task.Delay(300, cancellationToken);
+                await WaitDeviceReadyAsync(TimeSpan.FromSeconds(5), cancellationToken);
+
+                foreach (var handle in (await GetObjectHandlesAsync()).Where(h => !existingHandles.Contains(h)).Reverse())
+                {
+                    var (infoCode, info) = await ExecuteCommandWithDataAsync(PtpOcGetObjectInfo, handle);
+                    var format = infoCode == PtpRcOk && info is { Length: >= 6 } ? BinaryPrimitives.ReadUInt16LittleEndian(info.AsSpan(4, 2)) : (ushort)0;
+                    Log.Info(LogTag, $"New object 0x{handle:X8}: format 0x{format:X4}");
+                    if (format != PtpFormatExifJpeg)
+                        continue;
+
+                    var (code, data) = await ExecuteCommandWithDataAsync(PtpOcGetObject, handle);
+                    Log.Info(LogTag, $"GetObject (card 0x{handle:X8}): 0x{code:X4}, {data?.Length ?? 0} bytes");
+                    if (code != PtpRcOk || data is null || data.Length == 0)
+                        throw new CameraException($"Foto-Übertragung von der Kamera fehlgeschlagen (PTP Code 0x{code:X4}).");
+                    return new CapturedPhoto(data, DateTimeOffset.Now);
+                }
+            }
+
+            throw new CameraException("Nikon-Fotoauslösung: Kein neues Foto auf der Kamera gefunden.");
+        }
+        finally
+        {
+            _usbLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Polls the Nikon event queue (GetEvent) until the camera reports the new picture(s)
+    /// (ObjectAddedInSdram / ObjectAdded). With RAW+JPEG two objects arrive shortly after each other.
+    /// </summary>
+    private async Task<List<uint>> WaitForNikonPicturesAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var handles = new List<uint>();
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            var (code, data) = await ExecuteCommandWithDataAsync(PtpOcNikonGetEvent);
+            if (code == PtpRcOk && data is { Length: >= 2 })
+            {
+                var count = BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(0, 2));
+                for (var i = 0; i < count && 2 + (i + 1) * 6 <= data.Length; i++)
+                {
+                    var eventCode = BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(2 + i * 6, 2));
+                    var param = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4 + i * 6, 4));
+                    if (eventCode is not (PtpEcObjectAdded or PtpEcNikonObjectAddedInSdram))
+                        continue;
+
+                    Log.Info(LogTag, $"Event 0x{eventCode:X4} (0x{param:X8})");
+                    var handle = param != 0 ? param : NikonSdramObjectHandle;
+                    if (!handles.Contains(handle))
+                        handles.Add(handle);
+
+                    // Give a possible second picture (RAW+JPEG) a moment to show up
+                    var shortDeadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(800);
+                    if (shortDeadline < deadline)
+                        deadline = shortDeadline;
+                }
+            }
+            await Task.Delay(100, cancellationToken);
+        }
+
+        if (handles.Count == 0)
+            Log.Warn(LogTag, "No ObjectAdded event - the camera did not take a picture");
+        return handles;
+    }
+
+    /// <summary>Polls Nikon DeviceReady until the camera is no longer busy (e.g. after capture or live view changes).</summary>
+    private async Task<ushort> WaitDeviceReadyAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            var (code, _) = await ExecuteCommandNoDataAsync(PtpOcNikonDeviceReady);
+            if (code != PtpRcDeviceBusy)
+                return code;
+            await Task.Delay(50, cancellationToken);
+        }
+        Log.Warn(LogTag, "Camera still busy after waiting for DeviceReady");
+        return PtpRcDeviceBusy;
+    }
+
+    /// <summary>
+    /// PTP/USB "Device Reset" class request plus clearing stalled endpoints and draining stale data,
+    /// so the camera accepts a fresh command sequence.
+    /// </summary>
+    private async Task ResetPtpStateAsync(CancellationToken cancellationToken)
+    {
+        var connection = _connection!;
+        const int ClearFeature = 0x01, EndpointHalt = 0x00;
+        connection.ControlTransfer((UsbAddressing)0x02, ClearFeature, EndpointHalt, (int)_bulkIn!.Address, null, 0, 1000);
+        connection.ControlTransfer((UsbAddressing)0x02, ClearFeature, EndpointHalt, (int)_bulkOut!.Address, null, 0, 1000);
+
+        var reset = connection.ControlTransfer((UsbAddressing)0x21, 0x66 /* Device Reset */, 0, _interface!.Id, null, 0, 2000);
+        await Task.Delay(300, cancellationToken);
+
+        // PTP/USB spec: after a reset poll "Get Device Status" until the camera reports OK again
+        var status = new byte[32];
+        ushort statusCode = 0;
+        for (var i = 0; i < 30; i++)
+        {
+            var len = connection.ControlTransfer((UsbAddressing)0xA1, 0x67 /* Get Device Status */, 0, _interface.Id, status, status.Length, 1000);
+            if (len < 4) break;
+            statusCode = BinaryPrimitives.ReadUInt16LittleEndian(status.AsSpan(2, 2));
+            if (statusCode == PtpRcOk) break;
+            if (statusCode == 0x2019 /* busy */ || len > 4)
+            {
+                // Status lists stalled endpoints after the header: clear them
+                connection.ControlTransfer((UsbAddressing)0x02, ClearFeature, EndpointHalt, (int)_bulkIn.Address, null, 0, 1000);
+                connection.ControlTransfer((UsbAddressing)0x02, ClearFeature, EndpointHalt, (int)_bulkOut.Address, null, 0, 1000);
+            }
+            await Task.Delay(100, cancellationToken);
+        }
+        Log.Info(LogTag, $"PTP device status after reset: 0x{statusCode:X4}");
+
+        var drain = new byte[64 * 1024];
+        var drained = 0;
+        for (var i = 0; i < 20; i++)
+        {
+            var read = connection.BulkTransfer(_bulkIn, drain, drain.Length, 100);
+            if (read <= 0) break;
+            drained += read;
+        }
+        Log.Info(LogTag, $"PTP reset: device reset {(reset >= 0 ? "ok" : "not supported")}, drained {drained} bytes");
+    }
+
+    /// <summary>Starts Nikon live view and waits until the camera reports ready (mirror up, sensor running).</summary>
+    private async Task StartNikonLiveViewAsync(CancellationToken token)
+    {
+        var (startCode, _) = await ExecuteCommandNoDataAsync(PtpOcNikonStartLiveView);
+        Log.Info(LogTag, $"StartLiveView: 0x{startCode:X4}");
+
+        for (var attempt = 0; attempt < 40; attempt++)
+        {
+            var (readyCode, _) = await ExecuteCommandNoDataAsync(PtpOcNikonDeviceReady);
+            if (readyCode != PtpRcDeviceBusy)
+            {
+                Log.Info(LogTag, $"DeviceReady after {attempt} polls: 0x{readyCode:X4}");
+                return;
+            }
+            await Task.Delay(50, token);
+        }
+        Log.Warn(LogTag, "Camera stayed busy after StartLiveView");
     }
 
     private async Task<List<uint>> GetObjectHandlesAsync()
@@ -664,6 +864,11 @@ public sealed class AndroidNikonPtpCamera : ICameraService
         // Read Data packet header
         var initialChunk = new byte[64 * 1024];
         var bytesRead = _connection.BulkTransfer(_bulkIn, initialChunk, initialChunk.Length, 5000);
+        if (bytesRead == 0)
+        {
+            // Stale zero-length packet from the previous transfer
+            bytesRead = _connection.BulkTransfer(_bulkIn, initialChunk, initialChunk.Length, 5000);
+        }
         if (bytesRead < 12)
         {
             return Task.FromResult<(ushort, byte[]?)>((0x2002, null));
@@ -696,9 +901,13 @@ public sealed class AndroidNikonPtpCamera : ICameraService
             payloadRead += read;
         }
 
-        // After Data block, read the final Response Block (Type == 3)
+        // After Data block, read the final Response Block (Type == 3).
+        // A data phase that is an exact multiple of the packet size is followed by a zero-length packet - skip it,
+        // otherwise the response stays in the pipe and every later command reads the previous answer.
         var finalResp = new byte[512];
         var respBytes = _connection.BulkTransfer(_bulkIn, finalResp, finalResp.Length, 3000);
+        if (respBytes == 0)
+            respBytes = _connection.BulkTransfer(_bulkIn, finalResp, finalResp.Length, 3000);
         ushort finalCode = PtpRcOk;
         if (respBytes >= 12)
         {
@@ -727,6 +936,7 @@ public sealed class AndroidNikonPtpCamera : ICameraService
 
     public async ValueTask DisposeAsync()
     {
+        Log.Info(LogTag, "Disposing PTP connection");
         await StopLiveViewAsync();
 
         if (_connection is not null)
@@ -756,5 +966,6 @@ public sealed class AndroidNikonPtpCamera : ICameraService
         }
 
         Status = CameraStatus.Disconnected;
+        Log.Info(LogTag, "PTP connection closed");
     }
 }

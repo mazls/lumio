@@ -22,7 +22,7 @@ namespace Lumio.App.Android;
     Theme = "@style/Theme.Lumio.NoActionBar",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTask,
-    ScreenOrientation = ScreenOrientation.SensorLandscape,
+    ScreenOrientation = ScreenOrientation.FullUser,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode | ConfigChanges.SmallestScreenSize | ConfigChanges.ScreenLayout)]
 // Plugging in a supported camera opens Lumio; with "always open" ticked, Android grants USB access without asking again
 [IntentFilter([UsbManager.ActionUsbDeviceAttached])]
@@ -75,6 +75,7 @@ public class MainActivity : AvaloniaMainActivity<Lumio.App.Avalonia.App>
             var deviceId = settings.WebcamDeviceId;
             var uvcConnected = AndroidUvcCamera.IsDeviceConnected(this);
             var ptpConnected = AndroidNikonPtpCamera.IsDeviceConnected(this);
+            global::Android.Util.Log.Info("Lumio", $"Camera factory: backend={settings.CameraBackend}, device={deviceId}, uvc={uvcConnected}, ptp={ptpConnected}");
 
             // An explicitly selected USB camera wins while it is plugged in
             if (deviceId?.StartsWith("uvc:", System.StringComparison.OrdinalIgnoreCase) == true && uvcConnected)

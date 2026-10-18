@@ -48,7 +48,7 @@ public partial class AdminDashboardDialog : UserControl
     private readonly SelphyPrintService _printService;
     private readonly TemplateStore _templateStore;
     private TextBox? _currentFocusedTextBox;
-    private global::Avalonia.Threading.DispatcherTimer? _hardwareScanTimer;
+    private UiTimer? _hardwareScanTimer;
     private int _isScanningHardware;
 
     public bool ExitRequested { get; private set; }
@@ -89,7 +89,7 @@ public partial class AdminDashboardDialog : UserControl
             _hardwareScanTimer = null;
         };
 
-        _hardwareScanTimer = new global::Avalonia.Threading.DispatcherTimer
+        _hardwareScanTimer = new UiTimer
         {
             Interval = TimeSpan.FromSeconds(3)
         };
@@ -129,6 +129,7 @@ public partial class AdminDashboardDialog : UserControl
         VideoDurationUpDown.Value = current.VideoMessageDurationSeconds;
         AutoPrintCheckBox.IsChecked = current.AutoPrint;
         MirrorLiveViewCheckBox.IsChecked = current.MirrorLiveView;
+        LiveViewPowerSavingCheckBox.IsChecked = current.LiveViewOnlyDuringCapture;
         AdminPinTextBox.Text = current.AdminPin;
         OnScreenKeyboardCheckBox.IsChecked = current.OnScreenKeyboardEnabled;
     }
@@ -375,6 +376,7 @@ public partial class AdminDashboardDialog : UserControl
         copy.VideoMessageDurationSeconds = (int)(VideoDurationUpDown.Value ?? 20);
         copy.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
         copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
+        copy.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
         copy.OnScreenKeyboardEnabled = OnScreenKeyboardCheckBox.IsChecked ?? false;
 
         if (!string.IsNullOrWhiteSpace(AdminPinTextBox.Text))

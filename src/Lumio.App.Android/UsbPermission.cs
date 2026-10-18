@@ -20,6 +20,8 @@ internal static class UsbPermission
         if (usbManager.HasPermission(device))
             return true;
 
+        global::Android.Util.Log.Info("LumioUsb", $"Requesting USB permission for {device.ProductName} ({device.DeviceName})");
+
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var receiver = new PermissionReceiver(device.DeviceName, tcs);
         var filter = new IntentFilter(ActionUsbPermission);
@@ -47,10 +49,13 @@ internal static class UsbPermission
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-            return await tcs.Task.WaitAsync(linkedCts.Token).ConfigureAwait(false);
+            var granted = await tcs.Task.WaitAsync(linkedCts.Token).ConfigureAwait(false);
+            global::Android.Util.Log.Info("LumioUsb", $"USB permission for {device.ProductName}: {granted}");
+            return granted;
         }
         catch (System.OperationCanceledException)
         {
+            global::Android.Util.Log.Warn("LumioUsb", $"No answer to USB permission request for {device.ProductName}");
             return usbManager.HasPermission(device);
         }
         finally

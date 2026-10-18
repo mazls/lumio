@@ -54,6 +54,8 @@ public sealed class AndroidUvcCamera : ICameraService
     private UsbEndpoint? _streamEndpoint;
     private StreamFormat? _format;
     private int _maxPayloadSize;
+    private int _uvcVersion;
+    private bool _streamStopped;
 
     private CameraStatus _status = CameraStatus.Disconnected;
     private CancellationTokenSource? _streamCts;
@@ -179,6 +181,7 @@ public sealed class AndroidUvcCamera : ICameraService
             _format = ChooseFormat(formats) ?? throw new CameraException($"{DisplayName}: Kein MJPEG- oder YUY2-Videoformat verfügbar.");
             Log.Info(LogTag, $"{DisplayName}: UVC {uvcVersion:X4}, {formats.Count} Formate, gewählt {(_format.IsMjpeg ? "MJPEG" : "YUY2")} {_format.Width}x{_format.Height} @ {10_000_000.0 / Math.Max(1, _format.FrameInterval):0.#} fps");
 
+            _uvcVersion = uvcVersion;
             _maxPayloadSize = NegotiateStream(uvcVersion, _format);
             Status = CameraStatus.Connected;
         }
@@ -369,6 +372,13 @@ public sealed class AndroidUvcCamera : ICameraService
         if (_streamTask is not null)
             return Task.CompletedTask;
 
+        // After a stop the camera ended its stream: negotiate again to restart it
+        if (_streamStopped)
+        {
+            _maxPayloadSize = NegotiateStream(_uvcVersion, _format!);
+            _streamStopped = false;
+        }
+
         _streamCts = new CancellationTokenSource();
         var token = _streamCts.Token;
         _streamTask = Task.Factory.StartNew(() => StreamLoop(token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
@@ -494,6 +504,13 @@ public sealed class AndroidUvcCamera : ICameraService
         _streamCts?.Dispose();
         _streamCts = null;
         _streamTask = null;
+
+        // UVC bulk streaming: CLEAR_FEATURE(ENDPOINT_HALT) tells the camera to stop sending video
+        if (_connection is not null && _streamEndpoint is not null)
+        {
+            _connection.ControlTransfer((UsbAddressing)0x02, 0x01, 0, (int)_streamEndpoint.Address, null, 0, 1000);
+            _streamStopped = true;
+        }
     }
 
     /// <summary>A UVC camera has no shutter: the photo is the next full-resolution stream frame.</summary>
