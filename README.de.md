@@ -27,6 +27,12 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
+## Neu in Version 1.3.3: Selphy-Druck repariert 🖨️
+
+- 🖨️ **Ganzes Foto auf der Karte**: Das Bild wird jetzt passend auf die 100×148 mm Selphy-Karte skaliert (vorher wurde nur ein Ausschnitt gedruckt).
+- ✂️ **Randlos drucken** als Option im Admin-Menü → Drucker.
+- 📶 **Drucken per WLAN**: Der Selphy wird im Netzwerk automatisch gefunden – damit druckt jetzt auch die Android-App.
+
 ## Neu in Version 1.3.2: Party-Look ✨
 
 - 🎨 **Neue Testkamera** mit animierter Party-Szene (Lichterkette, Bokeh, Lumio-Logo) – sieht auch beim Testen ohne Kamera nach Fotobox aus.
@@ -99,7 +105,7 @@ Was in 1.2.x dazugekommen ist (Touch-Admin-Menü mit Tabs, Bildschirmtastatur, U
    - **Webcams**: USB-Webcams (Logitech, Anker etc.) sowie integrierte Surface-Front-/Rückkameras und Tablet-Kameras
    - **Simulierte Test-Kamera**: Integrierte virtuelle Testkamera mit Live-Zeitstempel zum Testen ohne Hardware
 3. **Drucker**:
-   - Canon Selphy CP1300 / CP1500 / CP1200 / CP1000 über den Windows-Druckertreiber, CUPS auf Linux/Raspberry Pi oder Selphy-WLAN auf Android
+   - Canon Selphy CP1300 / CP1500 / CP1200 / CP1000 über den Windows-Druckertreiber (USB oder Netzwerk), CUPS auf Linux/Raspberry Pi oder direkt per WLAN (IPP) – auf Android automatisch per WLAN
 
 ---
 

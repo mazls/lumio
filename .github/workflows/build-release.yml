@@ -108,15 +108,15 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Party-Look ✨
+            ## Lumio Release ${{ github.ref_name }} – Selphy-Druck repariert 🖨️
 
-            Kleines, aber schönes Update: Lumio sieht jetzt auch dann nach Party aus, wenn gerade keine Kamera läuft.
+            Beim ersten Testdruck kam auf dem Selphy nur ein Ausschnitt oben links raus. Das ist behoben – und randlos drucken geht jetzt auch.
 
             ### Highlights
-            - **Neue Testkamera**: animierte Party-Szene mit Lichterkette, Bokeh-Lichtern, Sucher-Ecken und Lumio-Logo – auch die Testfotos sehen so aus.
-            - **Ruhebildschirm im Akku-Sparmodus**: stimmungsvolles Party-Standbild statt schwarzem Hintergrund.
-            - **Hochformat**: Der Hintergrund füllt die Flächen rund ums Kamerabild statt schwarzer Balken (Android & Windows).
-            - **Android-APK mit festem Release-Schlüssel signiert** – Updates einfach drüber installieren. Wer noch eine ältere APK hat: einmal deinstallieren (vorher Fotos sichern), danach klappen Updates direkt.
+            - **Ganzes Foto auf der Karte**: passend auf 100×148 mm skaliert und bei Bedarf gedreht.
+            - **Randlos drucken** (Admin-Menü → Drucker): Foto füllt die Karte, nur minimal beschnitten. Ohne Haken: komplettes Foto mit schmalem Rand.
+            - **Drucken auf Android**: Selphy wird im WLAN automatisch gefunden, gedruckt wird direkt ohne Druckdialog.
+            - **WLAN-Drucker unter Windows & Linux**: zusätzlich als „(WLAN)“ in der Druckerauswahl.
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)

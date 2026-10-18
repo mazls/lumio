@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.3] – 2026-10-18 – *Selphy-Druck repariert* 🖨️
+
+### 🖨️ Drucken
+- **Ganzes Bild statt Ausschnitt**: Auf dem Selphy wurde nur ein Ausschnitt oben links gedruckt – das Foto wird jetzt passend auf die 100×148 mm Fotokarte skaliert und bei Bedarf gedreht.
+- **Randlos drucken**: Neue Option im Admin-Menü → Drucker (standardmäßig an). Das Foto füllt die Karte, beschnitten wird nur minimal (~1 %). Ohne Haken wird das komplette Foto mit schmalem Rand gedruckt.
+- **Papier wird an der Größe erkannt** (100×148 mm), egal wie der Treiber das Format nennt.
+- Unter Windows wird über den modernen XPS-Druckweg mit Druck-Ticket gedruckt – damit kommt „randlos“ auch bei aktuellen Treibern wie dem Selphy-IPP-Treiber an.
+- **Drucken auf Android**: Lumio findet den Selphy automatisch im WLAN und druckt direkt – ohne Android-Druckdialog.
+- **WLAN-Drucker auch unter Windows & Linux**: Drucker im Netzwerk erscheinen zusätzlich als „(WLAN)“ in der Druckerauswahl und werden direkt per IPP angesteuert.
+
+---
+
 ## [1.3.2] – 2026-10-18 – *Party-Look für Testkamera & Ruhebildschirm* ✨
 
 ### 🎨 Neue Hintergründe

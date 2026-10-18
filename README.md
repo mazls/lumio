@@ -27,6 +27,12 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.3.3: Selphy Printing Fixed 🖨️
+
+- 🖨️ **Whole photo on the card**: The picture is now scaled to the 100×148 mm Selphy card (previously only a section was printed).
+- ✂️ **Borderless printing** as an option in Admin menu → Printer.
+- 📶 **Printing over Wi-Fi**: The Selphy is found in the network automatically – so the Android app can print now too.
+
 ## New in Version 1.3.2: Party Look ✨
 
 - 🎨 **New test camera** with an animated party scene (fairy lights, bokeh, Lumio logo) – looks like a real photo booth even when testing without a camera.
@@ -99,7 +105,7 @@ What came with 1.2.x (touch admin menu with tabs, on-screen keyboard, USB drive 
    - **Webcams**: USB webcams (Logitech, Anker, etc.) and integrated Surface front/rear and tablet cameras
    - **Simulated Test Camera**: Built-in virtual camera with live timestamp for testing without hardware
 3. **Printers**:
-   - Canon Selphy CP1300 / CP1500 / CP1200 / CP1000 via Windows printer driver, CUPS on Linux/Raspberry Pi, or Selphy Wi-Fi on Android
+   - Canon Selphy CP1300 / CP1500 / CP1200 / CP1000 via Windows printer driver (USB or network), CUPS on Linux/Raspberry Pi, or directly over Wi-Fi (IPP) – automatically over Wi-Fi on Android
 
 ---
 
