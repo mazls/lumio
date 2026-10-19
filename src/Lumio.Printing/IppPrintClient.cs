@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using SkiaSharp;
 
 namespace Lumio.Printing;
 
@@ -32,20 +33,33 @@ public static class IppPrintClient
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(120) };
 
+    /// <summary>
+    /// Borderless IPP prints are enlarged by the printer slightly beyond the card (Canon Selphy: a few percent),
+    /// so the outer edge of the photo would be lost. This share of the width/height is added around the picture
+    /// (stretched edge pixels), which lands outside the card - the actual photo, frame and text fit completely.
+    /// </summary>
+    public static float BorderlessBleed { get; set; } = 0.025f;
+
     /// <summary>Prints a JPEG on a 100x148 mm postcard.</summary>
     /// <param name="printerUri">e.g. <c>http://192.168.2.32:631/ipp/print</c> (ipp:// is accepted too)</param>
     /// <param name="borderless">Edge to edge with the picture cropped to the card; otherwise fitted inside the printer's margins.</param>
-    public static Task PrintJpegAsync(Uri printerUri, byte[] jpegData, int copies, bool borderless, CancellationToken cancellationToken = default)
+    /// <param name="transport">
+    /// Optional connection to the printer instead of the network, e.g. IPP over USB (the same HTTP requests,
+    /// sent through the USB cable to <c>http://localhost/ipp/print</c>).
+    /// </param>
+    public static Task PrintJpegAsync(Uri printerUri, byte[] jpegData, int copies, bool borderless, CancellationToken cancellationToken = default,
+        HttpMessageHandler? transport = null)
     {
         ArgumentNullException.ThrowIfNull(jpegData);
-        return SendAsync(OperationPrintJob, printerUri, jpegData, copies, borderless, cancellationToken);
+        return SendAsync(OperationPrintJob, printerUri, jpegData, copies, borderless, cancellationToken, transport);
     }
 
     /// <summary>Lets the printer check the job settings (format, 100x148 mm, borderless) without printing anything.</summary>
     public static Task ValidateJobAsync(Uri printerUri, bool borderless, CancellationToken cancellationToken = default) =>
         SendAsync(OperationValidateJob, printerUri, document: null, copies: 1, borderless, cancellationToken);
 
-    private static async Task SendAsync(ushort operation, Uri printerUri, byte[]? document, int copies, bool borderless, CancellationToken cancellationToken)
+    private static async Task SendAsync(ushort operation, Uri printerUri, byte[]? document, int copies, bool borderless, CancellationToken cancellationToken,
+        HttpMessageHandler? transport = null)
     {
         ArgumentNullException.ThrowIfNull(printerUri);
 
@@ -74,12 +88,13 @@ public static class IppPrintClient
         request.WriteByte(EndOfAttributesTag);
         if (document is not null)
         {
-            request.Write(document);
+            request.Write(borderless ? AddBleed(document, BorderlessBleed) : document);
         }
 
         using var content = new ByteArrayContent(request.ToArray());
         content.Headers.ContentType = new MediaTypeHeaderValue("application/ipp");
-        using var response = await Http.PostAsync(httpUri, content, cancellationToken).ConfigureAwait(false);
+        using var client = transport is null ? null : new HttpClient(transport, disposeHandler: false) { Timeout = Http.Timeout };
+        using var response = await (client ?? Http).PostAsync(httpUri, content, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
@@ -91,6 +106,35 @@ public static class IppPrintClient
         if (status >= 0x0400)
         {
             throw new InvalidOperationException($"Der Drucker hat den Auftrag abgelehnt (IPP-Status 0x{status:X4}{FindStatusMessage(body)}).");
+        }
+    }
+
+    /// <summary>Extends the picture by <paramref name="bleed"/> on every side by stretching its edge pixels.</summary>
+    internal static byte[] AddBleed(byte[] jpeg, float bleed)
+    {
+        if (bleed <= 0)
+            return jpeg;
+        try
+        {
+            using var image = SKImage.FromEncodedData(jpeg);
+            if (image is null)
+                return jpeg;
+
+            var padX = (int)Math.Round(image.Width * bleed);
+            var padY = (int)Math.Round(image.Height * bleed);
+            using var surface = SKSurface.Create(new SKImageInfo(image.Width + 2 * padX, image.Height + 2 * padY));
+            using var paint = new SKPaint
+            {
+                Shader = SKShader.CreateImage(image, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, SKMatrix.CreateTranslation(padX, padY)),
+            };
+            surface.Canvas.DrawPaint(paint);
+            using var snapshot = surface.Snapshot();
+            using var data = snapshot.Encode(SKEncodedImageFormat.Jpeg, 95);
+            return data.ToArray();
+        }
+        catch
+        {
+            return jpeg; // print as is rather than not at all
         }
     }
 

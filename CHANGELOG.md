@@ -4,6 +4,29 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.4.0] – 2026-10-19 – *Drucken per USB & neue Lizenz* 🖨️
+
+### 🖨️ Drucken
+- **Selphy per USB auf Android**: Der Canon Selphy (z. B. CP1300, CP1500) wird am USB-Anschluss erkannt und erscheint als „(USB)“ in der Druckerauswahl – vor den WLAN-Druckern. Damit passen Kamera, Drucker und Strom an einen USB-Hub, ganz ohne WLAN.
+- **Randlos passt genau**: Der Drucker vergrößert randlose Drucke etwas über die Karte hinaus – Lumio gleicht das aus, das ganze Foto samt Rahmen und Text landet auf der Karte (USB und WLAN).
+
+### 🌐 Website
+- Lumio hat eine eigene Seite mit Downloads, Funktionen und Datenschutzerklärung: https://mazls.github.io/lumio/ – verlinkt im Info-Dialog der App.
+
+### 🛠️ Behoben
+- Kamera- und Druckerauswahl im Admin-Menü sprangen nach ein paar Sekunden auf die gespeicherte bzw. erste Auswahl zurück (Android, Linux, Raspberry Pi).
+
+### 📜 Lizenz
+- **PolyForm Shield 1.0.0** statt der eigenen „Lumio Fair-Use & Event License“. Der Einsatz auf Events bleibt ausdrücklich erlaubt – auch gewerblich, z. B. Fotobox-Vermietung. Den Quellcode darf man jetzt auch ändern und weitergeben, nur kein Konkurrenzprodukt daraus machen. Versionen bis 1.3.9 bleiben unter der alten Lizenz.
+
+---
+
+## [1.3.9] – 2026-10-19
+
+- Nur im Google Play Store: inhaltlich wie 1.3.8, mit höherem Versionscode.
+
+---
+
 ## [1.3.8] – 2026-10-19 – *Google-Play-Schutz*
 
 - **Mindestens Android 9**: Erfüllt die Voraussetzung für den automatischen Schutz von Google Play (vorher Android 5.0).

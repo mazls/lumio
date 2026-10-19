@@ -27,6 +27,13 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.4.0: USB Printing & New License 🖨️
+
+- 🔌 **Selphy via USB on phones & tablets**: camera, printer and power on one USB hub – no Wi-Fi needed.
+- ✂️ **Borderless fits exactly**: the whole photo including frame and text lands on the card.
+- 📜 **New license PolyForm Shield 1.0.0**: event use stays free, also commercially; the code may now be modified and shared.
+- 🛠️ Camera and printer selection in the admin menu no longer jump back.
+
 ## New in Version 1.3.8: Ready for Google Play 🚀
 
 - 📱 **New package name** `io.github.mazls.lumio` for the Play Store – please uninstall the old app once (photos are kept).
@@ -259,10 +266,13 @@ powershell -ExecutionPolicy Bypass -File .\build-android.ps1
 
 ## License & Third-Party Libraries 📜
 
-Lumio is distributed under the **[Lumio Fair-Use & Event License](LICENSE)**:
+Lumio is distributed under the **[PolyForm Shield License 1.0.0](LICENSE)** – with an additional permission for event use:
 
-- ✅ **Commercial Event Use ALLOWED:** You are completely free to use the compiled software at private parties and commercial events (e.g., photo booth rentals, weddings, corporate events, trade shows) and earn money with it. There are no hidden fees, licensing costs, or subscriptions.
-- ❌ **Source Code Non-Commercial:** The source code is visible and may be used for personal purposes, learning, and contributions/improvements (Pull Requests). Commercial exploitation of the source code (e.g., reselling source code, creating commercial closed-source products or paid apps) is prohibited without prior written permission.
+- ✅ **Commercial Event Use ALLOWED:** You are completely free to use Lumio at private parties and commercial events (e.g., photo booth rentals, weddings, corporate events, trade shows) and earn money with it. There are no hidden fees, licensing costs, or subscriptions.
+- ✅ **Use, modify & share the source code:** You may read the code, adapt it to your hardware, improve it and share it – pull requests are welcome.
+- ❌ **No competing product:** You may not turn the source code into a competing photo booth software and offer or sell it.
+
+Versions up to and including 1.3.9 were released under the "Lumio Fair-Use & Event License" and remain available under those terms.
 
 ### Used Libraries & Licenses:
 - **SkiaSharp** (Google Skia Wrapper) – MIT License

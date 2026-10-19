@@ -59,11 +59,19 @@
                     Margin="0,0,0,14">
                 <StackPanel Spacing="6">
                     <TextBlock Text="ÜBER DIESES PROJEKT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentOrangeBrush}" />
-                    <TextBlock Text="Moderne, hardwarenahe Fotobox-Software für Raspberry Pi &amp; Linux mit nativer Unterstützung für DSLR/DSLM-Kameras (Nikon, Canon, Sony, Fuji via gphoto2) und Canon Selphy CP1300 via CUPS."
+                    <TextBlock x:Name="DescriptionText"
+                               Text="Moderne, hardwarenahe Fotobox-Software für Raspberry Pi &amp; Linux mit nativer Unterstützung für DSLR/DSLM-Kameras (Nikon, Canon, Sony, Fuji via gphoto2) und Canon Selphy CP1300 via CUPS."
                                FontSize="13"
                                TextWrapping="Wrap"
                                Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="🌐 GitHub: https://github.com/mazls/lumio" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" Margin="0,4,0,0" />
+                    <Grid ColumnDefinitions="*,8,*" Margin="0,6,0,0">
+                        <Button Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" CornerRadius="10" Padding="10,8" Click="OnOpenWebsiteClick">
+                            <TextBlock Text="Website ↗" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        </Button>
+                        <Button Grid.Column="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" CornerRadius="10" Padding="10,8" Click="OnOpenGitHubClick">
+                            <TextBlock Text="GitHub ↗" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        </Button>
+                    </Grid>
                 </StackPanel>
             </Border>
 
@@ -90,8 +98,8 @@
                     <!-- Restricted: Non-commercial Source Code -->
                     <Border Background="#1AEF4444" BorderBrush="#33EF4444" BorderThickness="1" CornerRadius="10" Padding="12,8">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="❌ Quellcode: Nicht für kommerzielle Produkte" FontWeight="Bold" FontSize="13" Foreground="{StaticResource DangerBrush}" />
-                            <TextBlock Text="Der Quellcode steht für private Zwecke, Lernen &amp; Beiträge bereit. Der Weiterverkauf des Quellcodes oder die Nutzung in kommerziellen Bezahl-Apps ist untersagt."
+                            <TextBlock Text="❌ Quellcode: Kein Konkurrenzprodukt" FontWeight="Bold" FontSize="13" Foreground="{StaticResource DangerBrush}" />
+                            <TextBlock Text="Den Quellcode darfst du lesen, anpassen und weitergeben. Nicht erlaubt ist, daraus eine konkurrierende Fotobox-Software zu machen und anzubieten oder zu verkaufen (PolyForm Shield License 1.0.0)."
                                        FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>

@@ -79,6 +79,18 @@
                                LineHeight="20"
                                Foreground="{StaticResource TextPrimaryBrush}" />
                     <DockPanel Margin="0,12,0,0">
+                        <TextBlock Text="🏠 Website:" Style="{StaticResource Caption}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <Button Style="{StaticResource TouchGlassButton}"
+                                Padding="12,6"
+                                HorizontalAlignment="Right"
+                                Click="OnOpenWebsiteClick">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="mazls.github.io/lumio" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBlock Text="↗" FontFamily="{StaticResource SymbolFont}" FontSize="14" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </DockPanel>
+                    <DockPanel Margin="0,8,0,0">
                         <TextBlock Text="🌐 GitHub:" Style="{StaticResource Caption}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <Button Style="{StaticResource TouchGlassButton}"
                                 Padding="12,6"
@@ -129,8 +141,8 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="❌" FontSize="18" VerticalAlignment="Top" Margin="0,2,0,0" />
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Quellcode: Nicht für kommerzielle Produkte" FontWeight="Bold" FontSize="14" Foreground="{StaticResource DangerBrush}" />
-                                <TextBlock Text="Der Quellcode steht für private Zwecke, Lernen &amp; Community-Beiträge (PRs) bereit. Der Weiterverkauf des Quellcodes oder die Einbindung in kommerzielle Softwareprodukte ist ohne Genehmigung untersagt."
+                                <TextBlock Text="Quellcode: Kein Konkurrenzprodukt" FontWeight="Bold" FontSize="14" Foreground="{StaticResource DangerBrush}" />
+                                <TextBlock Text="Den Quellcode darfst du lesen, anpassen und weitergeben. Nicht erlaubt ist, daraus eine konkurrierende Fotobox-Software zu machen und anzubieten oder zu verkaufen (PolyForm Shield License 1.0.0)."
                                            FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" LineHeight="18" />
                             </StackPanel>
                         </Grid>

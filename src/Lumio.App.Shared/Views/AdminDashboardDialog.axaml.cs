@@ -172,11 +172,20 @@ public partial class AdminDashboardDialog : UserControl
                 }
             }
 
+            // The list is refreshed every few seconds (plugged in cameras): leave it alone when nothing changed,
+            // otherwise keep what the admin picked but has not saved yet
+            var previous = CameraSelectionComboBox.SelectedItem as CameraOptionItem;
+            if (previous is not null && CameraSelectionComboBox.ItemsSource is IEnumerable<CameraOptionItem> shown && shown.SequenceEqual(options))
+            {
+                CameraDetectionStatusText.Text = $"{options.Count} Kamera-Option(en) verfügbar";
+                return;
+            }
+
             CameraSelectionComboBox.ItemsSource = options;
 
             var current = _settingsService.Current;
-            CameraOptionItem? matching = null;
-            if (!string.IsNullOrEmpty(current.WebcamDeviceId))
+            CameraOptionItem? matching = previous is null ? null : options.FirstOrDefault(o => o == previous);
+            if (matching is null && !string.IsNullOrEmpty(current.WebcamDeviceId))
             {
                 matching = options.FirstOrDefault(o => o.DeviceId == current.WebcamDeviceId);
             }
@@ -232,10 +241,16 @@ public partial class AdminDashboardDialog : UserControl
                 options.Add(new PrinterOptionItem("⚠️ Kein Drucker gefunden (CUPS)", string.Empty));
             }
 
+            // Refreshed every few seconds: keep an unsaved choice instead of jumping back to the saved printer
+            var previous = PrinterComboBox.SelectedItem as PrinterOptionItem;
+            if (previous is not null && PrinterComboBox.ItemsSource is IEnumerable<PrinterOptionItem> shown && shown.SequenceEqual(options))
+                return;
+
             PrinterComboBox.ItemsSource = options;
 
             var current = _settingsService.Current;
-            var selected = options.FirstOrDefault(o => o.Name == current.SelectedPrinter)
+            var selected = (previous is null ? null : options.FirstOrDefault(o => o == previous))
+                           ?? options.FirstOrDefault(o => o.Name == current.SelectedPrinter)
                            ?? options.FirstOrDefault(o => o.DisplayName.Contains("Selphy", StringComparison.OrdinalIgnoreCase))
                            ?? options.FirstOrDefault();
 

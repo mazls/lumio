@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Android.App;
 using Android.Content;
 using Android.Net.Nsd;
 using Lumio.Printing;
@@ -26,9 +27,11 @@ internal static class AndroidNetworkPrinters
     private static NsdManager? _nsd;
     private static DiscoveryListener? _discovery;
     private static int _resolving;
+    private static Context? _context;
 
     public static void Start(Context context)
     {
+        _context = context;
         if (_nsd is not null)
             return;
 
@@ -44,15 +47,20 @@ internal static class AndroidNetworkPrinters
         }
     }
 
+    /// <summary>Printers on the USB port first (no Wi-Fi needed), then the ones found in the Wi-Fi.</summary>
     public static IReadOnlyList<PrinterDeviceInfo> GetPrinters() =>
-        Printers.Keys
-            .OrderByDescending(SelphyPrintService.IsSelphyName)
-            .ThenBy(name => name)
-            .Select(name => new PrinterDeviceInfo(name, SelphyPrintService.IsSelphyName(name), false))
+        (_context is null ? [] : AndroidUsbPrinters.GetPrinters(_context))
+            .Concat(Printers.Keys
+                .OrderByDescending(SelphyPrintService.IsSelphyName)
+                .ThenBy(name => name)
+                .Select(name => new PrinterDeviceInfo(name, SelphyPrintService.IsSelphyName(name), false)))
             .ToList();
 
     public static Task PrintAsync(byte[] jpeg, string? printerName, int copies, bool borderless, CancellationToken cancellationToken)
     {
+        if (AndroidUsbPrinters.IsUsbPrinterName(printerName) && _context is Activity activity)
+            return AndroidUsbPrinters.PrintAsync(activity, jpeg, printerName!, copies, borderless, cancellationToken);
+
         if (printerName is null || !Printers.TryGetValue(printerName, out var uri))
         {
             throw new InvalidOperationException(

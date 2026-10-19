@@ -114,18 +114,15 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Bereit für Google Play 🚀
+            ## Lumio Release ${{ github.ref_name }} – Drucken per USB & neue Lizenz 🖨️
 
-            Lumio bekommt seinen endgültigen Android-Paketnamen für den Play Store, dazu ein rundes Logo, einen gestochen scharfen Hintergrund und ein aufgeräumtes Hochformat.
+            Der Canon Selphy druckt jetzt auch per USB direkt vom Handy oder Tablet – Kamera, Drucker und Strom passen an einen USB-Hub, ganz ohne WLAN.
 
             ### Highlights
-            - **Neuer Paketname `io.github.mazls.lumio`**: Android sieht das als neue App – die alte Lumio-App bitte deinstallieren (Fotos in „Bilder/Lumio“ bleiben erhalten).
-            - **App Bundle** (`Lumio-android.aab`) für die Google Play Console.
-            - **Rundes Lumio-Logo** in der Oberfläche, auf den Fotos und als App-Icon, das die ganze Icon-Fläche füllt.
-            - **Scharfer Hintergrund** in voller Bildschirmauflösung (bis 4K).
-            - **Hochformat**: Modus-Knöpfe oben, „Foto starten“ unten.
-            - **Standard**: Akku-Sparmodus an, Live-Bild ungespiegelt.
-            - **Mindestens Android 9** (erfüllt die Voraussetzung für den automatischen Schutz von Google Play).
+            - **Selphy per USB auf Android** (z. B. CP1300, CP1500): erscheint als „(USB)“ in der Druckerauswahl.
+            - **Randlos passt genau**: das ganze Foto samt Rahmen und Text auf der Karte (USB und WLAN).
+            - **Behoben**: Kamera- und Druckerauswahl im Admin-Menü springen nicht mehr zurück.
+            - **Neue Lizenz PolyForm Shield 1.0.0**: Event-Einsatz bleibt kostenlos und auch gewerblich erlaubt, den Code darf man jetzt ändern und weitergeben.
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)

@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Bleed margin for borderless IPP prints -->
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Lumio.Core\Lumio.Core.csproj" />
   </ItemGroup>
 

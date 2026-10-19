@@ -27,6 +27,13 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
+## Neu in Version 1.4.0: Drucken per USB & neue Lizenz 🖨️
+
+- 🔌 **Selphy per USB am Handy oder Tablet**: Kamera, Drucker und Strom an einen USB-Hub – kein WLAN nötig.
+- ✂️ **Randlos passt genau**: Das ganze Foto samt Rahmen und Text landet auf der Karte.
+- 📜 **Neue Lizenz PolyForm Shield 1.0.0**: Event-Einsatz bleibt kostenlos und auch gewerblich erlaubt, den Code darf man jetzt ändern und weitergeben.
+- 🛠️ Kamera- und Druckerauswahl im Admin-Menü springen nicht mehr zurück.
+
 ## Neu in Version 1.3.8: Bereit für Google Play 🚀
 
 - 📱 **Neuer Paketname** `io.github.mazls.lumio` für den Play Store – die alte App bitte einmal deinstallieren (Fotos bleiben erhalten).
@@ -259,10 +266,13 @@ powershell -ExecutionPolicy Bypass -File .\build-android.ps1
 
 ## Lizenz & Drittanbieter-Bibliotheken 📜
 
-Lumio steht unter der **[Lumio Fair-Use & Event License](LICENSE)**:
+Lumio steht unter der **[PolyForm Shield License 1.0.0](LICENSE)** – mit einer zusätzlichen Erlaubnis für den Event-Einsatz:
 
-- ✅ **Gewerbliche Event-Nutzung ERLAUBT:** Du darfst die kompilierte Software völlig frei auf privaten Partys sowie gewerblichen Veranstaltungen (z. B. Fotobox-Vermietung, Hochzeiten, Firmenfeiern, Messen) einsetzen und damit Geld verdienen. Es gibt keine versteckten Kosten, keine Lizenzgebühren und kein Abo.
-- ❌ **Quellcode Nicht-Kommerziell:** Der Quellcode ist einsehbar und darf für private Zwecke, zum Lernen und für Beiträge/Verbesserungen (Pull Requests) genutzt werden. Die kommerzielle Verwertung des Quellcodes (z. B. Weiterverkauf des Quellcodes, Erstellen kommerzieller Closed-Source-Produkte oder Bezahl-Apps) ist ohne vorherige schriftliche Genehmigung untersagt.
+- ✅ **Gewerbliche Event-Nutzung ERLAUBT:** Du darfst Lumio völlig frei auf privaten Partys sowie gewerblichen Veranstaltungen (z. B. Fotobox-Vermietung, Hochzeiten, Firmenfeiern, Messen) einsetzen und damit Geld verdienen. Es gibt keine versteckten Kosten, keine Lizenzgebühren und kein Abo.
+- ✅ **Quellcode nutzen, ändern & weitergeben:** Du darfst den Code lesen, an deine Hardware anpassen, verbessern und weitergeben – Pull Requests sind willkommen.
+- ❌ **Kein Konkurrenzprodukt:** Nicht erlaubt ist, aus dem Quellcode eine konkurrierende Fotobox-Software zu machen und anzubieten oder zu verkaufen.
+
+Versionen bis einschließlich 1.3.9 wurden unter der „Lumio Fair-Use & Event License“ veröffentlicht und bleiben unter diesen Bedingungen verfügbar.
 
 ### Verwendete Bibliotheken & Lizenzen:
 - **SkiaSharp** (Google Skia Wrapper) – MIT Lizenz

@@ -8,6 +8,7 @@ namespace Lumio.App.Views;
 public partial class AboutDialog : Window
 {
     private const string GitHubRepoUrl = "https://github.com/mazls/lumio";
+    private const string WebsiteUrl = "https://mazls.github.io/lumio/";
 
     public AboutDialog()
     {
@@ -29,20 +30,24 @@ public partial class AboutDialog : Window
         }
     }
 
-    private void OnOpenGitHubClick(object sender, RoutedEventArgs e)
+    private void OnOpenGitHubClick(object sender, RoutedEventArgs e) => OpenInBrowser(GitHubRepoUrl);
+
+    private void OnOpenWebsiteClick(object sender, RoutedEventArgs e) => OpenInBrowser(WebsiteUrl);
+
+    private static void OpenInBrowser(string url)
     {
         try
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = GitHubRepoUrl,
+                FileName = url,
                 UseShellExecute = true
             });
         }
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"Konnte Browser nicht öffnen: {ex.Message}\nURL: {GitHubRepoUrl}",
+                $"Konnte Browser nicht öffnen: {ex.Message}\nURL: {url}",
                 "Lumio Info",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
