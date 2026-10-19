@@ -27,6 +27,13 @@ No subscriptions, no licensing headaches, no internet required at events, and fu
 
 ---
 
+## New in Version 1.3.6: Ready for Google Play 🚀
+
+- 📱 **New package name** `io.github.mazls.lumio` for the Play Store – please uninstall the old app once (photos are kept).
+- 🟣 **Round Lumio logo** and a **crisp background** even in 4K fullscreen.
+- 📐 **Portrait layout** cleaned up: mode buttons at the top, "Start photo" at the bottom.
+- 🔋 Battery saver on by default, live view no longer mirrored.
+
 ## New in Version 1.3.5: Looks & Beauty Filter 🎨
 
 - 🎨 **Looks for guests**: Original, Sunny, Vivid, Glam B&W, Vintage or Cinema – one tap after the shot, the chosen look is saved and printed.

@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.6] – 2026-10-19 – *Bereit für Google Play* 🚀
+
+### 📱 Android
+- **Neuer Paketname `io.github.mazls.lumio`** – die Grundlage für die Veröffentlichung im Google Play Store. Wichtig: Android sieht das als neue App. Die alte Lumio-App bitte deinstallieren (Fotos in „Bilder/Lumio“ bleiben erhalten), Einstellungen wie Event-Name und PIN einmal neu setzen.
+- Lumio fragt nach dem Zugriff auf Fotos & Videos, damit die Galerie auch Fotos früherer Installationen zeigt.
+- **App Bundle (.aab)** für die Play Console wird jetzt bei jedem Release mitgebaut, lokal mit `build-play.ps1`.
+
+### ✨ Oberfläche
+- **Rundes Lumio-Logo** in der Statusleiste, beim Event-Titel, im Info-Dialog, auf den Fotos und als rundes App-Icon.
+- **Gestochen scharfer Hintergrund**: Die Lichterkette wird in der echten Bildschirmauflösung berechnet (bis 4K) – vorher war sie im Vollbild unscharf.
+- **Hochformat**: Event-Titel und Modus-Knöpfe oben, „Foto starten“ unten – die Mitte bleibt frei für das Kamerabild.
+
+### ⚙️ Standardwerte
+- **Akku-Sparmodus** ist jetzt standardmäßig an, das **Live-Bild wird nicht mehr gespiegelt** (gilt für neue Installationen).
+
+---
+
 ## [1.3.5] – 2026-10-18 – *Looks, Schönheitsfilter & Fotos auf dem Handy finden* 🎨
 
 ### 🎨 Bilder

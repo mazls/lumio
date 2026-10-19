@@ -66,7 +66,7 @@ jobs:
           ((Get-Content ./dist/linux-x64/run-lumio.sh -Raw) -replace "`r`n", "`n") | Set-Content -NoNewline -Path ./dist/linux-x64/run-lumio.sh
           Compress-Archive -Path ./dist/linux-x64/* -DestinationPath ./dist/Lumio-linux-x64.zip
 
-      - name: Build Android APK
+      - name: Build Android APK & App Bundle (Google Play)
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -93,6 +93,11 @@ jobs:
           $apk = Get-ChildItem ./dist/android -Filter "*-Signed.apk" | Select-Object -First 1
           if (-not $apk) { throw "No signed APK was produced." }
           Copy-Item $apk.FullName ./dist/Lumio-android.apk
+          # App bundle for uploading to Google Play (signed with the same key, used as upload key)
+          dotnet publish src/Lumio.App.Android/Lumio.App.Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=aab -p:AndroidSdkDirectory="$env:ANDROID_HOME" -p:JavaSdkDirectory="$env:JAVA_HOME" -o ./dist/android-aab -nologo @signing
+          $aab = Get-ChildItem ./dist/android-aab -Filter "*-Signed.aab" | Select-Object -First 1
+          if (-not $aab) { throw "No signed app bundle was produced." }
+          Copy-Item $aab.FullName ./dist/Lumio-android.aab
 
       - name: Upload Artifacts (Action Run)
         uses: actions/upload-artifact@v4
@@ -101,6 +106,7 @@ jobs:
           path: |
             ./dist/*.zip
             ./dist/Lumio-android.apk
+            ./dist/Lumio-android.aab
 
       - name: Create GitHub Release (on Tag)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -108,19 +114,21 @@ jobs:
         with:
           name: "Lumio Release ${{ github.ref_name }}"
           body: |
-            ## Lumio Release ${{ github.ref_name }} – Looks & Schönheitsfilter 🎨
+            ## Lumio Release ${{ github.ref_name }} – Bereit für Google Play 🚀
 
-            Gäste können ihrem Foto jetzt per Fingertipp einen Look geben, ein optionaler Schönheitsfilter glättet die Haut. Dazu echte Fotos von der Nikon Z 50 II per PTP und Fotos, die man auf dem Handy auch wiederfindet.
+            Lumio bekommt seinen endgültigen Android-Paketnamen für den Play Store, dazu ein rundes Logo, einen gestochen scharfen Hintergrund und ein aufgeräumtes Hochformat.
 
             ### Highlights
-            - **Looks**: Original, Sonnig, Strahlend, Glam S/W, Vintage, Kino – gespeichert und gedruckt wird der gewählte Look, die Originale bleiben unverändert.
-            - **Schönheitsfilter** (optional, Admin-Menü → Aufnahme): Leicht, Mittel oder Stark.
-            - **Nikon Z 50 II per PTP**: Fotos in voller Auflösung statt Video-Einzelbildern.
-            - **Selfie-Kamera dreht mit** der Bildschirmausrichtung, hochkante Fotos bekommen eine hochkante 10×15-Karte.
-            - **Android**: Fotos liegen unter „Bilder/Lumio“ (sichtbar in Google Fotos), Löschen in der Galerie per PIN – optional mit eigener Lösch-PIN.
+            - **Neuer Paketname `io.github.mazls.lumio`**: Android sieht das als neue App – die alte Lumio-App bitte deinstallieren (Fotos in „Bilder/Lumio“ bleiben erhalten).
+            - **App Bundle** (`Lumio-android.aab`) für die Google Play Console.
+            - **Rundes Lumio-Logo** in der Oberfläche, auf den Fotos und als App-Icon.
+            - **Scharfer Hintergrund** in voller Bildschirmauflösung (bis 4K).
+            - **Hochformat**: Modus-Knöpfe oben, „Foto starten“ unten.
+            - **Standard**: Akku-Sparmodus an, Live-Bild ungespiegelt.
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)
+            - **`Lumio-android.aab`**: App Bundle für den Upload in die Google Play Console
             - **`Lumio-win-x64.zip`**: Für normale 64-Bit Windows PCs & Laptops
             - **`Lumio-win-arm64.zip`**: Für Microsoft Surface Pro / Laptop mit ARM-Prozessor
             - **`Lumio-linux-x64.zip`**: Für Linux PCs (CachyOS, Arch Linux, Ubuntu, Debian, Fedora etc.)
@@ -131,6 +139,7 @@ jobs:
             Alle Änderungen im Detail: [CHANGELOG.md](https://github.com/mazls/lumio/blob/main/CHANGELOG.md)
           files: |
             ./dist/Lumio-android.apk
+            ./dist/Lumio-android.aab
             ./dist/Lumio-win-x64.zip
             ./dist/Lumio-win-arm64.zip
             ./dist/Lumio-linux-x64.zip
