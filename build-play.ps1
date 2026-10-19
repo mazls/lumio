@@ -46,6 +46,29 @@ if (-not $env:ANDROID_KEY_PASSWORD) {
     $env:ANDROID_KEY_PASSWORD = if ($keyPassword) { $keyPassword } else { $env:ANDROID_KEYSTORE_PASSWORD }
 }
 
+# Check keystore, password and alias before the long build: jarsigner only reports "exited with code 1"
+$keytool = @(
+    $(if ($env:JAVA_HOME) { "$env:JAVA_HOME\bin\keytool.exe" }),
+    "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe",
+    (Get-Command keytool -ErrorAction SilentlyContinue).Source
+) + (Get-ChildItem "C:\Program Files\Microsoft\jdk-*\bin\keytool.exe" -ErrorAction SilentlyContinue).FullName |
+    Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if ($keytool) {
+    $check = & $keytool -list -keystore $Keystore -alias $Alias -storepass:env ANDROID_KEYSTORE_PASSWORD 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Remove-Item Env:ANDROID_KEYSTORE_PASSWORD, Env:ANDROID_KEY_PASSWORD -ErrorAction SilentlyContinue
+        if ($check -match "(?i)password|passwort|tampered|manipuliert") {
+            Write-Host "Das Keystore-Passwort ist falsch." -ForegroundColor Red
+        } elseif ($check -match "(?i)alias") {
+            Write-Host "Der Alias '$Alias' existiert nicht im Keystore. Vorhandene Aliase: keytool -list -keystore `"$Keystore`"" -ForegroundColor Red
+        } else {
+            Write-Host "Keystore konnte nicht gelesen werden:`n$check" -ForegroundColor Red
+        }
+        exit 1
+    }
+    Write-Host "Keystore, Passwort und Alias '$Alias' passen." -ForegroundColor Green
+}
+
 $signing = @(
     "-p:AndroidKeyStore=true",
     "-p:AndroidSigningKeyStore=$Keystore",
@@ -67,7 +90,9 @@ if (Test-Path $obj) { cmd /c rmdir /s /q "$obj" | Out-Null }
 try {
     Write-Host "Baue App Bundle (.aab) für Google Play..." -ForegroundColor Yellow
     & $dotnet publish $project -c Release -f net10.0-android -p:AndroidPackageFormat=aab -o "$work\aab" -nologo @signing
-    if ($LASTEXITCODE -ne 0) { throw "App Bundle konnte nicht gebaut werden." }
+    if ($LASTEXITCODE -ne 0) {
+        throw "App Bundle konnte nicht gebaut werden. Meldet der Build 'jarsigner.exe wurde mit dem Code 1 beendet', ist das Schlüssel-Passwort falsch (Keystore-Passwort und Alias wurden bereits geprüft)."
+    }
 
     Write-Host "Baue APK (zum direkten Installieren)..." -ForegroundColor Yellow
     & $dotnet publish $project -c Release -f net10.0-android -p:AndroidPackageFormat=apk -o "$work\apk" -nologo @signing

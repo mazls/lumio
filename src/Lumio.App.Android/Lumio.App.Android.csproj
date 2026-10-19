@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>io.github.mazls.lumio</ApplicationId>
-    <ApplicationVersion>136</ApplicationVersion>
-    <ApplicationDisplayVersion>1.3.6</ApplicationDisplayVersion>
+    <ApplicationVersion>137</ApplicationVersion>
+    <ApplicationDisplayVersion>1.3.7</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <RunAOTCompilation>false</RunAOTCompilation>

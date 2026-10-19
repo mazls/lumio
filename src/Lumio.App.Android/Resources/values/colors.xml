@@ -3,4 +3,6 @@
     <color name="background">#0B0B14</color>
     <color name="surface">#161626</color>
     <color name="accent">#FF3D9A</color>
+    <!-- Dark disc of the round logo: fills the corners of square/squircle icon shapes -->
+    <color name="icon_background">#161A1E</color>
 </resources>
