@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumio – Fotobox-App</title>
+  <meta name="description" content="Lumio ist eine kostenlose Fotobox-Software für Android, Windows, Linux und Raspberry Pi – ohne Abo, ohne Internetpflicht.">
+  <meta name="theme-color" content="#0b0b14">
+  <link rel="icon" href="assets/logo.png">
+  <meta property="og:title" content="Lumio – Fotobox-App">
+  <meta property="og:description" content="Kostenlose Fotobox-Software für Partys, Hochzeiten & Events.">
+  <meta property="og:image" content="https://mazls.github.io/lumio/assets/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="./"><img src="assets/logo.png" alt="">Lumio</a>
+      <nav>
+        <a href="#download">Download</a>
+        <a href="https://github.com/mazls/lumio">GitHub</a>
+        <a href="datenschutz.html">Datenschutz</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <img class="logo" src="assets/logo.png" alt="Lumio Logo">
+      <h1>Deine Fotobox.<br><span>Ohne Abo.</span></h1>
+      <p class="lead">Lumio macht aus Tablet, Handy, PC oder Raspberry Pi eine Fotobox für Partys, Hochzeiten und Events – mit Kamera, Countdown, Looks und Sofortdruck auf dem Canon Selphy.</p>
+      <div class="version" id="version">Neueste Version auf GitHub</div>
+    </section>
+
+    <section id="download">
+      <div class="downloads">
+        <a class="dl primary" href="https://github.com/mazls/lumio/releases/latest/download/Lumio-android.apk">
+          <strong>Android</strong>
+          <span>APK für Tablets &amp; Handys (ab Android 9)</span>
+        </a>
+        <a class="dl" href="https://github.com/mazls/lumio/releases/latest/download/Lumio-win-x64.zip">
+          <strong>Windows</strong>
+          <span>PCs, Laptops &amp; Touch-Geräte (x64)</span>
+        </a>
+        <a class="dl" href="https://github.com/mazls/lumio/releases/latest/download/Lumio-win-arm64.zip">
+          <strong>Windows ARM</strong>
+          <span>Surface Pro &amp; Laptops mit ARM-Chip</span>
+        </a>
+        <a class="dl" href="https://github.com/mazls/lumio/releases/latest/download/Lumio-linux-x64.zip">
+          <strong>Linux</strong>
+          <span>Ubuntu, Debian, Fedora, Arch (x64)</span>
+        </a>
+        <a class="dl" href="https://github.com/mazls/lumio/releases/latest/download/Lumio-linux-arm64.zip">
+          <strong>Raspberry Pi</strong>
+          <span>Pi 4 &amp; Pi 5 mit 64-Bit-System</span>
+        </a>
+      </div>
+      <p class="hint">Bald auch im Google Play Store. Alle Versionen und Änderungen: <a href="https://github.com/mazls/lumio/releases">Releases</a> · <a href="https://github.com/mazls/lumio/blob/main/CHANGELOG.md">Changelog</a></p>
+    </section>
+
+    <section class="shot">
+      <img src="assets/screenshot.jpg" alt="Lumio Startbildschirm mit Party-Hintergrund und Aufnahme-Modi" loading="lazy">
+    </section>
+
+    <h2>Was Lumio kann</h2>
+    <div class="features">
+      <div class="feature"><h3>📸 Sechs Aufnahme-Modi</h3><p>Einzelfoto, 4er-Collage, Fotostreifen, GIF, Boomerang und Videobotschaft.</p></div>
+      <div class="feature"><h3>🎨 Looks per Fingertipp</h3><p>Gäste wählen nach der Aufnahme Sonnig, Glam S/W, Vintage &amp; Co. – optional mit Schönheitsfilter.</p></div>
+      <div class="feature"><h3>🖨️ Sofortdruck</h3><p>Canon Selphy per USB oder WLAN, randlos auf 10×15-Fotokarten.</p></div>
+      <div class="feature"><h3>📷 Echte Kameras</h3><p>Nikon, Canon, Sony &amp; mehr, USB-Webcams oder die Kamera des Tablets.</p></div>
+      <div class="feature"><h3>🔋 Akku-Sparmodus</h3><p>Das Live-Bild läuft erst ab dem Countdown – schont Kamera- und Tablet-Akku.</p></div>
+      <div class="feature"><h3>🔒 Offline &amp; privat</h3><p>Kein Konto, keine Werbung, kein Tracking. Alle Fotos bleiben auf deinem Gerät.</p></div>
+    </div>
+
+    <h2>Android-App installieren</h2>
+    <ol class="steps">
+      <li><strong>APK herunterladen</strong> – oben auf „Android“ tippen, direkt auf dem Tablet oder Handy.</li>
+      <li><strong>Installation erlauben</strong> – Android fragt beim Öffnen der Datei, ob der Browser Apps installieren darf. Einmal zulassen.</li>
+      <li><strong>Lumio starten</strong> – Kamera, Mikrofon und Fotos erlauben, Event-Namen im Admin-Menü eintragen (Standard-PIN 1234) – fertig.</li>
+    </ol>
+
+    <footer>
+      <span>© 2026 Marcel Suffel · Lumio ist kostenlos, auch für den gewerblichen Einsatz auf Events (<a href="https://github.com/mazls/lumio/blob/main/LICENSE">Lizenz</a>)</span>
+      <span><a href="datenschutz.html">Datenschutz</a> · <a href="https://github.com/mazls/lumio/issues">Kontakt &amp; Fehler melden</a></span>
+    </footer>
+  </div>
+
+  <script>
+    // Shows the current release number; the download links work without it
+    fetch("https://api.github.com/repos/mazls/lumio/releases/latest")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (release) {
+        if (!release || !release.tag_name) return;
+        var date = new Date(release.published_at).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+        document.getElementById("version").textContent = "Version " + release.tag_name.replace(/^v/, "") + " · " + date;
+      })
+      .catch(function () { });
+  </script>
+</body>
+</html>

@@ -125,6 +125,7 @@ jobs:
             - **Scharfer Hintergrund** in voller Bildschirmauflösung (bis 4K).
             - **Hochformat**: Modus-Knöpfe oben, „Foto starten“ unten.
             - **Standard**: Akku-Sparmodus an, Live-Bild ungespiegelt.
+            - **Mindestens Android 9** (erfüllt die Voraussetzung für den automatischen Schutz von Google Play).
 
             ### Downloads & Plattformen
             - **`Lumio-android.apk`**: Für Android-Tablets & -Handys (Sideloading – Anleitung im README, Play-Store-Release ist geplant)
@@ -172,3 +173,5 @@ jobs:
             ./dist/Lumio-linux-arm64.zip
           draft: false
           prerelease: false
+          # Rolling dev build: must never become GitHub's "latest release" (download links, update check)
+          make_latest: false
