@@ -121,7 +121,7 @@ jobs:
             ### Highlights
             - **Neuer Paketname `io.github.mazls.lumio`**: Android sieht das als neue App – die alte Lumio-App bitte deinstallieren (Fotos in „Bilder/Lumio“ bleiben erhalten).
             - **App Bundle** (`Lumio-android.aab`) für die Google Play Console.
-            - **Rundes Lumio-Logo** in der Oberfläche, auf den Fotos und als App-Icon.
+            - **Rundes Lumio-Logo** in der Oberfläche, auf den Fotos und als App-Icon, das die ganze Icon-Fläche füllt.
             - **Scharfer Hintergrund** in voller Bildschirmauflösung (bis 4K).
             - **Hochformat**: Modus-Knöpfe oben, „Foto starten“ unten.
             - **Standard**: Akku-Sparmodus an, Live-Bild ungespiegelt.
