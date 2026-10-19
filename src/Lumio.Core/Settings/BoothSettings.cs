@@ -73,13 +73,13 @@ public sealed class BoothSettings
     public string? WebcamDeviceId { get; set; }
 
     /// <summary>Mirror the live view like a mirror (the saved photo is never mirrored).</summary>
-    public bool MirrorLiveView { get; set; } = true;
+    public bool MirrorLiveView { get; set; } = false;
 
     /// <summary>
     /// Battery saver: the live view only runs from the countdown until the result has been shown.
     /// Saves a lot of camera battery (DSLR mirror stays down, sensor off while the booth is idle).
     /// </summary>
-    public bool LiveViewOnlyDuringCapture { get; set; } = false;
+    public bool LiveViewOnlyDuringCapture { get; set; } = true;
 
     /// <summary>Base URL of the digiCamControl web server (Windows DSLR bridge).</summary>
     public string DigiCamControlUrl { get; set; } = DefaultDigiCamControlUrl;

@@ -141,6 +141,7 @@ public partial class MainView : UserControl
         _safeArea = safe;
         TopBarGrid.Margin = new Thickness(24 + safe.Left, 20 + safe.Top, 24 + safe.Right, 0);
         UpdateBanner.Margin = new Thickness(16 + safe.Left, 84 + safe.Top, 16 + safe.Right, 0);
+        UpdateIdleLayout();
         CornerGalleryBorder.Margin = new Thickness(24 + safe.Left, 0, 0, 20 + safe.Bottom);
         GalleryHeaderGrid.Margin = new Thickness(28 + safe.Left, 20 + safe.Top, 28 + safe.Right, 20);
         GalleryFooterBorder.Padding = new Thickness(28 + safe.Left, 16, 28 + safe.Right, 16 + safe.Bottom);
@@ -149,6 +150,23 @@ public partial class MainView : UserControl
         _isPortraitLayout = null;
         if (Bounds.Width > 0)
             ApplyOrientationLayout(Bounds.Size);
+    }
+
+    /// <summary>
+    /// Start screen: centered block in landscape. In portrait the title and mode buttons move to the top and the
+    /// start button to the bottom, so the camera picture in the middle is not covered by buttons.
+    /// </summary>
+    private void UpdateIdleLayout()
+    {
+        var portrait = _isPortraitLayout == true;
+        IdleLayoutGrid.RowDefinitions = portrait ? new RowDefinitions("Auto,*,Auto") : new RowDefinitions("Auto,20,Auto");
+        IdleLayoutGrid.VerticalAlignment = portrait
+            ? global::Avalonia.Layout.VerticalAlignment.Stretch
+            : global::Avalonia.Layout.VerticalAlignment.Center;
+        // Portrait: below the status bar, above the gallery thumbnail in the bottom left corner
+        IdleLayoutGrid.Margin = portrait
+            ? new Thickness(0, 88 + _safeArea.Top, 0, 120 + _safeArea.Bottom)
+            : new Thickness(0);
     }
 
     private Thickness WithSafeArea(Thickness margin, bool top = true) => new(
@@ -161,6 +179,7 @@ public partial class MainView : UserControl
     {
         base.OnSizeChanged(e);
         ApplyOrientationLayout(e.NewSize);
+        UpdateBackdrop(e.NewSize);
         FitModalToScreen();
     }
 
@@ -184,6 +203,8 @@ public partial class MainView : UserControl
         if (_isPortraitLayout == portrait)
             return;
         _isPortraitLayout = portrait;
+
+        UpdateIdleLayout();
 
         // Mode pills: one row in landscape, 2 columns x 3 rows in portrait
         Button[] modeButtons = [ModeSingleButton, ModeQuadButton, ModeStripButton, ModeGifButton, ModeBoomerangButton, ModeVideoButton];
@@ -236,8 +257,6 @@ public partial class MainView : UserControl
             button.HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
         }
 
-        UpdateBackdrop(size);
-
         // Live view: fill the screen in landscape; in portrait show the whole camera frame across the full width,
         // otherwise only a narrow middle strip of the (landscape) photo would be visible
         LiveViewImageControl.Stretch = portrait ? Stretch.Uniform : Stretch.UniformToFill;
@@ -259,17 +278,26 @@ public partial class MainView : UserControl
         GalleryDeleteButton.HorizontalContentAlignment = GalleryPrintButton.HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
     }
 
-    /// <summary>Renders the party backdrop in the screen's aspect ratio (only when the orientation changes).</summary>
+    private PixelSize _backdropPixels;
+    private int _backdropGeneration;
+
+    /// <summary>
+    /// Renders the party backdrop in the screen's real pixel resolution (incl. display scaling, up to 4K), so the
+    /// light strings and bulbs stay crisp in fullscreen. Only re-rendered when the orientation changes or the
+    /// screen got noticeably bigger.
+    /// </summary>
     private void UpdateBackdrop(Size size)
     {
         if (size.Width <= 0 || size.Height <= 0)
             return;
 
-        // ~1600 px on the long side is plenty for a soft, blurry background
-        var scale = 1600 / Math.Max(size.Width, size.Height);
-        var width = Math.Max(16, (int)(size.Width * scale));
-        var height = Math.Max(16, (int)(size.Height * scale));
+        var (width, height) = BackdropPixels(size.Width, size.Height, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0);
+        var sameOrientation = (width > height) == (_backdropPixels.Width > _backdropPixels.Height);
+        if (sameOrientation && Math.Max(width, height) <= Math.Max(_backdropPixels.Width, _backdropPixels.Height) * 1.1)
+            return;
+        _backdropPixels = new PixelSize(width, height);
 
+        var generation = ++_backdropGeneration;
         _ = Task.Run(() =>
         {
             try
@@ -277,6 +305,8 @@ public partial class MainView : UserControl
                 var (background, bulbsA, bulbsB) = PartyScene.RenderLayeredPng(width, height);
                 Dispatcher.UIThread.Post(() =>
                 {
+                    if (generation != _backdropGeneration)
+                        return; // a newer (e.g. larger) render is on its way
                     IdleBackdropImage.Source = LoadBitmap(background);
                     IdleBulbsAImage.Source = LoadBitmap(bulbsA);
                     IdleBulbsBImage.Source = LoadBitmap(bulbsB);
@@ -288,6 +318,16 @@ public partial class MainView : UserControl
                 // Decorative only
             }
         });
+    }
+
+    /// <summary>Pixel size for the backdrop: the physical screen size, capped at 4K on the long side.</summary>
+    private static (int Width, int Height) BackdropPixels(double width, double height, double scaling)
+    {
+        const double MaxLongSide = 3840;
+        var pixelWidth = width * Math.Max(1, scaling);
+        var pixelHeight = height * Math.Max(1, scaling);
+        var cap = Math.Min(1, MaxLongSide / Math.Max(pixelWidth, pixelHeight));
+        return (Math.Max(16, (int)(pixelWidth * cap)), Math.Max(16, (int)(pixelHeight * cap)));
     }
 
     private static Bitmap LoadBitmap(byte[] png)

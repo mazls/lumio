@@ -22,7 +22,7 @@
                RenderOptions.BitmapInterpolationMode="HighQuality"
                RenderTransformOrigin="50%,50%">
             <Image.RenderTransform>
-                <ScaleTransform ScaleX="-1" ScaleY="1" />
+                <ScaleTransform ScaleX="1" ScaleY="1" />
             </Image.RenderTransform>
         </Image>
 
@@ -138,7 +138,10 @@
                 </Grid>
             </Border>
 
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+            <!-- Landscape: everything centered. Portrait: title and modes at the top, start button at the bottom,
+                 so the (letterboxed) live view in the middle stays free - see ApplyOrientationLayout -->
+            <Grid x:Name="IdleLayoutGrid" HorizontalAlignment="Center" VerticalAlignment="Center" RowDefinitions="Auto,20,Auto">
+            <StackPanel x:Name="IdleTopPanel" Grid.Row="0" Spacing="20">
 
                 <!-- Glowing Event Title with Logo Badge -->
                 <Border Background="{StaticResource GlassBrush}"
@@ -148,9 +151,8 @@
                         Padding="16,8,28,8"
                         HorizontalAlignment="Center">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
-                        <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
-                                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
-                            <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
+                        <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                            <Image Source="avares://Lumio.App.Shared/Assets/logo_round.png" Stretch="Uniform" />
                         </Border>
                         <TextBlock x:Name="EventTitleText"
                                    TextTrimming="CharacterEllipsis"
@@ -171,7 +173,9 @@
                     <Button x:Name="ModeBoomerangButton" Content="⚡ Boomerang" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeBoomerangClick" />
                     <Button x:Name="ModeVideoButton" Content="📹 Videobotschaft" CornerRadius="18" Padding="16,10" Margin="5" Click="OnSelectModeVideoClick" />
                 </Grid>
+            </StackPanel>
 
+            <StackPanel x:Name="IdleBottomPanel" Grid.Row="2" Spacing="20">
                 <!-- Big Touch Callout Button -->
                 <Button x:Name="StartCaptureButton"
                         Background="{StaticResource AccentGradientBrush}"
@@ -195,6 +199,7 @@
                            Foreground="{StaticResource TextSecondaryBrush}"
                            HorizontalAlignment="Center" />
             </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- ==================== 4. COUNTDOWN OVERLAY ==================== -->
@@ -293,9 +298,8 @@
                     CornerRadius="18"
                     Padding="10,6,16,6">
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Border Width="24" Height="24" CornerRadius="12" ClipToBounds="True"
-                            BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
-                        <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
+                    <Border Width="24" Height="24" CornerRadius="12" ClipToBounds="True">
+                        <Image Source="avares://Lumio.App.Shared/Assets/logo_round.png" Stretch="Uniform" />
                     </Border>
                     <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
                     <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" TextTrimming="CharacterEllipsis" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />

@@ -628,8 +628,8 @@ public partial class AdminDashboardDialog : Window
         if (int.TryParse(VideoDurationTextBox.Text, out var vidDur))
             updated.VideoMessageDurationSeconds = vidDur;
 
-        updated.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
-        updated.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
+        updated.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? false;
+        updated.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? true;
         updated.GuestLooksEnabled = GuestLooksCheckBox.IsChecked ?? true;
         updated.BeautyFilterStrength = Math.Max(0, BeautyFilterComboBox.SelectedIndex);
         updated.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;

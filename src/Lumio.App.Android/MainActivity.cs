@@ -18,7 +18,7 @@ namespace Lumio.App.Android;
 [Activity(
     Label = "Lumio",
     Icon = "@mipmap/icon",
-    RoundIcon = "@mipmap/icon",
+    RoundIcon = "@mipmap/icon_round",
     Theme = "@style/Theme.Lumio.NoActionBar",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTask,
@@ -168,6 +168,18 @@ public class MainActivity : AvaloniaMainActivity<Lumio.App.Avalonia.App>
         var wanted = new List<string> { global::Android.Manifest.Permission.Camera, global::Android.Manifest.Permission.RecordAudio };
         if (Build.VERSION.SdkInt <= BuildVersionCodes.Q)
             wanted.Add(global::Android.Manifest.Permission.WriteExternalStorage); // shared Pictures folder before Android 11
+
+        // The gallery also shows photos in "Pictures/Lumio" that another installation of Lumio saved
+        // (e.g. the sideloaded app before the Play Store version)
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+        {
+            wanted.Add(global::Android.Manifest.Permission.ReadMediaImages);
+            wanted.Add(global::Android.Manifest.Permission.ReadMediaVideo);
+        }
+        else
+        {
+            wanted.Add(global::Android.Manifest.Permission.ReadExternalStorage);
+        }
         var missing = wanted
             .Where(p => CheckSelfPermission(p) != Permission.Granted)
             .ToArray();

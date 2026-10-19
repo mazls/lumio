@@ -31,12 +31,10 @@
             <!-- Brand Header -->
             <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,18" Spacing="6">
                 <Border Width="84" Height="84"
-                        CornerRadius="20"
+                        CornerRadius="42"
                         ClipToBounds="True"
-                        BorderBrush="{StaticResource AccentBrush}"
-                        BorderThickness="2"
                         HorizontalAlignment="Center">
-                    <Image Source="avares://Lumio.App.Shared/Assets/logo.png" Stretch="UniformToFill" />
+                    <Image Source="avares://Lumio.App.Shared/Assets/logo_round.png" Stretch="Uniform" />
                 </Border>
 
                 <TextBlock Text="Lumio Photobooth"

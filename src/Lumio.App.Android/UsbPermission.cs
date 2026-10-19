@@ -13,7 +13,7 @@ namespace Lumio.App.Android;
 /// </summary>
 internal static class UsbPermission
 {
-    private const string ActionUsbPermission = "com.lumio.booth.USB_PERMISSION";
+    private const string ActionUsbPermission = "io.github.mazls.lumio.USB_PERMISSION";
 
     public static async Task<bool> RequestAsync(Activity activity, UsbManager usbManager, UsbDevice device, CancellationToken cancellationToken = default)
     {

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.lumio.booth"
-          android:versionCode="135"
-          android:versionName="1.3.5">
+          package="io.github.mazls.lumio"
+          android:versionCode="136"
+          android:versionName="1.3.6">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="36" />
 
@@ -33,7 +33,7 @@
     <application
         android:label="Lumio"
         android:icon="@mipmap/icon"
-        android:roundIcon="@mipmap/icon"
+        android:roundIcon="@mipmap/icon_round"
         android:theme="@style/Theme.Lumio.NoActionBar"
         android:hardwareAccelerated="true"
         android:largeHeap="true"

@@ -19,7 +19,7 @@ public sealed class CollageRenderer
 
             try
             {
-                using var stream = typeof(CollageRenderer).Assembly.GetManifestResourceStream("Lumio.Imaging.Assets.logo.png");
+                using var stream = typeof(CollageRenderer).Assembly.GetManifestResourceStream("Lumio.Imaging.Assets.logo_round.png");
                 if (stream is not null)
                 {
                     _logoBitmap = SKBitmap.Decode(stream);

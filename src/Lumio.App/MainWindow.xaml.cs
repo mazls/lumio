@@ -1125,26 +1125,37 @@ public partial class MainWindow : Window
         var portrait = e.NewSize.Height > e.NewSize.Width;
         LiveViewImageControl.Stretch = portrait ? Stretch.Uniform : Stretch.UniformToFill;
 
-        if (_backdropIsPortrait != portrait)
-        {
-            _backdropIsPortrait = portrait;
-            UpdateBackdrop(e.NewSize);
-        }
+        UpdateBackdrop(e.NewSize);
     }
 
-    private bool? _backdropIsPortrait;
 
-    /// <summary>Renders the party backdrop in the window's aspect ratio (only when the orientation changes).</summary>
+    private (int Width, int Height) _backdropPixels;
+    private int _backdropGeneration;
+
+    /// <summary>
+    /// Renders the party backdrop in the window's real pixel resolution (incl. Windows display scaling, up to 4K),
+    /// so the light strings and bulbs stay crisp in fullscreen. Only re-rendered when the orientation changes or
+    /// the window got noticeably bigger.
+    /// </summary>
     private void UpdateBackdrop(Size size)
     {
         if (size.Width <= 0 || size.Height <= 0)
             return;
 
-        // ~1600 px on the long side is plenty for a soft, blurry background
-        var scale = 1600 / Math.Max(size.Width, size.Height);
-        var width = Math.Max(16, (int)(size.Width * scale));
-        var height = Math.Max(16, (int)(size.Height * scale));
+        const double MaxLongSide = 3840;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var pixelWidth = size.Width * Math.Max(1, dpi.DpiScaleX);
+        var pixelHeight = size.Height * Math.Max(1, dpi.DpiScaleY);
+        var cap = Math.Min(1, MaxLongSide / Math.Max(pixelWidth, pixelHeight));
+        var width = Math.Max(16, (int)(pixelWidth * cap));
+        var height = Math.Max(16, (int)(pixelHeight * cap));
 
+        var sameOrientation = (width > height) == (_backdropPixels.Width > _backdropPixels.Height);
+        if (sameOrientation && Math.Max(width, height) <= Math.Max(_backdropPixels.Width, _backdropPixels.Height) * 1.1)
+            return;
+        _backdropPixels = (width, height);
+
+        var generation = ++_backdropGeneration;
         _ = Task.Run(() =>
         {
             try
@@ -1152,6 +1163,8 @@ public partial class MainWindow : Window
                 var (background, bulbsA, bulbsB) = PartyScene.RenderLayeredPng(width, height);
                 Dispatcher.InvokeAsync(() =>
                 {
+                    if (generation != _backdropGeneration)
+                        return; // a newer (e.g. larger) render is on its way
                     IdleBackdropImage.Source = LoadBitmap(background);
                     IdleBulbsAImage.Source = LoadBitmap(bulbsA);
                     IdleBulbsBImage.Source = LoadBitmap(bulbsB);

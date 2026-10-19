@@ -1,4 +1,4 @@
-# Lumio Android APK Build Script
+﻿# Lumio Android APK Build Script
 param([switch]$Install)
 
 $dotnet = "$PSScriptRoot\.dotnet\dotnet.exe"
@@ -27,9 +27,9 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-$apk = Get-ChildItem "$PSScriptRoot\src\Lumio.App.Android\bin\Release\net10.0-android" -Filter "*Signed.apk" -Recurse | Select-Object -First 1
+$apk = Get-ChildItem "$PSScriptRoot\src\Lumio.App.Android\bin\Release\net10.0-android" -Filter "*Signed.apk" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $apk) {
-    $apk = Get-ChildItem "$PSScriptRoot\src\Lumio.App.Android\bin\Release\net10.0-android" -Filter "*.apk" -Recurse | Select-Object -First 1
+    $apk = Get-ChildItem "$PSScriptRoot\src\Lumio.App.Android\bin\Release\net10.0-android" -Filter "*.apk" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 }
 
 if ($apk) {
@@ -61,7 +61,7 @@ if ($apk) {
             Write-Host "Installiere direkt auf dem Tablet via ADB..." -ForegroundColor Yellow
             & $adbExe install -r -d $targetApk
             Write-Host "Starte Lumio auf dem Tablet..." -ForegroundColor Yellow
-            & $adbExe shell am start -n com.lumio.booth/crc64279976f630e61695.MainActivity
+            & $adbExe shell monkey -p io.github.mazls.lumio -c android.intent.category.LAUNCHER 1 | Out-Null
         } else {
             Write-Host "adb.exe nicht gefunden. Bitte SDK platform-tools zum PATH hinzufügen." -ForegroundColor Yellow
         }

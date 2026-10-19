@@ -387,8 +387,8 @@ public partial class AdminDashboardDialog : UserControl
         copy.VideoMessageDurationSeconds = (int)(VideoDurationUpDown.Value ?? 20);
         copy.AutoPrint = AutoPrintCheckBox.IsChecked ?? false;
         copy.BorderlessPrint = BorderlessPrintCheckBox.IsChecked ?? true;
-        copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? true;
-        copy.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? false;
+        copy.MirrorLiveView = MirrorLiveViewCheckBox.IsChecked ?? false;
+        copy.LiveViewOnlyDuringCapture = LiveViewPowerSavingCheckBox.IsChecked ?? true;
         copy.GuestLooksEnabled = GuestLooksCheckBox.IsChecked ?? true;
         copy.BeautyFilterStrength = Math.Max(0, BeautyFilterComboBox.SelectedIndex);
         copy.OnScreenKeyboardEnabled = OnScreenKeyboardCheckBox.IsChecked ?? false;

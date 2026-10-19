@@ -32,7 +32,7 @@
                RenderOptions.BitmapScalingMode="HighQuality"
                RenderTransformOrigin="0.5,0.5">
             <Image.RenderTransform>
-                <ScaleTransform x:Name="LiveViewScaleTransform" ScaleX="-1" ScaleY="1" />
+                <ScaleTransform x:Name="LiveViewScaleTransform" ScaleX="1" ScaleY="1" />
             </Image.RenderTransform>
         </Image>
 
@@ -149,12 +149,11 @@
                         HorizontalAlignment="Center"
                         Margin="0,0,0,24">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="44" Height="44" CornerRadius="22" ClipToBounds="True" Margin="0,0,14,0"
-                                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
+                        <Border Width="44" Height="44" CornerRadius="22" ClipToBounds="True" Margin="0,0,14,0">
                             <Border.Effect>
                                 <DropShadowEffect Color="#FF3D9A" BlurRadius="18" ShadowDepth="0" Opacity="0.7" />
                             </Border.Effect>
-                            <Image Source="pack://application:,,,/Lumio;component/Assets/logo.png" Stretch="UniformToFill" />
+                            <Image Source="pack://application:,,,/Lumio;component/Assets/logo_round.png" Stretch="Uniform" />
                         </Border>
                         <TextBlock x:Name="EventTitleText"
                                    Text="LUMIO"
@@ -345,9 +344,8 @@
                     Cursor="Hand"
                     MouseLeftButtonUp="OnCameraStatusClick">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True" Margin="0,0,10,0"
-                            BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
-                        <Image Source="pack://application:,,,/Lumio;component/Assets/logo.png" Stretch="UniformToFill" />
+                    <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True" Margin="0,0,10,0">
+                        <Image Source="pack://application:,,,/Lumio;component/Assets/logo_round.png" Stretch="Uniform" />
                     </Border>
                     <Ellipse x:Name="CameraStatusIndicator" Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <TextBlock x:Name="CameraStatusText" Text="Kamera bereit" Style="{StaticResource Caption}" FontWeight="SemiBold" VerticalAlignment="Center" />
