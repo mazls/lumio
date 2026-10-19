@@ -27,7 +27,7 @@ Kein Abo, kein Lizenz-Wahnsinn, keine Internetpflicht auf der Feier und komplett
 
 ---
 
-## Neu in Version 1.3.7: Bereit für Google Play 🚀
+## Neu in Version 1.3.8: Bereit für Google Play 🚀
 
 - 📱 **Neuer Paketname** `io.github.mazls.lumio` für den Play Store – die alte App bitte einmal deinstallieren (Fotos bleiben erhalten).
 - 🟣 **Rundes Lumio-Logo** – auch als App-Icon, das die ganze Icon-Fläche füllt – und ein **gestochen scharfer Hintergrund** auch im 4K-Vollbild.

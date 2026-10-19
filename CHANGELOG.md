@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen und Versionen von Lumio werden in diesem Dokument
 
 ---
 
+## [1.3.8] – 2026-10-19 – *Google-Play-Schutz*
+
+- **Mindestens Android 9**: Erfüllt die Voraussetzung für den automatischen Schutz von Google Play (vorher Android 5.0).
+
+---
+
 ## [1.3.7] – 2026-10-19 – *Bereit für Google Play* 🚀
 
 ### 📱 Android
